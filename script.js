@@ -1,4 +1,9 @@
-window.onerror = function(msg, url, line) { alert("ERRO: " + msg + "\nLinha: " + line); return true; };
+// Tratamento de erros global para exibir alertas na tela
+window.onerror = function(msg, url, line) { 
+    alert("ERRO: " + msg + "\nLinha: " + line); 
+    return false; // Permite que o erro também apareça no console
+};
+
 function appRefresh() { window.location.reload(true); }
 
 const DB_KEY = 'dhpe_v01_db'; const SESS_KEY = 'dhpe_sess_v01'; const REMEMBER_KEY = 'dhpe_remember_token_v01';
@@ -11,7 +16,6 @@ const DARK_MODE_KEY = 'dhpe_dark_mode';
 
 const OLD_KEYS = ['dhpe_v59_1_db'];
 
-// Usuário Admin Padrão
 const usersList = [{ nome: "ABRAAO EVERTON LOPES DE ARAUJO", cpf: ADMIN_CPF, pass: ADMIN_PASS, cat: "ORGANIZAÇÃO", tel: "81900000000", city: "RECIFE", gender:"M", role: "ADMIN", allowedEvts: [], inscricoes: [], selfie: null, secQ: 'time', secA: 'SPORT' }];
 
 const DEFAULT_POINTS = [50, 45, 40, 35, 30, 26, 24, 22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 3, 2, 1];
@@ -24,9 +28,10 @@ const DEFAULT_DB = {
 
 function cleanCPF(v) { return v ? v.replace(/\D/g, "") : ""; } 
 
-// --- 1. PERSISTÊNCIA DE FORMULÁRIO ---
+// --- FUNÇÕES DE INPUT E VALIDAÇÃO (Reorganizadas) ---
+
 function saveInput(el) {
-    if(el.id) localStorage.setItem('autosave_' + el.id, el.value);
+    if(el && el.id) localStorage.setItem('autosave_' + el.id, el.value);
 }
 
 function restoreInputs() {
@@ -37,33 +42,69 @@ function restoreInputs() {
     });
 }
 
-// --- 2. VALIDAÇÃO CPF VISUAL ---
-function mascaraCPF(i) { 
-    let v = i.value.replace(/\D/g, "").substring(0, 11); 
-    i.value = v.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2"); 
-    if(validarCPF(i.value)) { i.classList.add('valid'); i.classList.remove('invalid'); }
-    else { i.classList.add('invalid'); i.classList.remove('valid'); }
-    saveInput(i); 
-}
-
+// IMPORTANTE: validarCPF movido para CIMA para evitar erro de referência
 function validarCPF(strCPF) {
+    if(!strCPF) return false;
     strCPF = strCPF.replace(/[^\d]+/g,'');
     if (strCPF == '') return false;
+    // Elimina CPFs conhecidos inválidos (111.111.111-11, etc)
     if (strCPF.length != 11 || /^(\d)\1{10}$/.test(strCPF)) return false;
-    let add = 0; for (let i=0; i < 9; i ++) add += parseInt(strCPF.charAt(i)) * (10 - i);
-    let rev = 11 - (add % 11); if (rev == 10 || rev == 11) rev = 0;
+    
+    let add = 0; 
+    for (let i=0; i < 9; i ++) add += parseInt(strCPF.charAt(i)) * (10 - i);
+    let rev = 11 - (add % 11); 
+    if (rev == 10 || rev == 11) rev = 0;
     if (rev != parseInt(strCPF.charAt(9))) return false;
-    add = 0; for (let i = 0; i < 10; i ++) add += parseInt(strCPF.charAt(i)) * (11 - i);
-    rev = 11 - (add % 11); if (rev == 10 || rev == 11) rev = 0;
+    
+    add = 0; 
+    for (let i = 0; i < 10; i ++) add += parseInt(strCPF.charAt(i)) * (11 - i);
+    rev = 11 - (add % 11); 
+    if (rev == 10 || rev == 11) rev = 0;
     if (rev != parseInt(strCPF.charAt(10))) return false;
+    
     return true;
 }
 
-function mascaraTel(i) { let v = i.value.replace(/\D/g, "").substring(0, 11); v = v.replace(/^(\d{2})(\d)/g, "($1) $2"); v = v.replace(/(\d)(\d{4})$/, "$1-$2"); i.value = v; saveInput(i); }
-function mascaraData(i) { let v = i.value.replace(/\D/g,""); if(v.length > 4) v = v.substring(0,4); if(v.length > 2) v = v.substring(0,2) + '/' + v.substring(2); i.value = v; saveInput(i); }
-function togglePass(id) { const el = document.getElementById(id); el.type = el.type === 'password' ? 'text' : 'password'; }
+// CORREÇÃO LINHA 35: Função mascaraCPF robusta
+function mascaraCPF(i) { 
+    if(!i || !i.value) return; // Proteção se i for nulo
+    
+    let v = i.value.replace(/\D/g, "").substring(0, 11); 
+    i.value = v.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2"); 
+    
+    // Agora o validarCPF com certeza existe
+    if(validarCPF(i.value)) { 
+        if(i.classList) { i.classList.add('valid'); i.classList.remove('invalid'); }
+    } else { 
+        if(i.classList) { i.classList.add('invalid'); i.classList.remove('valid'); }
+    }
+    saveInput(i); 
+}
 
-// MIGRATION LOGIC
+function mascaraTel(i) { 
+    if(!i) return;
+    let v = i.value.replace(/\D/g, "").substring(0, 11); 
+    v = v.replace(/^(\d{2})(\d)/g, "($1) $2"); 
+    v = v.replace(/(\d)(\d{4})$/, "$1-$2"); 
+    i.value = v; 
+    saveInput(i); 
+}
+
+function mascaraData(i) { 
+    if(!i) return;
+    let v = i.value.replace(/\D/g,""); 
+    if(v.length > 4) v = v.substring(0,4); 
+    if(v.length > 2) v = v.substring(0,2) + '/' + v.substring(2); 
+    i.value = v; 
+    saveInput(i); 
+}
+
+function togglePass(id) { 
+    const el = document.getElementById(id); 
+    if(el) el.type = el.type === 'password' ? 'text' : 'password'; 
+}
+
+// --- LÓGICA DO BANCO DE DADOS E MIGRAÇÃO ---
 let db = JSON.parse(localStorage.getItem(DB_KEY));
 if(!db) {
     for(let key of OLD_KEYS) {
@@ -80,7 +121,6 @@ if(!db) {
 if(!db) db = DEFAULT_DB;
 if(!db.config) db.config = { phone: '' };
 
-// GARANTE QUE O ADMIN EXISTE E ESTÁ CORRETO (Correção 1)
 const adminIndex = db.users.findIndex(u => cleanCPF(u.cpf) === cleanCPF(ADMIN_CPF));
 if(adminIndex >= 0) { 
     db.users[adminIndex].role = "ADMIN"; 
@@ -96,7 +136,7 @@ db.events.forEach(e => {
 });
 saveDB();
 
-// INSTALL PROMPT LOGIC
+// --- PWA INSTALL ---
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault(); 
@@ -122,12 +162,21 @@ function installPWA() {
     }
 }
 
+// --- VARIÁVEIS DE NAVEGAÇÃO ---
 let currentTab = localStorage.getItem(LAST_TAB_KEY) || 'calendar'; 
 let currentAdmSection = null; let loggedUser = null; let currentPayId = null;
 
+// --- FUNÇÕES UTILITÁRIAS ---
 function saveDB() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
 function getUser() { return JSON.parse(localStorage.getItem(SESS_KEY)); }
-function toast(m) { const t=document.getElementById('toast'); t.innerText=m.toUpperCase(); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); }
+function toast(m) { 
+    const t=document.getElementById('toast'); 
+    if(t) {
+        t.innerText=m.toUpperCase(); 
+        t.classList.add('show'); 
+        setTimeout(()=>t.classList.remove('show'),3000); 
+    }
+}
 
 function compressImage(file, maxWidth, callback) {
     const reader = new FileReader();
@@ -180,7 +229,9 @@ function shareTicketImage() {
 
 function trocarTela(id) { 
     document.querySelectorAll('.screen').forEach(e=>e.classList.remove('active')); 
-    document.getElementById('screen-'+id).classList.add('active'); 
+    const tela = document.getElementById('screen-'+id);
+    if(tela) tela.classList.add('active'); 
+    
     if(id === 'app') {
         document.getElementById('main-nav-bar').style.display = 'flex';
         document.getElementById('main-app-header').style.display = 'flex';
@@ -190,7 +241,7 @@ function trocarTela(id) {
     }
 }
 
-function toggleSearch(id) { const el = document.getElementById('search-box-'+id); el.style.display = el.style.display === 'block' ? 'none' : 'block'; }
+function toggleSearch(id) { const el = document.getElementById('search-box-'+id); if(el) el.style.display = el.style.display === 'block' ? 'none' : 'block'; }
 
 function toggleUserSearch() { 
     const el = document.getElementById('adm-user-search-wrapper'); 
@@ -205,7 +256,7 @@ function toggleUserSearch() {
     }
 }
 
-// Alteração 4: Dark Mode Logic
+// --- DARK MODE ---
 function toggleDarkMode() {
     document.body.classList.toggle('dark-mode');
     const isDark = document.body.classList.contains('dark-mode');
@@ -217,6 +268,7 @@ function loadDarkMode() {
     if(isDark) document.body.classList.add('dark-mode');
 }
 
+// --- NAVEGAÇÃO ---
 function nav(t) {
     if(t === 'adm' && (!loggedUser || (loggedUser.role !== 'ADMIN' && loggedUser.role !== 'ORGANIZER'))) return toast("ACESSO NEGADO (APENAS ORGANIZADORES)");
     currentTab = t;
@@ -253,7 +305,6 @@ function tryOpenAdmin() { if(loggedUser && (loggedUser.role === 'ADMIN' || logge
 
 function renderContent(t) {
     if(t === 'calendar') {
-        const div = document.getElementById('list-calendar');
         const highlightDiv = document.getElementById('calendar-highlight');
         const othersDiv = document.getElementById('calendar-others');
         
@@ -330,6 +381,7 @@ function renderContent(t) {
     }
 }
 
+// --- ADMIN ---
 function openAdmSection(sec) {
     if(sec === 'events' && loggedUser.role !== 'ADMIN') { toast("APENAS ADMIN"); return backToAdmMenu(); }
 
@@ -478,7 +530,8 @@ function backToAdmMenu() {
     document.getElementById('adm-sec-events').style.display='none'; document.getElementById('adm-sec-results').style.display='none';
     document.getElementById('adm-sec-organizer').style.display='none'; document.getElementById('adm-sec-financial').style.display='none';
     document.getElementById('adm-sec-users-edit').style.display='none'; document.getElementById('adm-sec-config-global').style.display='none';
-    document.getElementById('adm-menu').style.display='grid';
+    const menu = document.getElementById('adm-menu');
+    if(menu) menu.style.display='grid';
 }
 
 function checkAdmPass() { if(document.getElementById('adm-pass-check').value === ADMIN_PASS) { document.getElementById('adm-login-box').style.display='none'; document.getElementById('adm-panel-real').style.display='block'; backToAdmMenu(); } else { toast("SENHA INVÁLIDA"); } }
@@ -669,7 +722,6 @@ function toggleStatus(cpf, evtId) {
     saveDB(); renderInscriptions(); 
 }
 
-// --- PRINT REPORT ---
 function openPrintOptions() {
     const evtId = document.getElementById('fin-evt-select').value;
     if(!evtId || evtId === 'ALL') return toast("SELECIONE UM EVENTO ESPECÍFICO");
@@ -789,7 +841,8 @@ function editEvent(id) {
         document.getElementById('evt-points-grid').innerHTML = pts.map((p, i) => `<input type="number" placeholder="${i+1}º" value="${p}" id="pt-${i}" style="text-align:center; font-size:10px; padding:4px;" oninput="saveEventForm()">`).join('');
         document.getElementById('btn-save-event').innerText = "ATUALIZAR"; 
         
-        document.querySelector('.admin-dashboard-grid').scrollIntoView();
+        const grid = document.querySelector('.admin-dashboard-grid');
+        if(grid) grid.scrollIntoView();
     } 
 }
 
@@ -915,7 +968,7 @@ function enviarComprovanteWhatsApp() {
 }
 function confirmarJaPaguei() { if(!loggedUser.inscricoes.some(i => i.id == currentPayId.id)) { loggedUser.inscricoes.push({ id: currentPayId.id, status: 'PENDENTE' }); const idx = db.users.findIndex(x => x.cpf === loggedUser.cpf); if(idx > -1) db.users[idx].inscricoes = loggedUser.inscricoes; saveDB(); localStorage.setItem(SESS_KEY, JSON.stringify(loggedUser)); } fecharModal('modal-pix'); toast("REGISTRADO!"); renderContent('calendar'); }
 function verCartaz(id) { const evt = db.events.find(e => e.id == id); if(evt && evt.img) { document.getElementById('img-poster-view').src = evt.img; document.getElementById('modal-poster').style.display = 'flex'; } }
-function fecharModal(id){ document.getElementById(id).style.display='none'; }
+function fecharModal(id){ const m = document.getElementById(id); if(m) m.style.display='none'; }
 function delItem(col, idx) { 
     if(confirm("APAGAR?")) { 
         const item = db[col][idx];
@@ -939,7 +992,7 @@ function maskTimeOrPoints(i, e) {
 function copiarPix() { navigator.clipboard.writeText(document.getElementById('pix-copy').innerText); toast("PIX COPIADO!"); }
 function imprimirTicket() { document.body.classList.add('printing-cupom'); setTimeout(() => { window.print(); setTimeout(() => document.body.classList.remove('printing-cupom'), 1000); }, 500); }
 
-// --- LOGICA DE LOGIN E CADASTRO ATUALIZADA (Correção 2 e 1) ---
+// --- LOGIN & CADASTRO ---
 function fazerLogin() { 
     try {
         const cpfRaw = document.getElementById('login-cpf').value; 
@@ -948,7 +1001,6 @@ function fazerLogin() {
         
         if(!cpfRaw || !pass) return toast("PREENCHA TUDO");
         
-        // Verifica usando cleanCPF para evitar erro de pontuação
         const user = db.users.find(x => cleanCPF(x.cpf) === cleanCPF(cpfRaw) && x.pass === pass);
         
         if(user) { 
@@ -960,7 +1012,6 @@ function fazerLogin() {
 }
 
 function fazerLogout() { localStorage.removeItem(SESS_KEY); window.location.reload(true); }
-function closeModal(id) { document.getElementById(id).style.display='none'; }
 
 function cadastrar() { 
     const u = { 
@@ -973,7 +1024,6 @@ function cadastrar() {
         gender: document.getElementById('cad-gender').value, 
         role: 'USER', 
         inscricoes: [],
-        // Novos campos de segurança
         secQ: document.getElementById('cad-sec-q').value,
         secA: document.getElementById('cad-sec-a').value.toUpperCase()
     }; 
@@ -991,7 +1041,7 @@ function cadastrar() {
     trocarTela('login');
 }
 
-// --- RECUPERAÇÃO DE SENHA (Alteração 2) ---
+// --- RECUPERAÇÃO DE SENHA ---
 function abrirRecuperacao() {
     document.getElementById('rec-cpf').value = '';
     document.getElementById('rec-tel').value = '';
@@ -1007,11 +1057,9 @@ function buscarUsuarioRecuperacao() {
     
     if(!cpf || !tel) return toast("PREENCHA CPF E TELEFONE");
     
-    // Busca usuário pelo CPF (limpo) e verifica se o telefone (limpo) bate
     const user = db.users.find(u => cleanCPF(u.cpf) === cleanCPF(cpf));
     
     if(user && cleanCPF(user.tel) === cleanCPF(tel)) {
-        // Usuário encontrado, mostrar pergunta
         const questions = {
             'nome_mae': 'Qual o primeiro nome da sua mãe?',
             'animal': 'Qual o nome do seu primeiro animal?',
@@ -1021,7 +1069,6 @@ function buscarUsuarioRecuperacao() {
         
         let qText = questions[user.secQ] || "Pergunta de Segurança";
         if(!user.secQ) {
-            // Se usuário antigo não tiver pergunta, libera se telefone bater (fallback)
             alert("SUA SENHA É: " + user.pass);
             fecharModal('modal-recovery');
             return;
@@ -1054,15 +1101,17 @@ function calcCat(dateStr, gender) { if(gender === 'F') { document.getElementById
 
 function initApp() { 
     if(db.config.logo) document.querySelectorAll('.app-logo-img').forEach(el => el.src = db.config.logo);
-    loadDarkMode(); // Carregar modo escuro
+    loadDarkMode(); 
     trocarTela('app'); 
     
     const lastTab = localStorage.getItem(LAST_TAB_KEY);
     
     if(loggedUser && (loggedUser.role === 'ADMIN' || loggedUser.role === 'ORGANIZER' || loggedUser.cpf === '083.276.324-18')) {
-         document.getElementById('btn-adm').style.display = 'flex';
+         const btn = document.getElementById('btn-adm');
+         if(btn) btn.style.display = 'flex';
     } else {
-         document.getElementById('btn-adm').style.display = 'none';
+         const btn = document.getElementById('btn-adm');
+         if(btn) btn.style.display = 'none';
     }
 
     if(lastTab) {
