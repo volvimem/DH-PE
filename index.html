@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DH-PE v0.9 (Final)</title>
+    <title>DH-PE v0.1 (Beta)</title>
     
-    <link rel="icon" type="image/jpg" href="logo-fp.jpg">
-    <link rel="apple-touch-icon" href="logo-fp.jpg">
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="apple-touch-icon" href="logo.png">
     
-    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiQ3Vwb20gREgtUEUgVG9kbyBUZXJyZW5vIiwic2hvcnRfbmFtZSI6IkRILVBFIiwic3RhcnRfdXJsIjoiLiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiNmMGYyZjUiLCJ0aGVtZV9jb2xvciI6IiMwMDM4YTgiLCJpY29ucyI6W3sic3JjIjoibG9nby1mcC5wbmciLCJzaXplcyI6IjUxMng1MTIiLCJ0eXBlIjoiaW1hZ2UvcG5nIn1dfQ==">
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiQ3Vwb20gREgtUEUgVG9kbyBUZXJyZW5vIiwic2hvcnRfbmFtZSI6IkRILVBFIiwic3RhcnRfdXJsIjoiLiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiNmMGYyZjUiLCJ0aGVtZV9jb2xvciI6IiMwMDM4YTgiLCJpY29ucyI6W3sic3JjIjoibG9nby5wbmciLCJzaXplcyI6IjUxMng1MTIiLCJ0eXBlIjoiaW1hZ2UvcG5nIn1dfQ==">
     <meta name="theme-color" content="#0038a8">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -48,7 +48,8 @@
         
         /* LOGIN */
         #screen-login { height: 100vh; overflow: hidden; position: relative; background: black; padding-bottom: 0; z-index: 2000; }
-        .login-bg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('logo-fp.jpg') no-repeat center center; background-size: cover; z-index: 1; pointer-events: none; opacity: 0.3; }
+        /* 3° Alteração: Imagem de fundo */
+        .login-bg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('logo.png') no-repeat center center; background-size: cover; z-index: 1; pointer-events: none; opacity: 0.3; }
         .login-overlay-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), rgba(0, 56, 168, 0.95)); z-index: 2; pointer-events: none; }
         .login-content-layer { position: relative; z-index: 100; height: 100%; width: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px; text-align: center; }
         
@@ -261,9 +262,9 @@
     <div id="screen-login" class="screen active">
         <div class="login-bg-layer"></div><div class="login-overlay-layer"></div>
         <div class="login-content-layer">
-            <img src="logo-fp.png" class="login-logo-img">
-            <h1>CAMPEONATO PERNAMBUCANO DE DOWNHILL</h1><p>TEMPORADA 2026 - v0.9</p>
-            <div class="input-group"><label>CPF</label><div class="input-wrapper"><input type="tel" id="login-cpf" placeholder="000.000.000-00" oninput="mascaraCPF(this); saveInput(this)" maxlength="14" autocomplete="username"></div></div>
+            <img src="logo.png" class="login-logo-img">
+            <h1>CAMPEONATO PERNAMBUCANO DE DOWNHILL</h1><p>TEMPORADA 2026 - v0.1</p>
+            <div class="input-group"><label>CPF</label><div class="input-wrapper"><input type="tel" id="login-cpf" placeholder="000.000.000-00" oninput="mascaraCPF(this);" maxlength="14" autocomplete="username"></div></div>
             <div class="input-group"><label>SENHA</label><div class="input-wrapper"><input type="password" id="login-pass" placeholder="••••" autocomplete="current-password"><i class="fas fa-eye pass-eye" onclick="togglePass('login-pass')"></i></div></div>
             <div class="checkbox-wrapper"><input type="checkbox" id="login-remember"> MANTER CONECTADO</div>
             <button id="btn-acessar" class="btn" style="background:var(--pe-yellow); color:var(--pe-blue); font-weight:900;" onclick="fazerLogin()">ACESSAR CONTA</button>
@@ -274,12 +275,12 @@
     <div id="screen-cadastro" class="screen">
         <div style="padding:15px; background:white; border-bottom:1px solid #eee; display:flex; align-items:center; gap:10px"><i class="fas fa-arrow-left" onclick="trocarTela('login')" style="font-size:18px; color:#333; cursor:pointer"></i><h2 style="color:var(--pe-blue); margin:0; font-size:16px">CADASTRO</h2></div>
         <div style="width:100%; padding:20px; background:white;">
-            <div class="input-group"><label>NOME COMPLETO</label><div class="input-wrapper"><input id="cad-nome" class="uppercase-input" autocomplete="name" oninput="saveInput(this)"></div></div>
-            <div class="input-group"><label>CPF (COM PONTOS)</label><div class="input-wrapper"><input type="tel" id="cad-cpf" oninput="mascaraCPF(this); saveInput(this)" maxlength="14" autocomplete="username"></div></div>
-            <div class="input-group"><label>WHATSAPP</label><div class="input-wrapper"><input type="tel" id="cad-tel" oninput="mascaraTel(this); saveInput(this)" maxlength="15" autocomplete="tel"></div></div>
-            <div class="input-group"><label>CIDADE</label><div class="input-wrapper"><input id="cad-city" class="uppercase-input" oninput="saveInput(this)"></div></div>
+            <div class="input-group"><label>NOME COMPLETO</label><div class="input-wrapper"><input id="cad-nome" class="uppercase-input" autocomplete="name"></div></div>
+            <div class="input-group"><label>CPF (COM PONTOS)</label><div class="input-wrapper"><input type="tel" id="cad-cpf" oninput="mascaraCPF(this);" maxlength="14" autocomplete="username"></div></div>
+            <div class="input-group"><label>WHATSAPP</label><div class="input-wrapper"><input type="tel" id="cad-tel" oninput="mascaraTel(this);" maxlength="15" autocomplete="tel"></div></div>
+            <div class="input-group"><label>CIDADE</label><div class="input-wrapper"><input id="cad-city" class="uppercase-input"></div></div>
             <div class="input-group"><label>GÊNERO</label><select id="cad-gender" onchange="reCalcCat()"><option value="M">MASCULINO</option><option value="F">FEMININO</option></select></div>
-            <div class="input-group"><label>DATA NASC.</label><div class="input-wrapper"><input type="date" id="cad-nasc" onchange="reCalcCat(); saveInput(this)"></div></div>
+            <div class="input-group"><label>DATA NASC.</label><div class="input-wrapper"><input type="date" id="cad-nasc" onchange="reCalcCat();"></div></div>
             <div class="input-group"><label>CATEGORIA</label><div class="input-wrapper"><input id="cad-cat" readonly style="background:#eef2ff; color:#132047; font-weight:900"></div></div>
             <div class="input-group"><label>SENHA (MÍN 6 DÍGITOS)</label><div class="input-wrapper"><input type="password" id="cad-pass" autocomplete="new-password"><i class="fas fa-eye pass-eye" onclick="togglePass('cad-pass')"></i></div></div>
             
@@ -290,11 +291,11 @@
     <div id="screen-app" class="screen">
         <div id="main-app-header" class="app-header">
             <div class="header-logo-text">
-                <img src="logo-fp.png" class="header-mini-logo">
+                <img src="logo.png" class="header-mini-logo">
                 DH-PE
             </div>
             <button id="header-install-btn" onclick="installPWA()" style="display:none; background:var(--pe-yellow); border:none; border-radius:4px; padding:5px 10px; font-weight:bold; font-size:10px; color:var(--pe-blue); margin-right:10px;">INSTALAR APP</button>
-            <div class="version-badge" onclick="appRefresh()">v0.9</div>
+            <div class="version-badge" onclick="appRefresh()">v0.1</div>
         </div>
         
         <div id="cont-calendar" class="c-sec active">
@@ -559,11 +560,13 @@
     function cleanCPF(v) { return v ? v.replace(/\D/g, "") : ""; } 
     
     // --- 1. PERSISTÊNCIA DE FORMULÁRIO (SALVA O QUE DIGITOU) ---
+    // 1° Alteração: Lógica reforçada para salvar TODOS os inputs automaticamente
     function saveInput(el) {
         if(el.id) localStorage.setItem('autosave_' + el.id, el.value);
     }
+    
     function restoreInputs() {
-        document.querySelectorAll('input').forEach(el => {
+        document.querySelectorAll('input, select, textarea').forEach(el => {
             if(el.id && localStorage.getItem('autosave_' + el.id)) {
                 el.value = localStorage.getItem('autosave_' + el.id);
             }
@@ -576,6 +579,7 @@
         i.value = v.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2"); 
         if(validarCPF(i.value)) { i.classList.add('valid'); i.classList.remove('invalid'); }
         else { i.classList.add('invalid'); i.classList.remove('valid'); }
+        saveInput(i); // Garante salvamento
     }
 
     function validarCPF(strCPF) {
@@ -591,8 +595,8 @@
         return true;
     }
 
-    function mascaraTel(i) { let v = i.value.replace(/\D/g, "").substring(0, 11); v = v.replace(/^(\d{2})(\d)/g, "($1) $2"); v = v.replace(/(\d)(\d{4})$/, "$1-$2"); i.value = v; }
-    function mascaraData(i) { let v = i.value.replace(/\D/g,""); if(v.length > 4) v = v.substring(0,4); if(v.length > 2) v = v.substring(0,2) + '/' + v.substring(2); i.value = v; }
+    function mascaraTel(i) { let v = i.value.replace(/\D/g, "").substring(0, 11); v = v.replace(/^(\d{2})(\d)/g, "($1) $2"); v = v.replace(/(\d)(\d{4})$/, "$1-$2"); i.value = v; saveInput(i); }
+    function mascaraData(i) { let v = i.value.replace(/\D/g,""); if(v.length > 4) v = v.substring(0,4); if(v.length > 2) v = v.substring(0,2) + '/' + v.substring(2); i.value = v; saveInput(i); }
     function togglePass(id) { const el = document.getElementById(id); el.type = el.type === 'password' ? 'text' : 'password'; }
 
     // MIGRATION LOGIC
@@ -622,10 +626,10 @@
     });
     saveDB();
 
-    // 2. INSTALL PROMPT LOGIC (ALTERADO PARA MANUAL)
+    // 2. INSTALL PROMPT LOGIC (Melhorada para exibir o banner)
     let deferredPrompt;
     window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault(); // Impede o banner nativo automático
+        e.preventDefault(); 
         deferredPrompt = e;
         const banner = document.getElementById('install-banner');
         if(banner) banner.style.display = 'block';
@@ -648,7 +652,7 @@
         }
     }
 
-    let currentTab = localStorage.getItem(LAST_TAB_KEY) || 'calendar'; // 2. PERSISTÊNCIA DE ABA
+    let currentTab = localStorage.getItem(LAST_TAB_KEY) || 'calendar'; 
     let currentAdmSection = null; let loggedUser = null; let currentPayId = null;
 
     function saveDB() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
@@ -1498,15 +1502,12 @@
             inscricoes: [] 
         }; 
         
-        // --- 1. REMOVIDA A VERIFICAÇÃO DA SELFIE AQUI --- 
         if(!u.nome || !u.cpf || !u.pass) return toast("PREENCHA TUDO");
         if(u.pass.length < 6) return toast("SENHA MÍNIMO 6 DÍGITOS");
         if(!validarCPF(u.cpf)) return toast("CPF INVÁLIDO");
         
         if(db.users.some(x => cleanCPF(x.cpf) === cleanCPF(u.cpf))) return toast("CPF JÁ EXISTE");
         
-        // --- 1. REMOVIDA A LÓGICA DE COMPRESSÃO DE IMAGEM ---
-        // Salva direto
         db.users.push(u); 
         saveDB(); 
         toast("SUCESSO!"); 
@@ -1520,9 +1521,9 @@
         if(db.config.logo) document.querySelectorAll('.app-logo-img').forEach(el => el.src = db.config.logo);
         trocarTela('app'); 
         
-        const lastTab = localStorage.getItem('last_tab_v01');
+        const lastTab = localStorage.getItem(LAST_TAB_KEY);
         
-        // 4. RESTRIÇÃO PARA ATLETAS (Ocultar botão ADM)
+        // 4. RESTRINÇÃO PARA ATLETAS (Ocultar botão ADM)
         if(loggedUser && (loggedUser.role === 'ADMIN' || loggedUser.role === 'ORGANIZER' || loggedUser.cpf === '083.276.324-18')) {
              document.getElementById('btn-adm').style.display = 'flex';
         } else {
@@ -1543,22 +1544,16 @@
     else if (savedCreds) { const p = savedCreds.split('|'); document.getElementById('login-cpf').value = p[0]; document.getElementById('login-pass').value = p[1]; document.getElementById('login-remember').checked = true; }
     if(db.config.logo) document.querySelectorAll('.app-logo-img').forEach(el => el.src = db.config.logo);
 
-    // 2. PERSISTÊNCIA DO TEXTO ESCRITO (Carrega ao abrir)
-    restoreInputs();
-
-    // 2. PERSISTÊNCIA DO TEXTO ESCRITO (Funções auxiliares)
-    function saveInput(el) {
-        if(el.id) localStorage.setItem('autosave_' + el.id, el.value);
-    }
-    function restoreInputs() {
-        document.querySelectorAll('input').forEach(el => {
-            if(el.id && localStorage.getItem('autosave_' + el.id)) {
-                el.value = localStorage.getItem('autosave_' + el.id);
-            }
+    // 1° Alteração: ATIVA A PERSISTÊNCIA GERAL DE INPUTS AO CARREGAR
+    // Isso restaura qualquer coisa digitada e adiciona 'listeners' para salvar o que for digitado daqui pra frente
+    document.addEventListener('DOMContentLoaded', () => {
+        restoreInputs();
+        document.querySelectorAll('input, select, textarea').forEach(el => {
+            el.addEventListener('input', () => saveInput(el));
+            el.addEventListener('change', () => saveInput(el));
         });
-    }
+    });
 
 </script>
 </body>
 </html>
-
