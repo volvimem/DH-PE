@@ -3,36 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DH-PE v0.2 (Beta)</title>
+    <title>DH-PE v1.0</title>
     
     <link rel="manifest" href="manifest.json">
-
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="apple-touch-icon" href="logo.png">
+    
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 </head>
 <body>
 
-<div class="toast" id="toast">MSG</div>
-<div id="area-cupom-visual" style="display:none"></div>
+<div class="toast" id="toast"></div> <div id="area-cupom-visual" style="display:none"></div>
 <div id="printable-area" style="display:none; padding:20px;"></div>
 
 <div class="modal-overlay" id="modal-recovery">
     <div class="modal-box">
         <h3 style="color:var(--pe-blue)">RECUPERAR SENHA</h3>
-        <p style="font-size:11px; color:#666; margin-bottom:15px">Preencha os dados para visualizar sua senha.</p>
-        
+        <p style="font-size:11px; color:#666; margin-bottom:15px">Dados para validação:</p>
         <div class="input-group"><label>SEU CPF</label><input type="tel" id="rec-cpf" oninput="mascaraCPF(this)"></div>
-        <div class="input-group"><label>SEU TELEFONE (Igual ao cadastro)</label><input type="tel" id="rec-tel" oninput="mascaraTel(this)"></div>
-        
+        <div class="input-group"><label>TELEFONE (Igual cadastro)</label><input type="tel" id="rec-tel" oninput="mascaraTel(this)"></div>
         <div id="rec-security-area" style="display:none; margin-top:10px; border-top:1px dashed #ccc; padding-top:10px;">
             <p style="font-size:10px; font-weight:bold; color:var(--pe-blue); margin-bottom:5px" id="rec-question-display">...</p>
-            <div class="input-group"><label>SUA RESPOSTA DE SEGURANÇA</label><input id="rec-answer" class="uppercase-input"></div>
+            <div class="input-group"><label>SUA RESPOSTA</label><input id="rec-answer" class="uppercase-input"></div>
             <button class="btn" onclick="revelarSenha()">MOSTRAR SENHA</button>
         </div>
-
         <button class="btn" id="btn-buscart-rec" onclick="buscarUsuarioRecuperacao()">CONTINUAR</button>
         <button class="btn" style="background:#ddd; color:#333; margin-top:5px" onclick="fecharModal('modal-recovery')">FECHAR</button>
     </div>
@@ -50,8 +47,8 @@
                 <div class="share-check"><i class="fas fa-check-circle"></i> PRESENÇA CONFIRMADA</div>
             </div>
         </div>
-        <p style="color:white; font-size:11px; margin:15px 0; text-shadow:0 1px 2px black">CLIQUE ABAIXO PARA COMPARTILHAR</p>
-        <button class="btn" style="background:#E1306C; margin-bottom:5px" onclick="shareTicketImage()">COMPARTILHAR IMAGEM <i class="fas fa-share-alt"></i></button>
+        <p style="color:white; font-size:11px; margin:15px 0; text-shadow:0 1px 2px black">CLIQUE ABAIXO PARA BAIXAR</p>
+        <button class="btn" style="background:#E1306C; margin-bottom:5px" onclick="shareTicketImage()">BAIXAR IMAGEM <i class="fas fa-download"></i></button>
         <button class="btn" style="background:white; color:#333" onclick="fecharModal('modal-share')">FECHAR</button>
     </div>
 </div>
@@ -60,12 +57,20 @@
     <div class="modal-box">
         <h3 style="color:var(--pe-blue)">TABELA DE PONTOS</h3>
         <p style="font-size:11px; color:#666" id="modal-points-subtitle">...</p>
-        <div id="public-points-list" style="margin-top:10px; text-align:left;"></div>
+        <div id="public-points-list" style="margin-top:10px; text-align:left; max-height:300px; overflow-y:auto"></div>
         <button class="btn" style="background:#ddd; color:#333; margin-top:15px" onclick="fecharModal('modal-points')">FECHAR</button>
     </div>
 </div>
 
-<div class="modal-overlay" id="modal-print-options"><div class="modal-box"><h3 style="color:var(--pe-blue)">IMPRIMIR PLANILHA</h3><button class="btn" onclick="generatePrint('ALL')">TODAS CATEGORIAS (GERAL)</button><div style="margin:10px 0; border-top:1px solid #eee; padding-top:10px; font-size:10px; font-weight:bold; color:#666">OU POR CATEGORIA:</div><div id="print-cat-list" style="max-height:200px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;"></div><button class="btn" style="background:#ddd; color:#333; margin-top:10px" onclick="fecharModal('modal-print-options')">CANCELAR</button></div></div>
+<div class="modal-overlay" id="modal-print-options">
+    <div class="modal-box">
+        <h3 style="color:var(--pe-blue)">IMPRIMIR PLANILHA</h3>
+        <button class="btn" onclick="generatePrint('ALL')">TODAS CATEGORIAS (GERAL)</button>
+        <div style="margin:10px 0; border-top:1px solid #eee; padding-top:10px; font-size:10px; font-weight:bold; color:#666">OU POR CATEGORIA:</div>
+        <div id="print-cat-list" style="max-height:200px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;"></div>
+        <button class="btn" style="background:#ddd; color:#333; margin-top:10px" onclick="fecharModal('modal-print-options')">CANCELAR</button>
+    </div>
+</div>
 
 <div class="modal-overlay" id="modal-edit-user">
     <div class="modal-box">
@@ -83,15 +88,28 @@
     </div>
 </div>
 
-<div class="modal-overlay" id="modal-poster"><div class="modal-box" style="padding:0; background:black; border:none; width:95%; max-width:400px"><div style="position:relative"><img id="img-poster-view" style="width:100%; display:block"><button onclick="fecharModal('modal-poster')" style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.5); color:white; border:none; padding:10px; border-radius:50%; cursor:pointer"><i class="fas fa-times"></i></button></div></div></div>
+<div class="modal-overlay" id="modal-poster">
+    <div class="modal-box" style="padding:0; background:black; border:none; width:95%; max-width:400px">
+        <div style="position:relative">
+            <img id="img-poster-view" style="width:100%; display:block">
+            <button onclick="fecharModal('modal-poster')" style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.5); color:white; border:none; padding:10px; border-radius:50%; cursor:pointer"><i class="fas fa-times"></i></button>
+        </div>
+    </div>
+</div>
 
-<div class="modal-overlay" id="modal-ticket"><div class="modal-box"><h2 style="color:var(--pe-blue); margin-bottom:5px">TICKET CONFIRMADO</h2><div style="width:50px; height:5px; background:var(--pe-grad); margin:0 auto 15px auto"></div><div style="text-align:left; border:1px dashed #ccc; padding:15px; margin-bottom:15px; background:#f9f9f9"><b style="font-size:10px; color:#999">EVENTO:</b><br><span style="font-size:14px; color:var(--pe-blue); font-weight:900" id="tk-evento">...</span><br><br><b style="font-size:10px; color:#999">PILOTO:</b><br><span style="font-size:12px; color:#333; font-weight:bold" id="tk-nome">...</span></div><button class="btn" onclick="openShareModal(document.getElementById('tk-evento').innerText)"><i class="fab fa-instagram"></i> COMPARTILHAR IMAGEM</button><button class="btn" style="margin-top:5px" onclick="imprimirTicket()"><i class="fas fa-print"></i> IMPRIMIR PDF</button><button class="btn" style="margin-top:5px; background:#333" onclick="gerarTermo(currentPayId.id)"><i class="fas fa-file-contract"></i> IMPRIMIR TERMO</button><button class="btn" onclick="fecharModal('modal-ticket')" style="background:#ddd; color:#333; margin-top:5px">FECHAR</button></div></div>
-
-<div class="modal-overlay" id="modal-pix"><div class="modal-box"><h3 style="color:var(--pe-green)"><i class="fas fa-qrcode"></i> PAGAMENTO</h3><p style="font-size:12px; color:#666; margin:5px 0">VALOR: <b style="color:var(--pe-blue)" id="pix-valor-display">R$ 0,00</b></p><div style="background:#f0fdf4; border:1px dashed var(--pe-green); padding:10px; margin:10px 0; font-size:10px; word-break:break-all; font-weight:bold" id="pix-copy">...</div>
-<p style="font-size:10px; color:#666; margin:5px 0">SUPORTE: <b id="support-phone-display">...</b></p>
-<button class="btn" style="margin-top:0; background:#64748b" onclick="copiarPix()"><i class="far fa-copy"></i> COPIAR CÓDIGO</button><hr style="border:0; border-top:1px solid #eee; margin:15px 0"><button class="btn" style="background:#25D366" onclick="enviarComprovanteWhatsApp()"><i class="fab fa-whatsapp"></i> ENVIAR COMPROVANTE</button><button class="btn" style="background:var(--pe-blue); margin-top:5px" onclick="confirmarJaPaguei()"><i class="fas fa-check-circle"></i> JÁ PAGUEI (REGISTRAR)</button><button class="btn" style="background:#ddd; color:#333; margin-top:5px" onclick="fecharModal('modal-pix')">CANCELAR</button></div></div>
-
-<div class="modal-overlay" id="modal-info"><div class="modal-box"><h3 id="info-title" style="color:var(--pe-blue)">INFO</h3><p id="info-text" style="font-size:13px; color:#555; margin:15px 0; text-align:left">...</p><button class="btn" onclick="fecharModal('modal-info')" style="background:#ddd; color:#333">FECHAR</button></div></div>
+<div class="modal-overlay" id="modal-pix">
+    <div class="modal-box">
+        <h3 style="color:var(--pe-green)"><i class="fas fa-qrcode"></i> PAGAMENTO</h3>
+        <p style="font-size:12px; color:#666; margin:5px 0">VALOR: <b style="color:var(--pe-blue)" id="pix-valor-display">R$ 0,00</b></p>
+        <div style="background:#f0fdf4; border:1px dashed var(--pe-green); padding:10px; margin:10px 0; font-size:10px; word-break:break-all; font-weight:bold" id="pix-copy">...</div>
+        <p style="font-size:10px; color:#666; margin:5px 0">SUPORTE: <b id="support-phone-display">...</b></p>
+        <button class="btn" style="margin-top:0; background:#64748b" onclick="copiarPix()"><i class="far fa-copy"></i> COPIAR CÓDIGO</button>
+        <hr style="border:0; border-top:1px solid #eee; margin:15px 0">
+        <button class="btn" style="background:#25D366" onclick="enviarComprovanteWhatsApp()"><i class="fab fa-whatsapp"></i> ENVIAR COMPROVANTE</button>
+        <button class="btn" style="background:var(--pe-blue); margin-top:5px" onclick="confirmarJaPaguei()"><i class="fas fa-check-circle"></i> JÁ PAGUEI (REGISTRAR)</button>
+        <button class="btn" style="background:#ddd; color:#333; margin-top:5px" onclick="fecharModal('modal-pix')">CANCELAR</button>
+    </div>
+</div>
 
 
 <div class="app-container">
@@ -103,11 +121,8 @@
             <h1>CAMPEONATO PERNAMBUCANO DE DOWNHILL</h1><p>TEMPORADA 2026</p>
             <div class="input-group"><label>CPF</label><div class="input-wrapper"><input type="tel" id="login-cpf" placeholder="000.000.000-00" oninput="mascaraCPF(this);" maxlength="14" autocomplete="username"></div></div>
             <div class="input-group"><label>SENHA</label><div class="input-wrapper"><input type="password" id="login-pass" placeholder="••••" autocomplete="current-password"><i class="fas fa-eye pass-eye" onclick="togglePass('login-pass')"></i></div></div>
-            
             <div class="checkbox-wrapper"><input type="checkbox" id="login-remember"> MANTER CONECTADO</div>
-            
             <button id="btn-acessar" class="btn" style="background:var(--pe-yellow); color:var(--pe-blue); font-weight:900;" onclick="fazerLogin()">ACESSAR CONTA</button>
-            
             <div style="display:flex; gap:10px; width:100%; margin-top:10px;">
                 <button class="btn" onclick="trocarTela('cadastro')" style="background:rgba(255,255,255,0.2); color:white; margin:0; font-size:12px">CRIAR CONTA</button>
                 <button class="btn" onclick="abrirRecuperacao()" style="background:rgba(255,255,255,0.1); color:#eee; margin:0; border:none; font-size:12px">ESQUECI SENHA</button>
@@ -120,50 +135,32 @@
         <div style="width:100%; padding:20px; background:white;">
             <div class="input-group"><label>NOME COMPLETO</label><div class="input-wrapper"><input id="cad-nome" class="uppercase-input" autocomplete="name"></div></div>
             <div class="input-group"><label>CPF (COM PONTOS)</label><div class="input-wrapper"><input type="tel" id="cad-cpf" oninput="mascaraCPF(this);" maxlength="14" autocomplete="username"></div></div>
-            <div class="input-group"><label>WHATSAPP (PARA RECUPERAR SENHA)</label><div class="input-wrapper"><input type="tel" id="cad-tel" oninput="mascaraTel(this);" maxlength="15" autocomplete="tel"></div></div>
+            <div class="input-group"><label>WHATSAPP</label><div class="input-wrapper"><input type="tel" id="cad-tel" oninput="mascaraTel(this);" maxlength="15" autocomplete="tel"></div></div>
             <div class="input-group"><label>CIDADE</label><div class="input-wrapper"><input id="cad-city" class="uppercase-input"></div></div>
             <div class="input-group"><label>GÊNERO</label><select id="cad-gender" onchange="reCalcCat()"><option value="M">MASCULINO</option><option value="F">FEMININO</option></select></div>
             <div class="input-group"><label>DATA NASC.</label><div class="input-wrapper"><input type="date" id="cad-nasc" onchange="reCalcCat();"></div></div>
             <div class="input-group"><label>CATEGORIA</label><div class="input-wrapper"><input id="cad-cat" readonly style="background:#eef2ff; color:#132047; font-weight:900"></div></div>
             <div class="input-group"><label>SENHA (MÍN 6 DÍGITOS)</label><div class="input-wrapper"><input type="password" id="cad-pass" autocomplete="new-password"><i class="fas fa-eye pass-eye" onclick="togglePass('cad-pass')"></i></div></div>
-            
             <div style="margin-top:20px; border-top:1px solid #eee; padding-top:10px">
-                <b style="color:var(--pe-blue); font-size:12px; display:block; margin-bottom:10px;">SEGURANÇA (RECUPERAÇÃO DE SENHA)</b>
-                <div class="input-group">
-                    <label>PERGUNTA DE SEGURANÇA</label>
-                    <select id="cad-sec-q">
-                        <option value="nome_mae">Qual o primeiro nome da sua mãe?</option>
-                        <option value="animal">Qual o nome do seu primeiro animal?</option>
-                        <option value="cidade_nas">Em que cidade você nasceu?</option>
-                        <option value="time">Qual seu time do coração?</option>
-                    </select>
-                </div>
+                <b style="color:var(--pe-blue); font-size:12px; display:block; margin-bottom:10px;">PERGUNTA DE SEGURANÇA</b>
+                <div class="input-group"><select id="cad-sec-q"><option value="nome_mae">Qual o primeiro nome da sua mãe?</option><option value="animal">Qual o nome do seu primeiro animal?</option><option value="cidade_nas">Em que cidade você nasceu?</option><option value="time">Qual seu time do coração?</option></select></div>
                 <div class="input-group"><label>SUA RESPOSTA</label><div class="input-wrapper"><input id="cad-sec-a" class="uppercase-input"></div></div>
             </div>
-
             <button class="btn" onclick="cadastrar()">CONFIRMAR CADASTRO</button>
         </div>
     </div>
 
     <div id="screen-app" class="screen">
         <div id="main-app-header" class="app-header">
-            <div class="header-logo-text">
-                <img src="logo.png" class="header-mini-logo">
-                DH-PE
-            </div>
-            
+            <div class="header-logo-text"><img src="logo.png" class="header-mini-logo"> DH-PE</div>
             <div style="display:flex; align-items:center; gap:10px;">
                  <div class="version-badge" onclick="toggleDarkMode()"><i class="fas fa-moon"></i></div>
-                 <div class="version-badge" onclick="appRefresh()">v0.2</div>
+                 <div class="version-badge" onclick="appRefresh()">v1.0</div>
             </div>
         </div>
         
         <div id="cont-calendar" class="c-sec active">
-            <div class="section-header-area">
-                 <div class="section-title-row" style="display:flex; justify-content:space-between; align-items:center;">
-                    <div class="section-title">CALENDÁRIO 2026</div>
-                 </div>
-            </div>
+            <div class="section-header-area"><div class="section-title">CALENDÁRIO 2026</div></div>
             <div class="calendar-wrapper">
                 <div id="calendar-highlight"></div>
                 <div id="calendar-others" class="mini-events-grid"></div>
@@ -174,18 +171,10 @@
             <div class="section-header-area">
                 <div class="section-title-row">
                     <div class="section-title">TEMPOS</div>
-                    <div>
-                        <button class="btn-icon" onclick="downloadSectionImage('list-tempos', 'Tempos DH-PE')"><i class="fas fa-camera"></i></button>
-                        <button class="btn-icon" onclick="toggleSearch('tempos')"><i class="fas fa-search"></i></button>
-                    </div>
+                    <div><button class="btn-icon" onclick="downloadSectionImage('list-tempos', 'Tempos DH-PE')"><i class="fas fa-camera"></i></button><button class="btn-icon" onclick="toggleSearch('tempos')"><i class="fas fa-search"></i></button></div>
                 </div>
-                <div class="filter-row">
-                    <select id="filter-evt-tempos" onchange="renderContent('tempos')" style="flex:1"><option value="ALL">TODAS ETAPAS</option></select>
-                    <select id="filter-cat-tempos" onchange="renderContent('tempos')" style="flex:1"></select>
-                </div>
-                <div id="search-box-tempos" class="search-area">
-                    <input type="text" id="search-input-tempos" placeholder="Buscar..." oninput="renderContent('tempos')">
-                </div>
+                <div class="filter-row"><select id="filter-evt-tempos" onchange="renderContent('tempos')" style="flex:1"><option value="ALL">TODAS ETAPAS</option></select><select id="filter-cat-tempos" onchange="renderContent('tempos')" style="flex:1"></select></div>
+                <div id="search-box-tempos" class="search-area"><input type="text" id="search-input-tempos" placeholder="Buscar..." oninput="renderContent('tempos')"></div>
             </div>
             <div class="rank-list-container" id="list-tempos"></div>
         </div>
@@ -194,24 +183,15 @@
             <div class="section-header-area">
                 <div class="section-title-row">
                     <div class="section-title">RANKING</div>
-                    <div>
-                        <button class="btn-icon" onclick="downloadSectionImage('list-ranking', 'Ranking DH-PE')"><i class="fas fa-camera"></i></button>
-                        <button class="btn-icon" onclick="toggleSearch('ranking')"><i class="fas fa-search"></i></button>
-                    </div>
+                    <div><button class="btn-icon" onclick="downloadSectionImage('list-ranking', 'Ranking DH-PE')"><i class="fas fa-camera"></i></button><button class="btn-icon" onclick="toggleSearch('ranking')"><i class="fas fa-search"></i></button></div>
                 </div>
-                <div class="filter-row">
-                    <select id="filter-evt-ranking" onchange="renderContent('ranking')" style="flex:1"><option value="ALL">GERAL (SOMA)</option></select>
-                    <select id="filter-cat-ranking" onchange="renderContent('ranking')" style="flex:1"></select>
-                </div>
-                <div id="search-box-ranking" class="search-area">
-                    <input type="text" id="search-input-ranking" placeholder="Buscar..." oninput="renderContent('ranking')">
-                </div>
+                <div class="filter-row"><select id="filter-evt-ranking" onchange="renderContent('ranking')" style="flex:1"><option value="ALL">GERAL (SOMA)</option></select><select id="filter-cat-ranking" onchange="renderContent('ranking')" style="flex:1"></select></div>
+                <div id="search-box-ranking" class="search-area"><input type="text" id="search-input-ranking" placeholder="Buscar..." oninput="renderContent('ranking')"></div>
             </div>
             <div class="rank-list-container" id="list-ranking"></div>
         </div>
 
         <div id="cont-adm" class="c-sec" style="display:none; padding:10px">
-            <div class="admin-header-flag"></div>
             <div class="section-title" style="color:var(--pe-red)">PAINEL ORGANIZAÇÃO</div>
             
             <div id="adm-login-box">
@@ -235,62 +215,45 @@
                         <input type="hidden" id="adm-evt-id-edit">
                         <input id="adm-evt-t" placeholder="NOME DO EVENTO" class="uppercase-input" style="margin-top:5px" oninput="saveEventForm()">
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-top:5px">
-                            <div><label style="font-size:9px; font-weight:bold">MÊS</label><select id="adm-evt-month" onchange="saveEventForm()"><option value="JAN">JAN</option><option value="FEV">FEV</option><option value="MAR">MAR</option><option value="ABR">ABR</option><option value="MAI">MAI</option><option value="JUN">JUN</option><option value="JUL">JUL</option><option value="AGO">AGO</option><option value="SET">SET</option><option value="OUT">OUT</option><option value="NOV">NOV</option><option value="DEZ">DEZ</option></select></div>
-                            <div><label style="font-size:9px; font-weight:bold">DIAS</label><input id="adm-evt-d" placeholder="00/00" oninput="mascaraData(this); saveEventForm()" maxlength="5"></div>
+                            <div><label>MÊS</label><select id="adm-evt-month" onchange="saveEventForm()"><option value="JAN">JAN</option><option value="FEV">FEV</option><option value="MAR">MAR</option><option value="ABR">ABR</option><option value="MAI">MAI</option><option value="JUN">JUN</option><option value="JUL">JUL</option><option value="AGO">AGO</option><option value="SET">SET</option><option value="OUT">OUT</option><option value="NOV">NOV</option><option value="DEZ">DEZ</option></select></div>
+                            <div><label>DIAS</label><input id="adm-evt-d" placeholder="00/00" oninput="mascaraData(this); saveEventForm()" maxlength="5"></div>
                         </div>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-top:5px">
                             <input id="adm-evt-c" placeholder="CIDADE" class="uppercase-input" oninput="saveEventForm()">
                             <input id="adm-evt-v" placeholder="VALOR (R$)" type="tel" oninput="saveEventForm()">
                         </div>
                         <div style="margin-top:5px; padding:5px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:4px">
-                            <label style="font-size:9px; font-weight:bold">DATA LIMITE INSCRIÇÃO</label>
-                            <input type="date" id="adm-evt-close-date" onchange="saveEventForm()">
-                            <div style="margin-top:5px">
-                                <label style="font-size:9px; font-weight:bold">STATUS ATUAL:</label>
-                                <select id="adm-evt-status" onchange="saveEventForm()"><option value="OPEN">ABERTO</option><option value="CLOSED">ENCERRADO</option></select>
-                            </div>
+                            <label>DATA LIMITE</label><input type="date" id="adm-evt-close-date" onchange="saveEventForm()">
+                            <div style="margin-top:5px"><label>STATUS:</label><select id="adm-evt-status" onchange="saveEventForm()"><option value="OPEN">ABERTO</option><option value="CLOSED">ENCERRADO</option></select></div>
                         </div>
-                        <div style="margin-top:5px">
-                            <label style="font-size:9px; font-weight:bold; color:#666">CHAVE PIX DO EVENTO</label>
-                            <input id="adm-evt-pix" placeholder="Cole a chave PIX aqui..." oninput="saveEventForm()">
-                        </div>
-                        <div style="margin-top:5px"><label style="font-size:9px; font-weight:bold; color:#666">CARTAZ</label><input type="file" id="adm-evt-img" accept="image/*"></div>
+                        <div style="margin-top:5px"><label>CHAVE PIX</label><input id="adm-evt-pix" placeholder="Cole a chave PIX aqui..." oninput="saveEventForm()"></div>
+                        <div style="margin-top:5px"><label>CARTAZ</label><input type="file" id="adm-evt-img" accept="image/*"></div>
                         <div style="display:flex; gap:10px; margin:10px 0; font-size:10px; font-weight:bold"><label><input type="checkbox" id="adm-evt-cb-pe" checked> ESTADUAL</label><label><input type="checkbox" id="adm-evt-cb-cbc"> CBC</label></div>
+                        
                         <div style="margin-top:10px; border-top:2px dashed #eee; padding-top:10px;">
-                            <b style="font-size:10px; color:var(--pe-blue)">PONTUAÇÃO (1º ao 20º)</b>
-                            <div style="background:#f8f9fa; padding:5px; border:1px solid #ddd; margin:5px 0;">
-                                <label style="font-size:9px; font-weight:bold">COPIAR PONTUAÇÃO DE:</label>
-                                <select id="adm-copy-points-source" onchange="copyPointsFrom(this.value)"><option value="">SELECIONE UM EVENTO...</option></select>
-                            </div>
+                            <b style="font-size:10px; color:var(--pe-blue)">PONTUAÇÃO</b>
+                            <div style="background:#f8f9fa; padding:5px; margin:5px 0;"><select id="adm-copy-points-source" onchange="copyPointsFrom(this.value)"><option value="">COPIAR DE...</option></select></div>
                             <div id="evt-points-grid" style="display:grid; grid-template-columns: repeat(5, 1fr); gap:3px; margin-top:5px"></div>
                         </div>
-                        <button class="btn" id="btn-save-event" style="padding:8px; margin:15px 0 0 0" onclick="addEvent()">CADASTRAR EVENTO</button>
-                        <button class="btn" style="background:#ddd; color:#333; margin-top:5px" onclick="clearEventForm()">CANCELAR / LIMPAR</button>
-                        <div style="margin-top:10px; border-top:1px solid #eee; padding-top:5px"><p style="font-size:9px; color:#999">LISTA</p><div id="adm-list-events"></div></div>
-                    </div>
-                    <button class="btn" style="background:#999; margin-top:20px" onclick="backToAdmMenu()">VOLTAR AO MENU</button>
-                </div>
 
-                <div id="adm-sec-config-global" style="display:none">
-                    <div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;">
-                        <b style="color:var(--pe-blue); font-size:12px">CONFIGURAÇÕES GERAIS</b>
-                        <div class="input-group"><label>TELEFONE SUPORTE (WhatsApp)</label><input id="adm-cfg-phone" type="tel" placeholder="(81) 99999-9999" oninput="mascaraTel(this)"></div>
-                        <button class="btn" onclick="saveGlobalConfig()">SALVAR DADOS</button>
+                        <button class="btn" id="btn-save-event" style="padding:8px; margin:15px 0 0 0" onclick="addEvent()">SALVAR EVENTO</button>
+                        <button class="btn" style="background:#ddd; color:#333; margin-top:5px" onclick="clearEventForm()">LIMPAR</button>
+                        <div style="margin-top:10px; border-top:1px solid #eee; padding-top:5px"><div id="adm-list-events"></div></div>
                     </div>
-                    <button class="btn" style="background:#999; margin-top:20px" onclick="backToAdmMenu()">VOLTAR AO MENU</button>
+                    <button class="btn" style="background:#999; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
                 </div>
 
                 <div id="adm-sec-results" style="display:none">
                     <div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;">
                         <b style="color:var(--pe-green); font-size:12px">LANÇAR RESULTADOS</b>
                         <input type="hidden" id="adm-res-index-edit"><input type="hidden" id="adm-res-type-edit">
-                        <select id="adm-res-evt" style="margin-top:5px; font-size:10px; font-weight:bold; color:var(--pe-blue)" onchange="saveAdmState()"><option value="">SELECIONE O EVENTO...</option></select>
+                        <select id="adm-res-evt" style="margin-top:5px; font-weight:bold; color:var(--pe-blue)" onchange="saveAdmState()"><option value="">SELECIONE O EVENTO...</option></select>
                         <div style="display:flex; gap:5px; margin-top:5px">
                             <select id="adm-res-type" style="width:auto" onchange="saveAdmState()"><option value="tempos">TEMPO</option><option value="ranking">RANKING</option></select>
-                            <select id="adm-res-id" style="flex:1; font-size:10px" onchange="saveAdmState()"><option value="">⬇ BUSQUE ABAIXO ⬇</option></select>
+                            <select id="adm-res-id" style="flex:1" onchange="saveAdmState()"><option value="">⬇ BUSQUE ABAIXO ⬇</option></select>
                         </div>
                         <div class="smart-search-container" style="margin-top:5px; z-index:1000">
-                            <input type="text" id="adm-res-search" placeholder="DIGITE NOME, CPF OU CIDADE..." oninput="filterPilots('res')" autocomplete="off">
+                            <input type="text" id="adm-res-search" placeholder="DIGITE NOME..." oninput="filterPilots('res')" autocomplete="off">
                             <div id="adm-res-list" class="smart-list"></div>
                         </div>
                         <div style="display:flex; gap:5px; margin-top:5px; position:relative; z-index:1;">
@@ -299,46 +262,9 @@
                         </div>
                         <button class="btn" id="btn-save-res" style="width:100%; margin-top:15px; background:var(--pe-green)" onclick="addResult()">LANÇAR</button>
                         <button class="btn" id="btn-cancel-res" style="width:100%; margin-top:5px; background:#999; display:none" onclick="cancelEditRes()">CANCELAR</button>
-                        <div style="margin-top:10px; border-top:1px solid #eee; padding-top:5px"><p style="font-size:9px; color:#999">ÚLTIMOS LANÇAMENTOS</p><div id="adm-list-results" style="max-height:150px; overflow-y:auto"></div></div>
+                        <div style="margin-top:10px; border-top:1px solid #eee; padding-top:5px"><div id="adm-list-results" style="max-height:150px; overflow-y:auto"></div></div>
                     </div>
-                    <button class="btn" style="background:#999; margin-top:20px" onclick="backToAdmMenu()">VOLTAR AO MENU</button>
-                </div>
-
-                <div id="adm-sec-organizer" style="display:none">
-                    <div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;">
-                        <b style="color:var(--pe-blue); font-size:12px">CADASTRAR ORGANIZADOR</b>
-                        <div class="smart-search-container" style="margin-top:20px; margin-bottom:10px; border-top:1px solid #eee; padding-top:10px">
-                            <label style="font-size:9px; font-weight:bold; color:#666">BUSCAR ATLETA PARA PROMOVER:</label>
-                            <input type="text" id="adm-org-search" placeholder="DIGITE NOME DO ATLETA..." oninput="filterPilots('org')" autocomplete="off">
-                            <div id="adm-org-list-search" class="smart-list"></div>
-                            <input type="hidden" id="adm-org-selected-cpf">
-                        </div>
-                        <div id="org-perms-area" style="display:none">
-                            <p style="font-size:10px;font-weight:bold;margin:10px 0 5px 0">PERMISSÃO DE ETAPAS:</p>
-                            <div id="org-events-list" class="perm-list"></div>
-                            <button class="btn" style="background:#666; margin-top:10px" onclick="promoteToOrganizer()">PROMOVER SELECIONADO</button>
-                        </div>
-                        <div style="margin-top:15px; border-top:1px solid #eee; padding-top:5px">
-                            <b style="font-size:10px; color:#666">LISTA DE ORGANIZADORES</b>
-                            <div id="adm-list-orgs" style="max-height:150px; overflow-y:auto"></div>
-                        </div>
-                    </div>
-                    <button class="btn" style="background:#999; margin-top:20px" onclick="backToAdmMenu()">VOLTAR AO MENU</button>
-                </div>
-
-                <div id="adm-sec-users-edit" style="display:none">
-                    <div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
-                            <b style="color:var(--pe-blue); font-size:12px">EDITAR ATLETAS (TOTAL)</b>
-                            <button class="btn-icon" onclick="toggleUserSearch()"><i class="fas fa-search"></i></button>
-                        </div>
-                         <div id="adm-user-search-wrapper" class="smart-search-container" style="display:none; margin-top:10px; margin-bottom:10px;">
-                            <input type="text" id="adm-edit-user-search" placeholder="BUSCAR POR NOME, CPF OU CIDADE..." oninput="filterPilots('edit-user')" autocomplete="off">
-                            <div id="adm-edit-user-list" class="smart-list" style="display:block; position:static; border:1px solid #eee; border-top:none; max-height: 250px; overflow-y:auto;"></div>
-                        </div>
-                        <p style="font-size:10px; color:#999; text-align:center">Clique na lupa para buscar atletas</p>
-                    </div>
-                    <button class="btn" style="background:#999; margin-top:20px" onclick="backToAdmMenu()">VOLTAR AO MENU</button>
+                    <button class="btn" style="background:#999; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
                 </div>
 
                 <div id="adm-sec-financial" style="display:none">
@@ -358,7 +284,48 @@
                         <div id="fin-list-container"></div>
                         <button class="btn" style="margin-top:10px; background:#333" onclick="openPrintOptions()"><i class="fas fa-print"></i> IMPRIMIR PLANILHA</button>
                     </div>
-                    <button class="btn" style="background:#999; margin-top:20px" onclick="backToAdmMenu()">VOLTAR AO MENU</button>
+                    <button class="btn" style="background:#999; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
+                </div>
+
+                <div id="adm-sec-organizer" style="display:none">
+                     <div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;">
+                        <b style="color:var(--pe-blue); font-size:12px">CADASTRAR ORGANIZADOR</b>
+                        <div class="smart-search-container" style="margin-top:20px;">
+                            <input type="text" id="adm-org-search" placeholder="DIGITE NOME DO ATLETA..." oninput="filterPilots('org')" autocomplete="off">
+                            <div id="adm-org-list-search" class="smart-list"></div>
+                            <input type="hidden" id="adm-org-selected-cpf">
+                        </div>
+                        <div id="org-perms-area" style="display:none">
+                            <p style="font-size:10px;font-weight:bold;margin:10px 0 5px 0">PERMISSÃO DE ETAPAS:</p>
+                            <div id="org-events-list" class="perm-list"></div>
+                            <button class="btn" style="background:#666; margin-top:10px" onclick="promoteToOrganizer()">PROMOVER</button>
+                        </div>
+                        <div style="margin-top:15px; border-top:1px solid #eee; padding-top:5px">
+                            <b style="font-size:10px; color:#666">LISTA</b>
+                            <div id="adm-list-orgs" style="max-height:150px; overflow-y:auto"></div>
+                        </div>
+                    </div>
+                    <button class="btn" style="background:#999; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
+                </div>
+                
+                <div id="adm-sec-users-edit" style="display:none">
+                    <div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;">
+                        <b style="color:var(--pe-blue); font-size:12px">BUSCAR ATLETA</b>
+                        <div class="smart-search-container" style="margin-top:10px;">
+                            <input type="text" id="adm-edit-user-search" placeholder="DIGITE NOME, CPF OU CIDADE..." oninput="filterPilots('edit-user')" autocomplete="off">
+                            <div id="adm-edit-user-list" class="smart-list" style="position:static; border:1px solid #eee; max-height: 250px; overflow-y:auto;"></div>
+                        </div>
+                    </div>
+                    <button class="btn" style="background:#999; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
+                </div>
+
+                <div id="adm-sec-config-global" style="display:none">
+                    <div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;">
+                        <b style="color:var(--pe-blue); font-size:12px">CONFIGURAÇÕES GERAIS</b>
+                        <div class="input-group"><label>TELEFONE SUPORTE (WhatsApp)</label><input id="adm-cfg-phone" type="tel" oninput="mascaraTel(this)"></div>
+                        <button class="btn" onclick="saveGlobalConfig()">SALVAR</button>
+                    </div>
+                    <button class="btn" style="background:#999; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
                 </div>
             </div>
         </div>
