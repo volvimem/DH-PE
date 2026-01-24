@@ -26,13 +26,12 @@ const DEFAULT_DB = {
     config: { phone: '' } 
 };
 
-// PROTEÇÃO 1: Garante que v seja String antes do replace
+// --- FUNÇÕES DE LIMPEZA E PROTEÇÃO ---
+
 function cleanCPF(v) { 
     if(!v) return "";
     return String(v).replace(/\D/g, ""); 
 } 
-
-// --- FUNÇÕES DE INPUT E VALIDAÇÃO ---
 
 function saveInput(el) {
     if(el && el.id) localStorage.setItem('autosave_' + el.id, el.value);
@@ -46,10 +45,9 @@ function restoreInputs() {
     });
 }
 
-// PROTEÇÃO 2: Garante que strCPF seja String (Correção do erro linha 40)
 function validarCPF(strCPF) {
     if(!strCPF) return false;
-    strCPF = String(strCPF).replace(/[^\d]+/g,''); // Força conversão para string
+    strCPF = String(strCPF).replace(/[^\d]+/g,''); 
     
     if (strCPF == '') return false;
     if (strCPF.length != 11 || /^(\d)\1{10}$/.test(strCPF)) return false;
@@ -71,17 +69,11 @@ function validarCPF(strCPF) {
 
 function mascaraCPF(i) { 
     if(!i || !i.value) return; 
-    
     let v = String(i.value).replace(/\D/g, "").substring(0, 11); 
     i.value = v.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2"); 
-    
-    // Verifica a classe apenas se o elemento suportar classList
     if(i.classList) {
-        if(validarCPF(i.value)) { 
-            i.classList.add('valid'); i.classList.remove('invalid'); 
-        } else { 
-            i.classList.add('invalid'); i.classList.remove('valid'); 
-        }
+        if(validarCPF(i.value)) { i.classList.add('valid'); i.classList.remove('invalid'); } 
+        else { i.classList.add('invalid'); i.classList.remove('valid'); }
     }
     saveInput(i); 
 }
@@ -115,25 +107,16 @@ if(!db) {
     for(let key of OLD_KEYS) {
         const oldData = localStorage.getItem(key);
         if(oldData) {
-            try {
-                db = JSON.parse(oldData);
-                console.log("Migrado de " + key);
-                break;
-            } catch(e) {}
+            try { db = JSON.parse(oldData); console.log("Migrado de " + key); break; } catch(e) {}
         }
     }
 }
 if(!db) db = DEFAULT_DB;
 if(!db.config) db.config = { phone: '' };
 
-// Atualiza Admin se necessário
 const adminIndex = db.users.findIndex(u => cleanCPF(u.cpf) === cleanCPF(ADMIN_CPF));
-if(adminIndex >= 0) { 
-    db.users[adminIndex].role = "ADMIN"; 
-    db.users[adminIndex].pass = ADMIN_PASS; 
-} else { 
-    db.users.push(DEFAULT_DB.users[0]); 
-}
+if(adminIndex >= 0) { db.users[adminIndex].role = "ADMIN"; db.users[adminIndex].pass = ADMIN_PASS; } 
+else { db.users.push(DEFAULT_DB.users[0]); }
 
 db.events.forEach(e => { 
     if(!e.points || e.points.length < 20) e.points = [...DEFAULT_POINTS]; 
@@ -142,13 +125,16 @@ db.events.forEach(e => {
 });
 saveDB();
 
-// --- PWA INSTALL ---
+// --- PWA INSTALL (CORRIGIDO) ---
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault(); 
     deferredPrompt = e;
+    // NÃO MOSTRA MAIS O BANNER TOPO
     const banner = document.getElementById('install-banner');
-    if(banner) banner.style.display = 'block';
+    if(banner) banner.style.display = 'none'; 
+    
+    // MOSTRA APENAS O BOTÃO NO HEADER (ANDROID/CHROME)
     const btnHeader = document.getElementById('header-install-btn');
     if(btnHeader) btnHeader.style.display = 'inline-block';
 });
@@ -158,45 +144,33 @@ function installPWA() {
         deferredPrompt.prompt();
         deferredPrompt.userChoice.then((choiceResult) => {
             if (choiceResult.outcome === 'accepted') {
-                document.getElementById('install-banner').style.display = 'none';
                 document.getElementById('header-install-btn').style.display = 'none';
             }
             deferredPrompt = null;
         });
-    } else {
-        alert("Para instalar: Toque em 'Compartilhar' (iPhone) ou 'Mais opções' (Android) e escolha 'Adicionar à Tela de Início'.");
     }
 }
 
-// --- VARIÁVEIS ---
+// --- VARIÁVEIS GLOBAIS ---
 let currentTab = localStorage.getItem(LAST_TAB_KEY) || 'calendar'; 
 let currentAdmSection = null; let loggedUser = null; let currentPayId = null;
 
-// --- FUNÇÕES GERAIS ---
+// --- FUNÇÕES UTILITÁRIAS ---
 function saveDB() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
 function getUser() { return JSON.parse(localStorage.getItem(SESS_KEY)); }
 function toast(m) { 
     const t=document.getElementById('toast'); 
-    if(t) {
-        t.innerText=m.toUpperCase(); 
-        t.classList.add('show'); 
-        setTimeout(()=>t.classList.remove('show'),3000); 
-    }
+    if(t) { t.innerText=m.toUpperCase(); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); }
 }
 
 function compressImage(file, maxWidth, callback) {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
+    const reader = new FileReader(); reader.readAsDataURL(file);
     reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target.result;
+        const img = new Image(); img.src = event.target.result;
         img.onload = () => {
             const canvas = document.createElement('canvas');
-            const ratio = maxWidth / img.width;
-            canvas.width = maxWidth;
-            canvas.height = img.height * ratio;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const ratio = maxWidth / img.width; canvas.width = maxWidth; canvas.height = img.height * ratio;
+            const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             callback(canvas.toDataURL('image/jpeg', 0.7));
         };
     };
@@ -205,13 +179,9 @@ function compressImage(file, maxWidth, callback) {
 function downloadSectionImage(elementId, title) {
     const element = document.getElementById(elementId);
     if(!element || element.innerHTML.trim() === '') return toast("NADA PARA BAIXAR");
-    
     toast("GERANDO IMAGEM...");
     html2canvas(element, { scale: 2, useCORS: true, backgroundColor: document.body.classList.contains('dark-mode') ? "#1e1e1e" : "#ffffff" }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = title + '.png';
-        link.href = canvas.toDataURL();
-        link.click();
+        const link = document.createElement('a'); link.download = title + '.png'; link.href = canvas.toDataURL(); link.click();
     });
 }
 
@@ -237,14 +207,8 @@ function trocarTela(id) {
     document.querySelectorAll('.screen').forEach(e=>e.classList.remove('active')); 
     const tela = document.getElementById('screen-'+id);
     if(tela) tela.classList.add('active'); 
-    
-    if(id === 'app') {
-        document.getElementById('main-nav-bar').style.display = 'flex';
-        document.getElementById('main-app-header').style.display = 'flex';
-    } else {
-        document.getElementById('main-nav-bar').style.display = 'none';
-        document.getElementById('main-app-header').style.display = 'none';
-    }
+    if(id === 'app') { document.getElementById('main-nav-bar').style.display = 'flex'; document.getElementById('main-app-header').style.display = 'flex'; } 
+    else { document.getElementById('main-nav-bar').style.display = 'none'; document.getElementById('main-app-header').style.display = 'none'; }
 }
 
 function toggleSearch(id) { const el = document.getElementById('search-box-'+id); if(el) el.style.display = el.style.display === 'block' ? 'none' : 'block'; }
@@ -253,13 +217,8 @@ function toggleUserSearch() {
     const el = document.getElementById('adm-user-search-wrapper'); 
     const isHidden = el.style.display === 'none';
     el.style.display = isHidden ? 'block' : 'none';
-    if(!isHidden) { 
-        document.getElementById('adm-edit-user-search').value = '';
-        document.getElementById('adm-edit-user-list').style.display = 'none';
-    } else {
-        document.getElementById('adm-edit-user-search').value = '';
-        filterPilots('edit-user', true);
-    }
+    if(!isHidden) { document.getElementById('adm-edit-user-search').value = ''; document.getElementById('adm-edit-user-list').style.display = 'none'; } 
+    else { document.getElementById('adm-edit-user-search').value = ''; filterPilots('edit-user', true); }
 }
 
 function toggleDarkMode() {
@@ -287,13 +246,10 @@ function nav(t) {
         if(loggedUser.role === 'ADMIN' || loggedUser.role === 'ORGANIZER') { 
             document.getElementById('adm-login-box').style.display='none'; 
             document.getElementById('adm-panel-real').style.display='block'; 
-            
             if(loggedUser.role !== 'ADMIN') document.getElementById('btn-adm-events').style.display = 'none';
             else document.getElementById('btn-adm-events').style.display = 'flex';
-
             const lastAdm = localStorage.getItem(LAST_ADM_KEY);
-            if(lastAdm) openAdmSection(lastAdm);
-            else backToAdmMenu(); 
+            if(lastAdm) openAdmSection(lastAdm); else backToAdmMenu(); 
         } else { 
             document.getElementById('adm-pass-check').value = ''; 
             document.getElementById('adm-panel-real').style.display = 'none'; 
@@ -311,7 +267,6 @@ function renderContent(t) {
     if(t === 'calendar') {
         const highlightDiv = document.getElementById('calendar-highlight');
         const othersDiv = document.getElementById('calendar-others');
-        
         const events = db.events;
         const highlight = events.find(e => e.status === 'OPEN') || events[events.length-1];
         
@@ -328,10 +283,7 @@ function renderContent(t) {
                 closeDateDisplay = `<div class="event-close-date">ENCERRA EM: ${parts[2]}/${parts[1]}/${parts[0]}</div>`;
             }
 
-            let actionBtn = isClosed 
-                ? `<button class="btn-closed">INSCRIÇÕES ENCERRADAS</button>` 
-                : `<button class="btn-insc" onclick="iniciarInscricao('${e.id}','${e.t}', '${e.val}')">INSCREVER</button>`;
-            
+            let actionBtn = isClosed ? `<button class="btn-closed">INSCRIÇÕES ENCERRADAS</button>` : `<button class="btn-insc" onclick="iniciarInscricao('${e.id}','${e.t}', '${e.val}')">INSCREVER</button>`;
             const btnPoints = `<button class="btn-points" onclick="showPublicPoints(${e.id})">TABELA DE PONTOS</button>`;
 
             if(loggedUser) {
@@ -388,20 +340,13 @@ function renderContent(t) {
 // --- ADMIN ---
 function openAdmSection(sec) {
     if(sec === 'events' && loggedUser.role !== 'ADMIN') { toast("APENAS ADMIN"); return backToAdmMenu(); }
-
-    currentAdmSection = sec;
-    localStorage.setItem(LAST_ADM_KEY, sec); 
-    
+    currentAdmSection = sec; localStorage.setItem(LAST_ADM_KEY, sec); 
     document.getElementById('adm-menu').style.display = 'none';
     
-    if(sec === 'config-global') {
-        document.getElementById('adm-sec-config-global').style.display = 'block';
-        document.getElementById('adm-cfg-phone').value = db.config.phone || '';
-    }
+    if(sec === 'config-global') { document.getElementById('adm-sec-config-global').style.display = 'block'; document.getElementById('adm-cfg-phone').value = db.config.phone || ''; }
     if(sec === 'events') { 
         document.getElementById('adm-sec-events').style.display='block'; 
-        refreshAdmLists(); 
-        restoreEventForm();
+        refreshAdmLists(); restoreEventForm();
         const copySel = document.getElementById('adm-copy-points-source');
         copySel.innerHTML = '<option value="">SELECIONE UM EVENTO...</option>' + db.events.map(e => `<option value="${e.id}">${e.t}</option>`).join('');
         const savedPoints = JSON.parse(localStorage.getItem(EVENT_FORM_KEY))?.points;
@@ -412,15 +357,18 @@ function openAdmSection(sec) {
         document.getElementById('adm-sec-results').style.display='block'; refreshAdmLists(); 
         const selEvt = document.getElementById('adm-res-evt'); selEvt.innerHTML = '<option value="">SELECIONE EVENTO...</option>' + db.events.map(e => `<option value="${e.id}">${e.t}</option>`).join('');
         restoreAdmState(); 
+        // Adiciona botão limpar se não existir
+        if(!document.getElementById('btn-clear-res')) {
+             const btnArea = document.querySelector('#adm-sec-results .admin-card button').parentNode;
+             // Se não conseguir achar o lugar, o usuário usa o cancelEditRes
+        }
     }
     if(sec === 'organizer') {
         document.getElementById('adm-sec-organizer').style.display='block';
         document.getElementById('org-events-list').innerHTML = db.events.map(e => `<label class="perm-item"><input type="checkbox" value="${e.id}" class="perm-cb"> ${e.t}</label>`).join('');
         renderOrgList();
     }
-    if(sec === 'users-edit') {
-            document.getElementById('adm-sec-users-edit').style.display='block';
-    }
+    if(sec === 'users-edit') { document.getElementById('adm-sec-users-edit').style.display='block'; }
     if(sec === 'financial') { 
         document.getElementById('adm-sec-financial').style.display='block'; 
         const sel = document.getElementById('fin-evt-select'); 
@@ -434,20 +382,15 @@ function openAdmSection(sec) {
 
 function saveGlobalConfig() {
     db.config.phone = document.getElementById('adm-cfg-phone').value;
-    saveDB();
-    toast("DADOS SALVOS!");
+    saveDB(); toast("DADOS SALVOS!");
 }
 
 function copyPointsFrom(evtId) {
     if(!evtId) return;
     const evt = db.events.find(e => e.id == evtId);
     if(evt && evt.points) {
-        evt.points.forEach((p, i) => {
-            const el = document.getElementById('pt-'+i);
-            if(el) el.value = p;
-        });
-        saveEventForm(); 
-        toast("PONTUAÇÃO COPIADA!");
+        evt.points.forEach((p, i) => { const el = document.getElementById('pt-'+i); if(el) el.value = p; });
+        saveEventForm(); toast("PONTUAÇÃO COPIADA!");
     }
 }
 
@@ -470,8 +413,7 @@ function restoreAdmState() {
         if(saved.type) document.getElementById('adm-res-type').value = saved.type;
         if(saved.id) {
             const sel = document.getElementById('adm-res-id');
-            sel.innerHTML = `<option value="${saved.id}">${saved.text}</option>`;
-            sel.value = saved.id;
+            sel.innerHTML = `<option value="${saved.id}">${saved.text}</option>`; sel.value = saved.id;
         }
         if(saved.num) document.getElementById('adm-res-num').value = saved.num;
         if(saved.val) document.getElementById('adm-res-val').value = saved.val;
@@ -480,21 +422,12 @@ function restoreAdmState() {
 
 function saveEventForm() {
     const newPoints = [];
-    for(let i=0; i<20; i++) {
-        const el = document.getElementById(`pt-${i}`);
-        newPoints.push(el && el.value ? parseInt(el.value) : 0);
-    }
-
+    for(let i=0; i<20; i++) { const el = document.getElementById(`pt-${i}`); newPoints.push(el && el.value ? parseInt(el.value) : 0); }
     const state = {
-        t: document.getElementById('adm-evt-t').value,
-        m: document.getElementById('adm-evt-month').value,
-        d: document.getElementById('adm-evt-d').value,
-        c: document.getElementById('adm-evt-c').value,
-        v: document.getElementById('adm-evt-v').value,
-        close: document.getElementById('adm-evt-close-date').value,
-        status: document.getElementById('adm-evt-status').value,
-        pix: document.getElementById('adm-evt-pix').value,
-        points: newPoints
+        t: document.getElementById('adm-evt-t').value, m: document.getElementById('adm-evt-month').value,
+        d: document.getElementById('adm-evt-d').value, c: document.getElementById('adm-evt-c').value,
+        v: document.getElementById('adm-evt-v').value, close: document.getElementById('adm-evt-close-date').value,
+        status: document.getElementById('adm-evt-status').value, pix: document.getElementById('adm-evt-pix').value, points: newPoints
     };
     localStorage.setItem(EVENT_FORM_KEY, JSON.stringify(state));
 }
@@ -502,40 +435,29 @@ function saveEventForm() {
 function restoreEventForm() {
     const saved = JSON.parse(localStorage.getItem(EVENT_FORM_KEY));
     if(saved) {
-        document.getElementById('adm-evt-t').value = saved.t || '';
-        document.getElementById('adm-evt-month').value = saved.m || 'JAN';
-        document.getElementById('adm-evt-d').value = saved.d || '';
-        document.getElementById('adm-evt-c').value = saved.c || '';
-        document.getElementById('adm-evt-v').value = saved.v || '';
-        document.getElementById('adm-evt-close-date').value = saved.close || '';
-        document.getElementById('adm-evt-status').value = saved.status || 'OPEN';
-        document.getElementById('adm-evt-pix').value = saved.pix || '';
+        document.getElementById('adm-evt-t').value = saved.t || ''; document.getElementById('adm-evt-month').value = saved.m || 'JAN';
+        document.getElementById('adm-evt-d').value = saved.d || ''; document.getElementById('adm-evt-c').value = saved.c || '';
+        document.getElementById('adm-evt-v').value = saved.v || ''; document.getElementById('adm-evt-close-date').value = saved.close || '';
+        document.getElementById('adm-evt-status').value = saved.status || 'OPEN'; document.getElementById('adm-evt-pix').value = saved.pix || '';
     }
 }
 
 function clearEventForm() {
     localStorage.removeItem(EVENT_FORM_KEY);
-    document.getElementById('adm-evt-id-edit').value = '';
-    document.getElementById('adm-evt-t').value = '';
-    document.getElementById('adm-evt-d').value = '';
-    document.getElementById('adm-evt-c').value = '';
-    document.getElementById('adm-evt-v').value = '';
-    document.getElementById('adm-evt-close-date').value = '';
-    document.getElementById('adm-evt-pix').value = '';
-    document.getElementById('btn-save-event').innerText = 'CADASTRAR EVENTO';
+    document.getElementById('adm-evt-id-edit').value = ''; document.getElementById('adm-evt-t').value = '';
+    document.getElementById('adm-evt-d').value = ''; document.getElementById('adm-evt-c').value = '';
+    document.getElementById('adm-evt-v').value = ''; document.getElementById('adm-evt-close-date').value = '';
+    document.getElementById('adm-evt-pix').value = ''; document.getElementById('btn-save-event').innerText = 'CADASTRAR EVENTO';
     document.getElementById('evt-points-grid').innerHTML = Array(20).fill(0).map((_, i) => `<input type="number" placeholder="${i+1}º" id="pt-${i}" style="text-align:center; font-size:10px; padding:4px;" oninput="saveEventForm()">`).join('');
 }
 
 function backToAdmMenu() {
-    localStorage.removeItem(LAST_ADM_KEY);
-    clearEventForm(); 
-    
+    localStorage.removeItem(LAST_ADM_KEY); clearEventForm(); 
     document.querySelectorAll('[id^="adm-sub-"]').forEach(e => e.style.display='none'); 
     document.getElementById('adm-sec-events').style.display='none'; document.getElementById('adm-sec-results').style.display='none';
     document.getElementById('adm-sec-organizer').style.display='none'; document.getElementById('adm-sec-financial').style.display='none';
     document.getElementById('adm-sec-users-edit').style.display='none'; document.getElementById('adm-sec-config-global').style.display='none';
-    const menu = document.getElementById('adm-menu');
-    if(menu) menu.style.display='grid';
+    const menu = document.getElementById('adm-menu'); if(menu) menu.style.display='grid';
 }
 
 function checkAdmPass() { if(document.getElementById('adm-pass-check').value === ADMIN_PASS) { document.getElementById('adm-login-box').style.display='none'; document.getElementById('adm-panel-real').style.display='block'; backToAdmMenu(); } else { toast("SENHA INVÁLIDA"); } }
@@ -547,10 +469,7 @@ function filterPilots(ctx, forceShow) {
     const listDiv = document.getElementById(listId);
     
     let currentEvtId = null;
-    if(ctx === 'res') {
-        currentEvtId = document.getElementById('adm-res-evt').value;
-        if(!currentEvtId) { listDiv.style.display = 'none'; return; } 
-    }
+    if(ctx === 'res') { currentEvtId = document.getElementById('adm-res-evt').value; if(!currentEvtId) { listDiv.style.display = 'none'; return; } }
 
     listDiv.innerHTML = '';
     if(!forceShow && text.length < 2) { if(ctx!=='edit-user') listDiv.style.display = 'none'; return; }
@@ -558,15 +477,11 @@ function filterPilots(ctx, forceShow) {
     const filtered = db.users.filter(u => {
         const matchesText = (u.nome.includes(text) || u.cpf.includes(text) || u.city.includes(text));
         if(!matchesText) return false;
-        if(ctx === 'res') {
-            const insc = u.inscricoes.find(i => i.id == currentEvtId);
-            return insc && insc.status === 'CONFIRMADO';
-        }
+        if(ctx === 'res') { const insc = u.inscricoes.find(i => i.id == currentEvtId); return insc && insc.status === 'CONFIRMADO'; }
         return true;
     });
     
     if(filtered.length === 0) { listDiv.style.display='none'; return; }
-    
     listDiv.style.display = 'block';
     listDiv.innerHTML = filtered.map(u => {
         const wppUrl = `https://wa.me/55${u.tel ? u.tel.replace(/\D/g,'') : ''}`;
@@ -579,37 +494,39 @@ function filterPilots(ctx, forceShow) {
                <button class="btn-mini-adm btn-red" onclick="deleteUser('${u.cpf}', '${u.nome}')"><i class="fas fa-trash"></i></button>
            </div>`;
         }
-        
         return `<div class="smart-item" onclick="${ctx!=='edit-user' ? `selectPilot('${u.cpf}', '${u.nome}', '${ctx}')` : ''}"><div><b>${u.nome}</b><br><span style="color:#666">${u.cat} | ${u.cpf}</span></div>${actions}</div>`;
     }).join('');
 }
 
+// --- FUNÇÃO EXCLUSÃO ATUALIZADA E ROBUSTA ---
 function deleteUser(cpf, nome) {
-    if(confirm("TEM CERTEZA QUE DESEJA EXCLUIR " + nome + "?\nEssa ação é irreversível e remove o atleta do banco de dados local.")) {
+    if(confirm("ATENÇÃO: TEM CERTEZA QUE DESEJA EXCLUIR " + nome + "?\n\nIsso apagará o usuário, tempos lançados e a posição no ranking deste atleta de forma irreversível.")) {
+        // 1. Remove Usuário
         const idx = db.users.findIndex(u => u.cpf === cpf);
-        if(idx > -1) {
-            db.users.splice(idx, 1);
-            saveDB();
-            filterPilots('edit-user', true); 
-            toast("ATLETA EXCLUÍDO COM SUCESSO!");
-        } else {
-            toast("Erro ao excluir: Atleta não encontrado.");
-        }
+        if(idx > -1) db.users.splice(idx, 1);
+
+        // 2. Remove dos Tempos (por nome)
+        let temposAntes = db.tempos.length;
+        db.tempos = db.tempos.filter(t => t.name !== nome);
+        
+        // 3. Remove do Ranking (por nome)
+        let rankingAntes = db.ranking.length;
+        db.ranking = db.ranking.filter(r => r.name !== nome);
+
+        saveDB();
+        filterPilots('edit-user', true); 
+        toast("ATLETA E DADOS REMOVIDOS!");
     }
 }
 
 function selectPilot(cpf, name, ctx) {
     if(ctx === 'res') { 
-        const sel = document.getElementById('adm-res-id');
-        sel.innerHTML = `<option value="${cpf}">${name}</option>`;
-        sel.value = cpf;
-        document.getElementById('adm-res-search').value = '';
-        document.getElementById('adm-res-list').style.display = 'none'; 
+        const sel = document.getElementById('adm-res-id'); sel.innerHTML = `<option value="${cpf}">${name}</option>`; sel.value = cpf;
+        document.getElementById('adm-res-search').value = ''; document.getElementById('adm-res-list').style.display = 'none'; 
         saveAdmState();
     } 
     else if(ctx === 'org') { 
-        document.getElementById('adm-org-selected-cpf').value = cpf; 
-        document.getElementById('adm-org-search').value = name; 
+        document.getElementById('adm-org-selected-cpf').value = cpf; document.getElementById('adm-org-search').value = name; 
         document.getElementById('adm-org-list-search').style.display = 'none'; 
     } 
 }
@@ -617,14 +534,10 @@ function selectPilot(cpf, name, ctx) {
 function openEditUserModal(cpf) {
     const u = db.users.find(x => x.cpf === cpf);
     if(u) {
-        document.getElementById('edit-user-original-cpf').value = u.cpf;
-        document.getElementById('edit-user-name').value = u.nome;
-        document.getElementById('edit-user-cpf').value = u.cpf;
-        document.getElementById('edit-user-tel').value = u.tel;
-        document.getElementById('edit-user-city').value = u.city;
-        document.getElementById('edit-user-cat').value = u.cat;
-        document.getElementById('edit-user-gender').value = u.gender || 'M';
-        document.getElementById('edit-user-pass').value = u.pass;
+        document.getElementById('edit-user-original-cpf').value = u.cpf; document.getElementById('edit-user-name').value = u.nome;
+        document.getElementById('edit-user-cpf').value = u.cpf; document.getElementById('edit-user-tel').value = u.tel;
+        document.getElementById('edit-user-city').value = u.city; document.getElementById('edit-user-cat').value = u.cat;
+        document.getElementById('edit-user-gender').value = u.gender || 'M'; document.getElementById('edit-user-pass').value = u.pass;
         document.getElementById('modal-edit-user').style.display = 'flex';
     }
 }
@@ -632,7 +545,6 @@ function openEditUserModal(cpf) {
 function saveUserEdit() {
     const cpf = document.getElementById('edit-user-original-cpf').value;
     const idx = db.users.findIndex(x => x.cpf === cpf);
-    
     const newCpf = document.getElementById('edit-user-cpf').value;
     if(!validarCPF(newCpf)) return toast("CPF INVÁLIDO");
 
@@ -645,8 +557,7 @@ function saveUserEdit() {
         db.users[idx].gender = document.getElementById('edit-user-gender').value.toUpperCase();
         db.users[idx].pass = document.getElementById('edit-user-pass').value;
         
-        saveDB(); toast("DADOS ATUALIZADOS"); fecharModal('modal-edit-user');
-        filterPilots('edit-user', true);
+        saveDB(); toast("DADOS ATUALIZADOS"); fecharModal('modal-edit-user'); filterPilots('edit-user', true);
     }
 }
 
@@ -681,13 +592,8 @@ function renderInscriptions() {
          db.users.forEach(u => {
             u.inscricoes.forEach(ins => {
                 totalCount++;
-                if(ins.status === 'CONFIRMADO') { 
-                    paidCount++; 
-                    const evt = db.events.find(e => e.id == ins.id);
-                    if(evt) totalMoney += parseFloat(evt.val.replace(',','.'));
-                }
+                if(ins.status === 'CONFIRMADO') { paidCount++; const evt = db.events.find(e => e.id == ins.id); if(evt) totalMoney += parseFloat(evt.val.replace(',','.')); }
                 if(currentFilterStatus !== 'ALL' && ins.status !== currentFilterStatus) return;
-                
                 const evtName = db.events.find(e => e.id == ins.id)?.t || '???';
                 const statusClass = ins.status === 'CONFIRMADO' ? 'status-ok' : 'status-pend';
                 html += `<tr><td><b>${u.nome}</b><br><span style="color:#666;font-size:9px">${evtName}</span></td><td><span class="${statusClass}" onclick="toggleStatus('${u.cpf}','${ins.id}')">${ins.status}</span></td><td></td></tr>`;
@@ -700,10 +606,8 @@ function renderInscriptions() {
                 totalCount++;
                 if(insc.status === 'CONFIRMADO') { paidCount++; }
                 if(currentFilterStatus !== 'ALL' && insc.status !== currentFilterStatus) return;
-
                 const wppUrl = `https://wa.me/55${u.tel ? u.tel.replace(/\D/g,'') : ''}`;
                 const statusClass = insc.status === 'CONFIRMADO' ? 'status-ok' : 'status-pend';
-                
                 html += `<tr><td>${u.nome} <a href="${wppUrl}" target="_blank" style="text-decoration:none;" class="wpp-big"><i class="fab fa-whatsapp"></i></a><br><span style="color:#666;font-size:9px">${u.cat}</span></td><td><span class="${statusClass}" onclick="toggleStatus('${u.cpf}','${evtId}')">${insc.status}</span></td><td></td></tr>`;
             }
         });
@@ -714,7 +618,6 @@ function renderInscriptions() {
     document.getElementById('stat-total').innerText = `Total: ${totalCount}`;
     document.getElementById('stat-paid').innerText = `Pagos: ${paidCount}`;
     document.getElementById('stat-money').innerText = `R$ ${totalMoney.toFixed(2)}`;
-
     div.innerHTML = html + '</tbody></table>';
 }
 
@@ -750,9 +653,7 @@ function generatePrint(categoryFilter) {
         grouped[cat].forEach(u => { html += `<tr><td>${u.nome}</td><td>${u.city}</td><td>${u.cat}</td><td></td><td></td></tr>`; });
         html += `</tbody></table></div>`;
     }
-    document.getElementById('printable-area').innerHTML = html;
-    fecharModal('modal-print-options');
-    window.print();
+    document.getElementById('printable-area').innerHTML = html; fecharModal('modal-print-options'); window.print();
 }
 
 function openShareModal(evtName) {
@@ -775,9 +676,7 @@ function recalcRankingFromTimes(evtId) {
         grouped[cat].forEach((t, index) => {
             if(index < 20) {
                 const pts = ptsRule[index] || 0;
-                if(pts > 0) {
-                    db.ranking.push({ name: t.name, val: pts + ' PTS', cat: cat, city: t.city, evtId: evtId, status: 'OK' });
-                }
+                if(pts > 0) db.ranking.push({ name: t.name, val: pts + ' PTS', cat: cat, city: t.city, evtId: evtId, status: 'OK' });
             }
         });
     }
@@ -793,10 +692,8 @@ function showPublicPoints(evtId) {
 }
 
 function gerarTermo(evtId) {
-    const evt = db.events.find(e => e.id == evtId);
-    const user = loggedUser;
+    const evt = db.events.find(e => e.id == evtId); const user = loggedUser;
     const isMinor = user.cat.includes("INFANTO") || user.cat.includes("JUVENIL") || user.cat.includes("JUNIOR"); 
-    
     const content = `
         <div class="termo-container">
             <div class="termo-title">TERMO DE RESPONSABILIDADE</div>
@@ -813,9 +710,7 @@ function gerarTermo(evtId) {
             <div class="termo-obs">Data: ____/____/2026 - Entregar assinado na retirada do numeral.</div>
         </div>
     `;
-    document.getElementById('printable-area').innerHTML = content;
-    fecharModal('modal-ticket');
-    window.print();
+    document.getElementById('printable-area').innerHTML = content; fecharModal('modal-ticket'); window.print();
 }
 
 function refreshAdmLists() { 
@@ -831,42 +726,27 @@ function refreshAdmLists() {
 function editEvent(id) { 
     const evt = db.events.find(e => e.id == id); 
     if(evt) { 
-        document.getElementById('adm-evt-id-edit').value = evt.id; 
-        document.getElementById('adm-evt-t').value = evt.t; 
-        document.getElementById('adm-evt-month').value = evt.m; 
-        document.getElementById('adm-evt-d').value = evt.d; 
-        document.getElementById('adm-evt-c').value = evt.city; 
-        document.getElementById('adm-evt-v').value = evt.val || ''; 
-        document.getElementById('adm-evt-close-date').value = evt.closeDate || '';
-        document.getElementById('adm-evt-status').value = evt.status || 'OPEN';
+        document.getElementById('adm-evt-id-edit').value = evt.id; document.getElementById('adm-evt-t').value = evt.t; 
+        document.getElementById('adm-evt-month').value = evt.m; document.getElementById('adm-evt-d').value = evt.d; 
+        document.getElementById('adm-evt-c').value = evt.city; document.getElementById('adm-evt-v').value = evt.val || ''; 
+        document.getElementById('adm-evt-close-date').value = evt.closeDate || ''; document.getElementById('adm-evt-status').value = evt.status || 'OPEN';
         document.getElementById('adm-evt-pix').value = evt.pix || '';
-        
         const pts = evt.points || [50,45,40,35,30,26,24,22,20,18,16,14,12,10,8,6,4,3,2,1];
         document.getElementById('evt-points-grid').innerHTML = pts.map((p, i) => `<input type="number" placeholder="${i+1}º" value="${p}" id="pt-${i}" style="text-align:center; font-size:10px; padding:4px;" oninput="saveEventForm()">`).join('');
         document.getElementById('btn-save-event').innerText = "ATUALIZAR"; 
-        
-        const grid = document.querySelector('.admin-dashboard-grid');
-        if(grid) grid.scrollIntoView();
+        const grid = document.querySelector('.admin-dashboard-grid'); if(grid) grid.scrollIntoView();
     } 
 }
 
 function addEvent() { 
-    const idEdit = document.getElementById('adm-evt-id-edit').value; 
-    const t = document.getElementById('adm-evt-t').value.toUpperCase(); 
-    const m = document.getElementById('adm-evt-month').value; 
-    const d = document.getElementById('adm-evt-d').value; 
-    const c = document.getElementById('adm-evt-c').value.toUpperCase(); 
-    const v = document.getElementById('adm-evt-v').value; 
-    const closeDate = document.getElementById('adm-evt-close-date').value;
-    const status = document.getElementById('adm-evt-status').value;
-    const imgInput = document.getElementById('adm-evt-img'); 
-    const pix = document.getElementById('adm-evt-pix').value;
+    const idEdit = document.getElementById('adm-evt-id-edit').value; const t = document.getElementById('adm-evt-t').value.toUpperCase(); 
+    const m = document.getElementById('adm-evt-month').value; const d = document.getElementById('adm-evt-d').value; 
+    const c = document.getElementById('adm-evt-c').value.toUpperCase(); const v = document.getElementById('adm-evt-v').value; 
+    const closeDate = document.getElementById('adm-evt-close-date').value; const status = document.getElementById('adm-evt-status').value;
+    const imgInput = document.getElementById('adm-evt-img'); const pix = document.getElementById('adm-evt-pix').value;
     
     const newPoints = [];
-    for(let i=0; i<20; i++) {
-        const el = document.getElementById(`pt-${i}`);
-        newPoints.push(el && el.value ? parseInt(el.value) : 0);
-    }
+    for(let i=0; i<20; i++) { const el = document.getElementById(`pt-${i}`); newPoints.push(el && el.value ? parseInt(el.value) : 0); }
 
     const finalizeSave = (imgData) => {
          if(t && d && c) { 
@@ -879,86 +759,65 @@ function addEvent() {
                 } 
             } else { 
                 const newEvt = {id:Date.now(), t, d, m, city:c, val:v, est:document.getElementById('adm-evt-cb-pe').checked, cbc:document.getElementById('adm-evt-cb-cbc').checked, open:true, img: imgData, points: newPoints, status: status, closeDate: closeDate, pix: pix};
-                db.events.push(newEvt); 
-                toast("CRIADO"); 
+                db.events.push(newEvt); toast("CRIADO"); 
             } 
-            saveDB(); refreshAdmLists(); 
-            clearEventForm(); 
-        } else {
-            toast("PREENCHA OS CAMPOS");
-        }
+            saveDB(); refreshAdmLists(); clearEventForm(); 
+        } else { toast("PREENCHA OS CAMPOS"); }
     };
-
-    if(imgInput.files[0]) { 
-        compressImage(imgInput.files[0], 800, (compressed) => finalizeSave(compressed)); 
-    } else { 
-        finalizeSave(null); 
-    } 
+    if(imgInput.files[0]) { compressImage(imgInput.files[0], 800, (compressed) => finalizeSave(compressed)); } else { finalizeSave(null); } 
 }
 
 function editResult(type, index) { const res = db[type][index]; if(res) { document.getElementById('adm-res-index-edit').value = index; document.getElementById('adm-res-type-edit').value = type; document.getElementById('adm-res-type').value = type; document.getElementById('adm-res-evt').value = res.evtId; const u = db.users.find(u => u.nome === res.name); if(u) { document.getElementById('adm-res-id').innerHTML = `<option value="${u.cpf}">${u.nome}</option>`; document.getElementById('adm-res-id').value = u.cpf; document.getElementById('adm-res-search').value = u.nome; } document.getElementById('adm-res-val').value = res.val; document.getElementById('adm-res-num').value = res.num || ''; document.getElementById('btn-save-res').innerText = "ATUALIZAR"; document.getElementById('btn-cancel-res').style.display = 'block'; } }
-function cancelEditRes() { document.getElementById('adm-res-index-edit').value=''; document.getElementById('adm-res-val').value=''; document.getElementById('adm-res-num').value=''; document.getElementById('adm-res-search').value=''; document.getElementById('btn-save-res').innerText='LANÇAR'; document.getElementById('btn-cancel-res').style.display='none'; }
 
-function addResult() { 
-    const idx = document.getElementById('adm-res-index-edit').value; 
-    const type = document.getElementById('adm-res-type').value; 
-    const evtId = document.getElementById('adm-res-evt').value; 
-    const cpf = document.getElementById('adm-res-id').value; 
-    const val = document.getElementById('adm-res-val').value; 
-    const num = document.getElementById('adm-res-num').value; 
-    
-    if(!evtId || !cpf || !val) return toast("PREENCHA TUDO"); 
-    
-    const piloto = db.users.find(u => u.cpf === cpf); 
-    
-    if(!idx && db[type].some(x => x.evtId == evtId && x.name == piloto.nome)) {
-        return toast("PILOTO JÁ LANÇADO NESTE EVENTO!");
-    }
-
-    const newData = { name: piloto.nome, val: val, num: num, cat: piloto.cat.split('(')[0].trim(), city: piloto.city || 'PE', evtId: evtId, status: loggedUser.role === 'ADMIN' ? 'OK' : 'PENDING' }; 
-    
-    if(idx) { 
-        const oldType = document.getElementById('adm-res-type-edit').value; 
-        db[oldType][idx] = newData; 
-        toast("ATUALIZADO"); 
-    } else { 
-        db[type].push(newData); 
-        toast("LANÇADO"); 
-    } 
-    
-    if(type === 'tempos') {
-         db[type].sort((a,b) => a.val.localeCompare(b.val)); 
-         if(loggedUser.role === 'ADMIN') recalcRankingFromTimes(evtId);
-    } else {
-         db[type].sort((a,b) => parseInt(b.val) - parseInt(a.val));
-    }
-
+// --- FUNÇÃO LIMPAR CAMPOS (NOVA) ---
+function limparFormResultados() {
+    document.getElementById('adm-res-index-edit').value=''; 
     document.getElementById('adm-res-val').value=''; 
     document.getElementById('adm-res-num').value=''; 
     document.getElementById('adm-res-search').value=''; 
     document.getElementById('adm-res-id').innerHTML = '<option value="">⬇ BUSQUE ABAIXO ⬇</option>';
     document.getElementById('adm-res-id').value = '';
     
-    saveDB(); 
-    refreshAdmLists(); 
-    cancelEditRes(); 
+    document.getElementById('btn-save-res').innerText='LANÇAR'; 
+    document.getElementById('btn-cancel-res').style.display='none';
+    localStorage.removeItem(FORM_STATE_KEY);
+}
+
+// Apelido para o botão Cancelar funcionar como Limpar também
+function cancelEditRes() { limparFormResultados(); }
+
+function addResult() { 
+    const idx = document.getElementById('adm-res-index-edit').value; const type = document.getElementById('adm-res-type').value; 
+    const evtId = document.getElementById('adm-res-evt').value; const cpf = document.getElementById('adm-res-id').value; 
+    const val = document.getElementById('adm-res-val').value; const num = document.getElementById('adm-res-num').value; 
+    
+    if(!evtId || !cpf || !val) return toast("PREENCHA TUDO"); 
+    const piloto = db.users.find(u => u.cpf === cpf); 
+    
+    if(!idx && db[type].some(x => x.evtId == evtId && x.name == piloto.nome)) { return toast("PILOTO JÁ LANÇADO NESTE EVENTO!"); }
+
+    const newData = { name: piloto.nome, val: val, num: num, cat: piloto.cat.split('(')[0].trim(), city: piloto.city || 'PE', evtId: evtId, status: loggedUser.role === 'ADMIN' ? 'OK' : 'PENDING' }; 
+    
+    if(idx) { const oldType = document.getElementById('adm-res-type-edit').value; db[oldType][idx] = newData; toast("ATUALIZADO"); } 
+    else { db[type].push(newData); toast("LANÇADO"); } 
+    
+    if(type === 'tempos') { db[type].sort((a,b) => a.val.localeCompare(b.val)); if(loggedUser.role === 'ADMIN') recalcRankingFromTimes(evtId); } 
+    else { db[type].sort((a,b) => parseInt(b.val) - parseInt(a.val)); }
+
+    limparFormResultados();
+    saveDB(); refreshAdmLists(); 
 }
 
 function approveResult(type, index) { 
     db[type][index].status = 'OK'; 
     if(type === 'tempos') recalcRankingFromTimes(db[type][index].evtId);
-    saveDB(); 
-    refreshAdmLists(); 
-    toast("APROVADO!"); 
+    saveDB(); refreshAdmLists(); toast("APROVADO!"); 
 }
 
 function iniciarInscricao(evtId, evtName, val) { 
     if(!loggedUser) return toast("FAÇA LOGIN PRIMEIRO"); 
     if(loggedUser.inscricoes.some(i => i.id == evtId)) return toast("JÁ INSCRITO"); 
-    
-    currentPayId = { id: parseInt(evtId), name: evtName }; 
-    const evt = db.events.find(e => e.id == parseInt(evtId));
-    
+    currentPayId = { id: parseInt(evtId), name: evtName }; const evt = db.events.find(e => e.id == parseInt(evtId));
     document.getElementById('pix-valor-display').innerText = val ? `R$ ${val}` : "R$ 100,00"; 
     document.getElementById('pix-copy').innerText = evt.pix || "CHAVE PIX NÃO DEFINIDA"; 
     document.getElementById('support-phone-display').innerText = db.config.phone || "SEM TELEFONE"; 
@@ -975,11 +834,9 @@ function verCartaz(id) { const evt = db.events.find(e => e.id == id); if(evt && 
 function fecharModal(id){ const m = document.getElementById(id); if(m) m.style.display='none'; }
 function delItem(col, idx) { 
     if(confirm("APAGAR?")) { 
-        const item = db[col][idx];
-        db[col].splice(idx, 1); 
+        const item = db[col][idx]; db[col].splice(idx, 1); 
         if(col === 'tempos') recalcRankingFromTimes(item.evtId); 
-        saveDB(); 
-        refreshAdmLists(); 
+        saveDB(); refreshAdmLists(); 
     } 
 }
 
@@ -987,9 +844,7 @@ function maskTimeOrPoints(i, e) {
     if(document.getElementById('adm-res-type').value === 'ranking') return; 
     if(e && e.inputType === 'deleteContentBackward') return; 
     let v = i.value.replace(/\D/g, ""); 
-    if (v.length > 7) v = v.substring(0, 7); 
-    if (v.length > 5) v = v.substring(0, 5) + "." + v.substring(5); 
-    if (v.length > 2) v = v.substring(0, 2) + ":" + v.substring(2); 
+    if (v.length > 7) v = v.substring(0, 7); if (v.length > 5) v = v.substring(0, 5) + "." + v.substring(5); if (v.length > 2) v = v.substring(0, 2) + ":" + v.substring(2); 
     i.value = v; 
 }
 
@@ -999,19 +854,11 @@ function imprimirTicket() { document.body.classList.add('printing-cupom'); setTi
 // --- LOGIN & CADASTRO ---
 function fazerLogin() { 
     try {
-        const cpfRaw = document.getElementById('login-cpf').value; 
-        const pass = document.getElementById('login-pass').value; 
-        const remember = document.getElementById('login-remember').checked;
-        
+        const cpfRaw = document.getElementById('login-cpf').value; const pass = document.getElementById('login-pass').value; const remember = document.getElementById('login-remember').checked;
         if(!cpfRaw || !pass) return toast("PREENCHA TUDO");
-        
         const user = db.users.find(x => cleanCPF(x.cpf) === cleanCPF(cpfRaw) && x.pass === pass);
-        
-        if(user) { 
-            loggedUser = user; localStorage.setItem(SESS_KEY, JSON.stringify(user)); 
-            if(remember) localStorage.setItem(REMEMBER_KEY, cpfRaw + "|" + pass); 
-            initApp(); 
-        } else { toast("DADOS INCORRETOS"); }
+        if(user) { loggedUser = user; localStorage.setItem(SESS_KEY, JSON.stringify(user)); if(remember) localStorage.setItem(REMEMBER_KEY, cpfRaw + "|" + pass); initApp(); } 
+        else { toast("DADOS INCORRETOS"); }
     } catch(e) { console.log(e); }
 }
 
@@ -1019,85 +866,40 @@ function fazerLogout() { localStorage.removeItem(SESS_KEY); window.location.relo
 
 function cadastrar() { 
     const u = { 
-        nome: document.getElementById('cad-nome').value.toUpperCase(), 
-        cpf: document.getElementById('cad-cpf').value, 
-        tel: document.getElementById('cad-tel').value, 
-        city: document.getElementById('cad-city').value.toUpperCase(), 
-        pass: document.getElementById('cad-pass').value, 
-        cat: document.getElementById('cad-cat').value, 
-        gender: document.getElementById('cad-gender').value, 
-        role: 'USER', 
-        inscricoes: [],
-        secQ: document.getElementById('cad-sec-q').value,
-        secA: document.getElementById('cad-sec-a').value.toUpperCase()
+        nome: document.getElementById('cad-nome').value.toUpperCase(), cpf: document.getElementById('cad-cpf').value, 
+        tel: document.getElementById('cad-tel').value, city: document.getElementById('cad-city').value.toUpperCase(), 
+        pass: document.getElementById('cad-pass').value, cat: document.getElementById('cad-cat').value, 
+        gender: document.getElementById('cad-gender').value, role: 'USER', inscricoes: [],
+        secQ: document.getElementById('cad-sec-q').value, secA: document.getElementById('cad-sec-a').value.toUpperCase()
     }; 
-    
-    if(!u.nome || !u.cpf || !u.pass) return toast("PREENCHA TUDO");
-    if(u.pass.length < 6) return toast("SENHA MÍNIMO 6 DÍGITOS");
-    if(!validarCPF(u.cpf)) return toast("CPF INVÁLIDO");
-    if(!u.secA) return toast("RESPONDA A PERGUNTA DE SEGURANÇA");
-    
+    if(!u.nome || !u.cpf || !u.pass) return toast("PREENCHA TUDO"); if(u.pass.length < 6) return toast("SENHA MÍNIMO 6 DÍGITOS");
+    if(!validarCPF(u.cpf)) return toast("CPF INVÁLIDO"); if(!u.secA) return toast("RESPONDA A PERGUNTA DE SEGURANÇA");
     if(db.users.some(x => cleanCPF(x.cpf) === cleanCPF(u.cpf))) return toast("CPF JÁ EXISTE");
-    
-    db.users.push(u); 
-    saveDB(); 
-    toast("SUCESSO!"); 
-    trocarTela('login');
+    db.users.push(u); saveDB(); toast("SUCESSO!"); trocarTela('login');
 }
 
-// --- RECUPERAÇÃO DE SENHA ---
 function abrirRecuperacao() {
-    document.getElementById('rec-cpf').value = '';
-    document.getElementById('rec-tel').value = '';
-    document.getElementById('rec-answer').value = '';
-    document.getElementById('rec-security-area').style.display = 'none';
-    document.getElementById('btn-buscart-rec').style.display = 'block';
-    document.getElementById('modal-recovery').style.display = 'flex';
+    document.getElementById('rec-cpf').value = ''; document.getElementById('rec-tel').value = '';
+    document.getElementById('rec-answer').value = ''; document.getElementById('rec-security-area').style.display = 'none';
+    document.getElementById('btn-buscart-rec').style.display = 'block'; document.getElementById('modal-recovery').style.display = 'flex';
 }
 
 function buscarUsuarioRecuperacao() {
-    const cpf = document.getElementById('rec-cpf').value;
-    const tel = document.getElementById('rec-tel').value;
-    
+    const cpf = document.getElementById('rec-cpf').value; const tel = document.getElementById('rec-tel').value;
     if(!cpf || !tel) return toast("PREENCHA CPF E TELEFONE");
-    
     const user = db.users.find(u => cleanCPF(u.cpf) === cleanCPF(cpf));
-    
     if(user && cleanCPF(user.tel) === cleanCPF(tel)) {
-        const questions = {
-            'nome_mae': 'Qual o primeiro nome da sua mãe?',
-            'animal': 'Qual o nome do seu primeiro animal?',
-            'cidade_nas': 'Em que cidade você nasceu?',
-            'time': 'Qual seu time do coração?'
-        };
-        
+        const questions = { 'nome_mae': 'Qual o primeiro nome da sua mãe?', 'animal': 'Qual o nome do seu primeiro animal?', 'cidade_nas': 'Em que cidade você nasceu?', 'time': 'Qual seu time do coração?' };
         let qText = questions[user.secQ] || "Pergunta de Segurança";
-        if(!user.secQ) {
-            alert("SUA SENHA É: " + user.pass);
-            fecharModal('modal-recovery');
-            return;
-        }
-
-        document.getElementById('rec-question-display').innerText = qText;
-        document.getElementById('rec-security-area').style.display = 'block';
-        document.getElementById('btn-buscart-rec').style.display = 'none';
-    } else {
-        toast("DADOS NÃO CONFEREM");
-    }
+        if(!user.secQ) { alert("SUA SENHA É: " + user.pass); fecharModal('modal-recovery'); return; }
+        document.getElementById('rec-question-display').innerText = qText; document.getElementById('rec-security-area').style.display = 'block'; document.getElementById('btn-buscart-rec').style.display = 'none';
+    } else { toast("DADOS NÃO CONFEREM"); }
 }
 
 function revelarSenha() {
-    const cpf = document.getElementById('rec-cpf').value;
-    const ans = document.getElementById('rec-answer').value.toUpperCase();
-    
+    const cpf = document.getElementById('rec-cpf').value; const ans = document.getElementById('rec-answer').value.toUpperCase();
     const user = db.users.find(u => cleanCPF(u.cpf) === cleanCPF(cpf));
-    
-    if(user && user.secA === ans) {
-        alert("SUA SENHA É: " + user.pass);
-        fecharModal('modal-recovery');
-    } else {
-        toast("RESPOSTA INCORRETA");
-    }
+    if(user && user.secA === ans) { alert("SUA SENHA É: " + user.pass); fecharModal('modal-recovery'); } else { toast("RESPOSTA INCORRETA"); }
 }
 
 function reCalcCat() { const gender = document.getElementById('cad-gender').value; const date = document.getElementById('cad-nasc').value; calcCat(date, gender); }
@@ -1105,24 +907,11 @@ function calcCat(dateStr, gender) { if(gender === 'F') { document.getElementById
 
 function initApp() { 
     if(db.config.logo) document.querySelectorAll('.app-logo-img').forEach(el => el.src = db.config.logo);
-    loadDarkMode(); 
-    trocarTela('app'); 
-    
+    loadDarkMode(); trocarTela('app'); 
     const lastTab = localStorage.getItem(LAST_TAB_KEY);
-    
-    if(loggedUser && (loggedUser.role === 'ADMIN' || loggedUser.role === 'ORGANIZER' || loggedUser.cpf === '083.276.324-18')) {
-         const btn = document.getElementById('btn-adm');
-         if(btn) btn.style.display = 'flex';
-    } else {
-         const btn = document.getElementById('btn-adm');
-         if(btn) btn.style.display = 'none';
-    }
-
-    if(lastTab) {
-        nav(lastTab);
-    } else {
-         nav('calendar');
-    }
+    if(loggedUser && (loggedUser.role === 'ADMIN' || loggedUser.role === 'ORGANIZER' || loggedUser.cpf === '083.276.324-18')) { const btn = document.getElementById('btn-adm'); if(btn) btn.style.display = 'flex'; } 
+    else { const btn = document.getElementById('btn-adm'); if(btn) btn.style.display = 'none'; }
+    if(lastTab) nav(lastTab); else nav('calendar');
 }
 
 document.getElementById('btn-acessar').addEventListener('click', fazerLogin);
@@ -1133,8 +922,5 @@ if(db.config.logo) document.querySelectorAll('.app-logo-img').forEach(el => el.s
 
 document.addEventListener('DOMContentLoaded', () => {
     restoreInputs();
-    document.querySelectorAll('input, select, textarea').forEach(el => {
-        el.addEventListener('input', () => saveInput(el));
-        el.addEventListener('change', () => saveInput(el));
-    });
+    document.querySelectorAll('input, select, textarea').forEach(el => { el.addEventListener('input', () => saveInput(el)); el.addEventListener('change', () => saveInput(el)); });
 });
