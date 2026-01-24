@@ -43,83 +43,85 @@ const adminIndex = db.users.findIndex(u => cleanCPF(u.cpf) === cleanCPF(ADMIN_CP
 if(adminIndex >= 0) { db.users[adminIndex].role = "ADMIN"; db.users[adminIndex].pass = ADMIN_PASS; } 
 else { db.users.push(DEFAULT_DB.users[0]); }
 
-// --- FUNÇÃO CRÍTICA: LIMPEZA DE DADOS FANTASMAS ---
-// Esta função roda sempre ao iniciar para garantir que não existam atletas no ranking que foram excluídos
+// --- LIMPEZA DE DADOS FANTASMAS ---
 function limparDadosFantasmas() {
     const nomesValidos = db.users.map(u => u.nome);
-    
-    let rankingAntes = db.ranking.length;
-    let temposAntes = db.tempos.length;
-
-    // Filtra apenas se o nome existir na lista de usuários
+    let rankingAntes = db.ranking.length; let temposAntes = db.tempos.length;
     db.ranking = db.ranking.filter(r => nomesValidos.includes(r.name));
     db.tempos = db.tempos.filter(t => nomesValidos.includes(t.name));
-
-    if(db.ranking.length !== rankingAntes || db.tempos.length !== temposAntes) {
-        console.log("Limpeza realizada: Atletas fantasmas removidos.");
-        saveDB();
-    }
+    if(db.ranking.length !== rankingAntes || db.tempos.length !== temposAntes) { saveDB(); }
 }
-limparDadosFantasmas(); // Executa imediatamente
+limparDadosFantasmas(); 
 
 db.events.forEach(e => { 
     if(!e.points || e.points.length < 20) e.points = [...DEFAULT_POINTS]; 
-    if(!e.status) e.status = 'OPEN';
-    if(e.pix === undefined) e.pix = '';
+    if(!e.status) e.status = 'OPEN'; if(e.pix === undefined) e.pix = '';
 });
 saveDB();
 
-// --- PWA INSTALL (Modificado para Tela de Login) ---
+// --- PWA INSTALL (CORRIGIDO E TEMPORIZADO) ---
 let deferredPrompt;
-
-// Cria o botão de instalar na tela de login dinamicamente
-function criarBotaoInstalarLogin() {
-    if(document.getElementById('btn-install-login')) return;
-    
-    const div = document.createElement('div');
-    div.id = 'btn-install-login';
-    div.innerHTML = `<button style="background:#0038a8; color:white; border:none; padding:10px 20px; border-radius:30px; font-weight:bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display:flex; align-items:center; gap:10px; cursor:pointer;">
-        <i class="fas fa-download"></i> INSTALAR APP
-    </button>`;
-    div.style.position = 'fixed';
-    div.style.bottom = '20px';
-    div.style.left = '50%';
-    div.style.transform = 'translateX(-50%)';
-    div.style.zIndex = '9999';
-    div.style.display = 'none'; // Começa oculto
-    
-    div.onclick = installPWA;
-    
-    // Adiciona na tela de login
-    const loginScreen = document.getElementById('screen-login');
-    if(loginScreen) loginScreen.appendChild(div);
-}
 
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault(); 
     deferredPrompt = e;
     
-    // Mostra o botão flutuante na tela de login
-    criarBotaoInstalarLogin();
-    const btn = document.getElementById('btn-install-login');
-    if(btn) btn.style.display = 'block';
+    // 1. Esconde banner antigo se existir
+    const oldBanner = document.getElementById('install-banner');
+    if(oldBanner) oldBanner.style.display = 'none';
+    
+    // 2. Cria ou seleciona o botão personalizado
+    let btn = document.getElementById('pwa-install-float-btn');
+    
+    if(!btn) {
+        btn = document.createElement('button');
+        btn.id = 'pwa-install-float-btn';
+        btn.innerHTML = '<i class="fas fa-download"></i> INSTALAR APP';
+        
+        // ESTILIZAÇÃO DO BOTÃO (Cores e Posição)
+        btn.style.position = 'fixed';
+        btn.style.top = '15px'; // No topo
+        btn.style.left = '50%';
+        btn.style.transform = 'translateX(-50%)';
+        btn.style.zIndex = '10000';
+        btn.style.backgroundColor = '#00d26a'; // Verde vibrante
+        btn.style.color = '#fff';
+        btn.style.border = 'none';
+        btn.style.padding = '12px 30px';
+        btn.style.borderRadius = '50px';
+        btn.style.fontWeight = 'bold';
+        btn.style.fontSize = '14px';
+        btn.style.boxShadow = '0 5px 20px rgba(0,0,0,0.4)';
+        btn.style.cursor = 'pointer';
+        btn.style.transition = 'opacity 1s ease, transform 0.3s';
+        btn.style.display = 'none';
 
-    // Esconde o banner antigo se existir
-    const banner = document.getElementById('install-banner');
-    if(banner) banner.style.display = 'none'; 
+        btn.onclick = async () => {
+            if(deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    btn.style.display = 'none';
+                }
+                deferredPrompt = null;
+            }
+        };
+        document.body.appendChild(btn);
+    }
+    
+    // 3. Mostra o botão
+    btn.style.display = 'block';
+    btn.style.opacity = '1';
+
+    // 4. Temporizador de 10 segundos para sumir
+    setTimeout(() => {
+        if(btn) {
+            btn.style.opacity = '0'; // Efeito fade out
+            setTimeout(() => { btn.style.display = 'none'; }, 1000); // Remove do display após fade
+        }
+    }, 10000); // 10000 ms = 10 segundos
 });
 
-async function installPWA() {
-    if(deferredPrompt) {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-            const btn = document.getElementById('btn-install-login');
-            if(btn) btn.style.display = 'none';
-        }
-        deferredPrompt = null;
-    }
-}
 
 // --- FUNÇÕES DE INPUT E VALIDAÇÃO ---
 function saveInput(el) { if(el && el.id) localStorage.setItem('autosave_' + el.id, el.value); }
