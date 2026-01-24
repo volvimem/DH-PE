@@ -1,7 +1,7 @@
-// Tratamento de erros global para exibir alertas na tela
+// Tratamento de erros global
 window.onerror = function(msg, url, line) { 
-    alert("ERRO: " + msg + "\nLinha: " + line); 
-    return false; // Permite que o erro também apareça no console
+    console.log("Erro silenciado: " + msg);
+    return false; 
 };
 
 function appRefresh() { window.location.reload(true); }
@@ -26,9 +26,13 @@ const DEFAULT_DB = {
     config: { phone: '' } 
 };
 
-function cleanCPF(v) { return v ? v.replace(/\D/g, "") : ""; } 
+// PROTEÇÃO 1: Garante que v seja String antes do replace
+function cleanCPF(v) { 
+    if(!v) return "";
+    return String(v).replace(/\D/g, ""); 
+} 
 
-// --- FUNÇÕES DE INPUT E VALIDAÇÃO (Reorganizadas) ---
+// --- FUNÇÕES DE INPUT E VALIDAÇÃO ---
 
 function saveInput(el) {
     if(el && el.id) localStorage.setItem('autosave_' + el.id, el.value);
@@ -42,12 +46,12 @@ function restoreInputs() {
     });
 }
 
-// IMPORTANTE: validarCPF movido para CIMA para evitar erro de referência
+// PROTEÇÃO 2: Garante que strCPF seja String (Correção do erro linha 40)
 function validarCPF(strCPF) {
     if(!strCPF) return false;
-    strCPF = strCPF.replace(/[^\d]+/g,'');
+    strCPF = String(strCPF).replace(/[^\d]+/g,''); // Força conversão para string
+    
     if (strCPF == '') return false;
-    // Elimina CPFs conhecidos inválidos (111.111.111-11, etc)
     if (strCPF.length != 11 || /^(\d)\1{10}$/.test(strCPF)) return false;
     
     let add = 0; 
@@ -65,25 +69,26 @@ function validarCPF(strCPF) {
     return true;
 }
 
-// CORREÇÃO LINHA 35: Função mascaraCPF robusta
 function mascaraCPF(i) { 
-    if(!i || !i.value) return; // Proteção se i for nulo
+    if(!i || !i.value) return; 
     
-    let v = i.value.replace(/\D/g, "").substring(0, 11); 
+    let v = String(i.value).replace(/\D/g, "").substring(0, 11); 
     i.value = v.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2"); 
     
-    // Agora o validarCPF com certeza existe
-    if(validarCPF(i.value)) { 
-        if(i.classList) { i.classList.add('valid'); i.classList.remove('invalid'); }
-    } else { 
-        if(i.classList) { i.classList.add('invalid'); i.classList.remove('valid'); }
+    // Verifica a classe apenas se o elemento suportar classList
+    if(i.classList) {
+        if(validarCPF(i.value)) { 
+            i.classList.add('valid'); i.classList.remove('invalid'); 
+        } else { 
+            i.classList.add('invalid'); i.classList.remove('valid'); 
+        }
     }
     saveInput(i); 
 }
 
 function mascaraTel(i) { 
     if(!i) return;
-    let v = i.value.replace(/\D/g, "").substring(0, 11); 
+    let v = String(i.value).replace(/\D/g, "").substring(0, 11); 
     v = v.replace(/^(\d{2})(\d)/g, "($1) $2"); 
     v = v.replace(/(\d)(\d{4})$/, "$1-$2"); 
     i.value = v; 
@@ -92,7 +97,7 @@ function mascaraTel(i) {
 
 function mascaraData(i) { 
     if(!i) return;
-    let v = i.value.replace(/\D/g,""); 
+    let v = String(i.value).replace(/\D/g,""); 
     if(v.length > 4) v = v.substring(0,4); 
     if(v.length > 2) v = v.substring(0,2) + '/' + v.substring(2); 
     i.value = v; 
@@ -104,7 +109,7 @@ function togglePass(id) {
     if(el) el.type = el.type === 'password' ? 'text' : 'password'; 
 }
 
-// --- LÓGICA DO BANCO DE DADOS E MIGRAÇÃO ---
+// --- BANCO DE DADOS ---
 let db = JSON.parse(localStorage.getItem(DB_KEY));
 if(!db) {
     for(let key of OLD_KEYS) {
@@ -121,6 +126,7 @@ if(!db) {
 if(!db) db = DEFAULT_DB;
 if(!db.config) db.config = { phone: '' };
 
+// Atualiza Admin se necessário
 const adminIndex = db.users.findIndex(u => cleanCPF(u.cpf) === cleanCPF(ADMIN_CPF));
 if(adminIndex >= 0) { 
     db.users[adminIndex].role = "ADMIN"; 
@@ -162,11 +168,11 @@ function installPWA() {
     }
 }
 
-// --- VARIÁVEIS DE NAVEGAÇÃO ---
+// --- VARIÁVEIS ---
 let currentTab = localStorage.getItem(LAST_TAB_KEY) || 'calendar'; 
 let currentAdmSection = null; let loggedUser = null; let currentPayId = null;
 
-// --- FUNÇÕES UTILITÁRIAS ---
+// --- FUNÇÕES GERAIS ---
 function saveDB() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
 function getUser() { return JSON.parse(localStorage.getItem(SESS_KEY)); }
 function toast(m) { 
@@ -256,7 +262,6 @@ function toggleUserSearch() {
     }
 }
 
-// --- DARK MODE ---
 function toggleDarkMode() {
     document.body.classList.toggle('dark-mode');
     const isDark = document.body.classList.contains('dark-mode');
@@ -268,7 +273,6 @@ function loadDarkMode() {
     if(isDark) document.body.classList.add('dark-mode');
 }
 
-// --- NAVEGAÇÃO ---
 function nav(t) {
     if(t === 'adm' && (!loggedUser || (loggedUser.role !== 'ADMIN' && loggedUser.role !== 'ORGANIZER'))) return toast("ACESSO NEGADO (APENAS ORGANIZADORES)");
     currentTab = t;
