@@ -83,6 +83,26 @@ window.trocarTela = (id) => {
     else { document.getElementById('main-nav-bar').style.display = 'none'; document.getElementById('main-app-header').style.display = 'none'; }
 };
 
+// PWA Install Customizado (Do seu arquivo)
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault(); deferredPrompt = e;
+    const oldBanner = document.getElementById('install-banner'); if(oldBanner) oldBanner.style.display = 'none';
+    let btn = document.getElementById('pwa-install-float-btn');
+    if(!btn) {
+        btn = document.createElement('button'); btn.id = 'pwa-install-float-btn';
+        btn.innerHTML = '<i class="fas fa-download"></i> INSTALAR APP';
+        btn.style.cssText = "position:fixed; top:15px; left:50%; transform:translateX(-50%); z-index:10000; background:#00d26a; color:#fff; border:none; padding:12px 30px; border-radius:50px; font-weight:bold; font-size:14px; box-shadow:0 5px 20px rgba(0,0,0,0.4); cursor:pointer; transition:opacity 1s ease, transform 0.3s; display:none;";
+        btn.onclick = async () => {
+            if(deferredPrompt) { deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') { btn.style.display = 'none'; } deferredPrompt = null; }
+        };
+        document.body.appendChild(btn);
+    }
+    btn.style.display = 'block'; btn.style.opacity = '1';
+    setTimeout(() => { if(btn) { btn.style.opacity = '0'; setTimeout(() => { btn.style.display = 'none'; }, 1000); } }, 10000);
+});
+
+
 // Máscaras e Validação
 window.validarCPF = (strCPF) => {
     if(!strCPF) return false; strCPF = String(strCPF).replace(/[^\d]+/g,''); 
@@ -386,7 +406,7 @@ window.toggleStatus = (cpf, eid) => {
 // Print / Share
 window.openShareModal = (en) => { document.getElementById('share-piloto-name').innerText=loggedUser.nome; document.getElementById('share-event-name').innerText=en; document.getElementById('modal-share').style.display='flex'; };
 window.openPrintOptions = () => { document.getElementById('modal-print-options').style.display='flex'; };
-window.generatePrint = () => { window.print(); };
+window.generatePrint = (cat) => { window.print(); };
 
 // Init
 window.verCartaz = (id) => { const e=db.events.find(x=>x.id==id); if(e){ document.getElementById('img-poster-view').src=e.img; document.getElementById('modal-poster').style.display='flex'; } };
