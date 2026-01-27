@@ -428,7 +428,10 @@ function addResult() {
     const user = db.users.find(u => cleanCPF(u.cpf) === cleanCPF(cpf));
     if(!user) return toast("ERRO AO BUSCAR USUÁRIO");
 
-    const newData = { evtId, name: user.nome, cat: cat, city: city, val, num, status: loggedUser.role === 'ADMIN' ? 'OK' : 'PENDING' };
+    // CORREÇÃO CRÍTICA: Força status OK se for admin
+    const status = loggedUser.role === 'ADMIN' ? 'OK' : 'PENDING';
+    
+    const newData = { evtId, name: user.nome, cat: cat, city: city, val, num, status: status };
 
     if (idxEdit !== "") {
         db.tempos[idxEdit] = newData;
@@ -444,7 +447,6 @@ function addResult() {
     recalcEventRanking(evtId);
     saveDB();
     renderAdmResults();
-    // Atualiza imediatamente se estiver no modo overlay
     if(window.liveInterval) atualizarLiveScreen();
     
     if(idxEdit === "") {
@@ -472,6 +474,7 @@ function recalcEventRanking(evtId) {
     temposEvento.forEach((t, index) => {
         let pontos = 0;
         if(index < pontosRef.length) pontos = pontosRef[index];
+        // Força Status OK no ranking também
         db.ranking.push({ evtId: t.evtId, name: t.name, cat: t.cat, city: t.city, num: t.num, val: pontos + " PTS", status: 'OK' });
     });
 }
@@ -644,16 +647,101 @@ function atualizarLiveScreen() {
     ).join('');
 }
 
+// 5. RENDERIZAÇÃO PÚBLICA (COM CIDADE E FILTROS DINÂMICOS)
+function populatePublicFilters(t) {
+    const elEvt = document.getElementById(`filter-evt-${t}`);
+    if (elEvt && db.events) {
+        const currentVal = elEvt.value;
+        elEvt.innerHTML = '<option value="ALL">TODAS ETAPAS</option>' + 
+                          db.events.map(e => `<option value="${e.id}">${e.t}</option>`).join('');
+        // Se perdeu o valor, volta para ALL
+        if(currentVal && currentVal !== "") elEvt.value = currentVal;
+        else elEvt.value = "ALL";
+    }
+
+    const elCat = document.getElementById(`filter-cat-${t}`);
+    if (elCat && db[t]) {
+        const currentVal = elCat.value;
+        const uniqueCats = [...new Set(db[t].map(item => item.cat))].sort();
+        elCat.innerHTML = '<option value="ALL">TODAS CATEGORIAS</option>' + 
+                          uniqueCats.map(c => `<option value="${c}">${c}</option>`).join('');
+        if(currentVal && currentVal !== "") elCat.value = currentVal;
+        else elCat.value = "ALL";
+    }
+}
+
+function renderContent(t) {
+    if(t === 'calendar') {
+        const hD = document.getElementById('calendar-highlight');
+        const oD = document.getElementById('calendar-others');
+        if(!db.events || db.events.length === 0) { hD.innerHTML = '<div style="padding:20px;text-align:center">Nenhum evento.</div>'; oD.innerHTML = ''; return; }
+
+        const events = db.events;
+        // CORREÇÃO: Garante que 'h' não seja null
+        const h = events.find(e => e.status === 'OPEN') || events[events.length-1];
+        if (!h) return; // Segurança extra
+
+        const imgHtml = (evt) => evt.img ? `<img src="${evt.img}" style="width:100%; height:auto; display:block; border-bottom:1px solid #eee">` : '';
+        const today = new Date().toISOString().split('T')[0];
+        const isClosed = (evt) => evt.closeDate && evt.closeDate < today;
+        
+        const getBtn = (evt) => {
+            if(isClosed(evt) || evt.status === 'CLOSED') return `<button class="btn" style="margin-top:10px; background:#666" disabled>ENCERRADO</button>`;
+            let btnText = "INSCREVER-SE";
+            let btnColor = "var(--pe-blue)";
+            let btnAction = `iniciarInscricao('${evt.id}','${evt.t}','${evt.val}')`;
+            if(loggedUser) {
+                const subs = loggedUser.inscricoes || [];
+                const sub = subs.find(i => i.id == evt.id);
+                if(sub) {
+                    if(sub.status === 'PENDENTE') { btnText = "PENDENTE (PAGAR)"; btnColor = "orange"; btnAction = `iniciarInscricao('${evt.id}','${evt.t}','${evt.val}')`; } 
+                    else { btnText = "CONFIRMADO (VER TICKET)"; btnColor = "green"; btnAction = `abrirTicket('${evt.id}')`; }
+                }
+            }
+            return `<div style="display:flex; gap:5px; margin-top:10px;">
+                <button class="btn" style="flex:2; margin:0; background:${btnColor}" onclick="${btnAction}">${btnText}</button>
+                <button class="btn" style="flex:1; margin:0; background:#333; font-size:10px" onclick="showPublicPointsEvent('${evt.id}')">PTS</button>
+                <button class="btn" style="flex:1; margin:0; background:#25D366" onclick="falarZapTicket()"><i class="fab fa-whatsapp"></i></button>
+            </div>`;
+        };
+
+        hD.innerHTML = `<div class="highlight-event">${imgHtml(h)}<div class="event-body"><div style="font-size:14px; font-weight:900; color:var(--pe-blue)">${h.t}</div><div style="font-size:12px; color:#666; margin:5px 0">${h.d} ${h.m} | ${h.city}</div><div class="event-price">INSCRIÇÃO: R$ ${h.val}</div><div style="margin-top:10px; font-size:10px"><b>STATUS:</b> <span style="color:${h.status==='OPEN'?'green':'red'}">${h.status==='OPEN'?'ABERTO':'ENCERRADO'}</span><br><b>ENCERRA EM:</b> ${h.closeDate ? h.closeDate.split('-').reverse().join('/') : 'INDEFINIDO'}</div>${getBtn(h)}</div></div>`;
+        oD.innerHTML = events.filter(e => e.id !== h.id).map(e => `<div class="event-card">${imgHtml(e)}<div class="event-body" style="text-align:left"><div style="font-size:12px; font-weight:bold; color:var(--pe-blue)">${e.t}</div><div style="font-size:10px; color:#666">${e.d} ${e.m} - ${e.city}</div>${getBtn(e)}</div></div>`).join('');
+    } else if (t === 'tempos' || t === 'ranking') {
+        const list = db[t] ? db[t].filter(i => i.status === 'OK') : [];
+        const div = document.getElementById('list-'+t);
+        if(!div) return;
+        
+        // Aplica Filtros
+        const fEvt = document.getElementById('filter-evt-'+t).value;
+        const fCat = document.getElementById('filter-cat-'+t).value;
+        
+        let filteredList = list;
+        if (fEvt !== 'ALL') filteredList = filteredList.filter(i => i.evtId == fEvt);
+        if (fCat !== 'ALL') filteredList = filteredList.filter(i => i.cat === fCat);
+
+        div.innerHTML = filteredList.map((r, i) => `<div class="rank-row"><div class="rank-pos">${i+1}</div><div class="rank-name">${r.name}<span class="rank-cat">${r.city} - ${r.cat}</span></div><div class="rank-val">${r.val}</div></div>`).join('');
+    }
+}
+
+function showPublicPointsEvent(evtId) {
+    const evt = db.events.find(e => e.id == evtId);
+    if(!evt) return;
+    const pts = evt.points || DEFAULT_POINTS;
+    const title = document.getElementById('modal-points-title');
+    const list = document.getElementById('public-points-list');
+    title.innerText = "PONTOS: " + evt.t;
+    list.innerHTML = pts.map((p, i) => `<div style="border-bottom:1px solid #eee; padding:5px; display:flex; justify-content:space-between;"><span>${i+1}º LUGAR</span><b>${p} PTS</b></div>`).join('');
+    openModal('modal-points');
+}
+
 // CHECK INICIAL DO MODO LIVE POPUP
 document.addEventListener('DOMContentLoaded', () => {
-    // Verifica se estamos no modo popup live
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('mode') === 'live') {
-        // Esconde tudo, mostra só a live
         document.getElementById('main-app-container').style.display = 'none';
         document.getElementById('screen-live-monitor').style.display = 'flex';
         document.getElementById('screen-live-monitor').classList.add('fullscreen-mode');
-        // Inicia loop
         iniciarLiveLoop();
         return; 
     }
