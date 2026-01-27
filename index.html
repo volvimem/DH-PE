@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DH-PE v4.1 LIVE</title>
+    <title>DH-PE v4.2 PRO</title>
     
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="logo.png">
@@ -20,8 +20,8 @@
     <div class="live-header-bar">
         <div class="live-logo"><img src="logo.png" style="height:50px"></div>
         <div style="text-align:center; flex:1">
-            <div class="live-event-title" id="live-title-display" style="font-size:24px; text-transform: uppercase;">CARREGANDO EVENTO...</div>
-            <div class="live-cat-title" id="live-cat-display" style="font-size:30px; color:var(--pe-yellow); font-weight:900; margin-top:5px; text-shadow: 1px 1px 3px black;">AGUARDANDO COMANDO...</div>
+            <div class="live-event-title" id="live-title-display" style="font-size:24px; text-transform: uppercase;">CARREGANDO...</div>
+            <div class="live-cat-title" id="live-cat-display" style="font-size:30px; color:var(--pe-yellow); font-weight:900; margin-top:5px; text-shadow: 1px 1px 3px black;">AGUARDANDO...</div>
         </div>
         <div style="width:50px"></div> 
     </div>
@@ -31,9 +31,8 @@
             <div class="live-col-header" style="background:var(--pe-blue); font-size:20px; padding:15px;"><i class="fas fa-stopwatch"></i> ÚLTIMOS NA PISTA</div>
             <div id="live-feed-list" class="live-list-content" style="padding:10px;"></div>
         </div>
-        
         <div class="live-col">
-            <div class="live-col-header" style="background:var(--pe-green); font-size:20px; padding:15px;"><i class="fas fa-trophy"></i> CLASSIFICAÇÃO <span id="live-cat-label"></span></div>
+            <div class="live-col-header" style="background:var(--pe-green); font-size:20px; padding:15px;"><i class="fas fa-trophy"></i> CLASSIFICAÇÃO</div>
             <div id="live-ranking-list" class="live-list-content" style="padding:10px;"></div>
         </div>
     </div>
@@ -83,9 +82,7 @@
 </div>
 
 <div class="modal-overlay" id="modal-edit-user"><div class="modal-box"><h3 style="color:var(--pe-blue)">EDITAR ATLETA</h3><input type="hidden" id="edit-user-original-cpf"><div class="input-group"><label>NOME</label><input id="edit-user-name" class="uppercase-input"></div><div class="input-group"><label>CPF</label><input id="edit-user-cpf" oninput="mascaraCPF(this)"></div><div class="input-group"><label>WHATSAPP</label><input id="edit-user-tel" oninput="mascaraTel(this)"></div><div class="input-group"><label>CIDADE</label><input id="edit-user-city" class="uppercase-input"></div><div class="input-group"><label>CATEGORIA</label><input id="edit-user-cat"></div><div class="input-group"><label>GÊNERO</label><input id="edit-user-gender" maxlength="1" class="uppercase-input"></div><div class="input-group"><label>SENHA</label><input id="edit-user-pass"></div><button class="btn" onclick="saveUserEdit()">SALVAR TUDO</button><button class="btn" style="background:#ddd; color:#333; margin-top:5px" onclick="fecharModal('modal-edit-user')">CANCELAR</button></div></div>
-
 <div class="modal-overlay" id="modal-poster"><div class="modal-box" style="padding:0; background:black; border:none; width:95%; max-width:400px"><div style="position:relative"><img id="img-poster-view" style="width:100%; display:block"><button onclick="fecharModal('modal-poster')" style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.5); color:white; border:none; padding:10px; border-radius:50%; cursor:pointer"><i class="fas fa-times"></i></button></div></div></div>
-
 <div class="modal-overlay" id="modal-recovery"><div class="modal-box"><h3 style="color:var(--pe-blue)">RECUPERAR SENHA</h3><div class="input-group"><label>SEU CPF</label><input type="tel" id="rec-cpf" oninput="mascaraCPF(this)"></div><div class="input-group"><label>SEU TELEFONE</label><input type="tel" id="rec-tel" oninput="mascaraTel(this)"></div><div id="rec-security-area" style="display:none; margin-top:10px; border-top:1px dashed #ccc; padding-top:10px;"><p style="font-size:10px; font-weight:bold; color:var(--pe-blue); margin-bottom:5px">PALAVRA-CHAVE</p><div class="input-group"><label>SUA RESPOSTA</label><input id="rec-answer" class="uppercase-input"></div><button class="btn" onclick="revelarSenha()">MOSTRAR SENHA</button></div><button class="btn" id="btn-buscart-rec" onclick="buscarUsuarioRecuperacao()">CONTINUAR</button><button class="btn" style="background:#ddd; color:#333; margin-top:5px" onclick="fecharModal('modal-recovery')">FECHAR</button></div></div>
 
 <div class="app-container" id="main-app-container">
@@ -143,7 +140,7 @@
             <div class="header-logo-text"><img src="logo.png" class="header-mini-logo"> DH-PE</div>
             <div style="display:flex; align-items:center; gap:10px;">
                  <div class="version-badge" onclick="toggleDarkMode()"><i class="fas fa-moon"></i></div>
-                 <div class="version-badge" onclick="appRefresh()">v4.1</div>
+                 <div class="version-badge" onclick="appRefresh()">v4.2</div>
             </div>
         </div>
         
