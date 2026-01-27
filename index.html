@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DH-PE v4.4 PRO</title>
+    <title>DH-PE v6.0 PRO</title>
     
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="logo.png">
@@ -11,40 +11,39 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-    <style>
-        /* Ajuste Específico para Live Vermelha */
-        .live-red-theme { color: #ff0000 !important; }
-        .live-bg-red { background: #d50000 !important; }
-        .live-border-red { border-color: #d50000 !important; }
-    </style>
 </head>
 <body>
 
 <div class="toast" id="toast">MSG</div>
 
-<div id="screen-live-monitor" class="live-screen" style="display:none;">
-    <div class="live-header-bar" style="height: 80px; flex-shrink: 0; justify-content: center;">
-        <div class="live-logo"><img src="logo.png" style="height:60px"></div>
-        <div style="text-align:center; margin-left: 20px;">
-            <div class="live-event-title" id="live-title-display" style="font-size:1.5vw; text-transform: uppercase;">CARREGANDO...</div>
-            <div class="live-cat-title live-red-theme" id="live-cat-display" style="font-size:2.5vw; font-weight:900; margin-top:0px; text-shadow: 2px 2px 0px #000;">AGUARDANDO...</div>
+<div id="screen-live-monitor" class="live-screen" style="display:none; background:white;">
+    <div class="live-header-bar" style="background:#fff; border-bottom:3px solid #000; height:70px;">
+        <div class="live-logo"><img src="logo.png" style="height:50px"></div>
+        <div style="text-align:center; flex:1">
+            <div id="live-title-display" style="font-size:1.8vw; font-weight:900; color:#000; text-transform: uppercase;">EVENTO AO VIVO</div>
         </div>
+        <div style="width:50px"></div> 
     </div>
     
-    <div class="live-grid-container" style="height: calc(100vh - 80px); overflow:hidden; display:flex;">
-        
-        <div class="live-col" style="flex:1; border-right: 3px solid #444; display:flex; flex-direction:column;">
-            <div class="live-col-header live-bg-red" style="font-size:1.5vw; padding:15px; text-align:center; color:white; font-weight:bold;">
-                <i class="fas fa-filter"></i> CATEGORIA ATUAL
-            </div>
-            <div id="live-cat-list" class="live-list-content" style="padding:10px; flex:1; overflow-y:auto;"></div>
+    <div class="live-layout-grid">
+        <div class="live-col-side">
+            <div class="live-header-box live-header-blue"><i class="fas fa-filter"></i> <span id="live-cat-label">CATEGORIA</span></div>
+            <div id="live-cat-list" style="flex:1; overflow-y:auto;"></div>
         </div>
-        
-        <div class="live-col" style="flex:1; display:flex; flex-direction:column;">
-            <div class="live-col-header" style="background:#111; border-bottom: 3px solid #d50000; font-size:1.5vw; padding:15px; text-align:center; color:white; font-weight:bold;">
-                <i class="fas fa-trophy"></i> GERAL (TOP TEMPOS)
+        <div class="live-col-center">
+            <div style="font-size:1vw; font-weight:bold; color:#666; margin-top:10px;">TEMPO DE CORRIDA</div>
+            <div class="chrono-box" id="live-chronometer">00:00:00</div>
+            <div class="live-last-athlete">
+                <div style="font-size:1vw; font-weight:bold; margin-bottom:5px;">ÚLTIMO NA PISTA</div>
+                <div id="live-last-name" style="font-size:2vw; font-weight:900; color:#0038a8;">-</div>
+                <div id="live-last-city" style="font-size:1.2vw; color:#333;">-</div>
+                <div id="live-last-time" style="font-size:2.5vw; font-weight:900; color:#d50000; margin-top:5px;">--:--.--</div>
             </div>
-            <div id="live-general-list" class="live-list-content" style="padding:10px; flex:1; overflow-y:auto;"></div>
+            <div style="margin-top:auto; font-size:0.8vw; color:#999;">SISTEMA DH-PE LIVE TIMING</div>
+        </div>
+        <div class="live-col-side">
+            <div class="live-header-box live-header-red"><i class="fas fa-crown"></i> TOP PISTA (GERAL)</div>
+            <div id="live-general-list" style="flex:1; overflow-y:auto;"></div>
         </div>
     </div>
 </div>
@@ -95,6 +94,7 @@
 <div class="modal-overlay" id="modal-edit-user"><div class="modal-box"><h3 style="color:var(--pe-blue)">EDITAR ATLETA</h3><input type="hidden" id="edit-user-original-cpf"><div class="input-group"><label>NOME</label><input id="edit-user-name" class="uppercase-input"></div><div class="input-group"><label>CPF</label><input id="edit-user-cpf" oninput="mascaraCPF(this)"></div><div class="input-group"><label>WHATSAPP</label><input id="edit-user-tel" oninput="mascaraTel(this)"></div><div class="input-group"><label>CIDADE</label><input id="edit-user-city" class="uppercase-input"></div><div class="input-group"><label>CATEGORIA</label><input id="edit-user-cat"></div><div class="input-group"><label>GÊNERO</label><input id="edit-user-gender" maxlength="1" class="uppercase-input"></div><div class="input-group"><label>SENHA</label><input id="edit-user-pass"></div><button class="btn" onclick="saveUserEdit()">SALVAR TUDO</button><button class="btn" style="background:#ddd; color:#333; margin-top:5px" onclick="fecharModal('modal-edit-user')">CANCELAR</button></div></div>
 <div class="modal-overlay" id="modal-poster"><div class="modal-box" style="padding:0; background:black; border:none; width:95%; max-width:400px"><div style="position:relative"><img id="img-poster-view" style="width:100%; display:block"><button onclick="fecharModal('modal-poster')" style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.5); color:white; border:none; padding:10px; border-radius:50%; cursor:pointer"><i class="fas fa-times"></i></button></div></div></div>
 <div class="modal-overlay" id="modal-recovery"><div class="modal-box"><h3 style="color:var(--pe-blue)">RECUPERAR SENHA</h3><div class="input-group"><label>SEU CPF</label><input type="tel" id="rec-cpf" oninput="mascaraCPF(this)"></div><div class="input-group"><label>SEU TELEFONE</label><input type="tel" id="rec-tel" oninput="mascaraTel(this)"></div><div id="rec-security-area" style="display:none; margin-top:10px; border-top:1px dashed #ccc; padding-top:10px;"><p style="font-size:10px; font-weight:bold; color:var(--pe-blue); margin-bottom:5px">PALAVRA-CHAVE</p><div class="input-group"><label>SUA RESPOSTA</label><input id="rec-answer" class="uppercase-input"></div><button class="btn" onclick="revelarSenha()">MOSTRAR SENHA</button></div><button class="btn" id="btn-buscart-rec" onclick="buscarUsuarioRecuperacao()">CONTINUAR</button><button class="btn" style="background:#ddd; color:#333; margin-top:5px" onclick="fecharModal('modal-recovery')">FECHAR</button></div></div>
+<div class="modal-overlay" id="modal-customize"><div class="modal-box" style="text-align:left"><h3 style="color:var(--pe-blue); text-align:center; margin-bottom:15px">PERSONALIZAR SISTEMA</h3><b style="font-size:10px; color:#666">CORES GERAIS</b><div class="edit-row"><span>COR PRINCIPAL (AZUL)</span><input type="color" id="cust-color-blue" style="width:40px; padding:0;"></div><div class="edit-row"><span>COR DESTAQUE (AMARELO)</span><input type="color" id="cust-color-yellow" style="width:40px; padding:0;"></div><div class="edit-row"><span>COR ALERTA (VERMELHO)</span><input type="color" id="cust-color-red" style="width:40px; padding:0;"></div><div class="edit-row"><span>COR SUCESSO (VERDE)</span><input type="color" id="cust-color-green" style="width:40px; padding:0;"></div><b style="font-size:10px; color:#666; margin-top:10px; display:block">BOTÕES GLOBAIS (MENU)</b><div class="input-group" style="margin-bottom:5px"><label>BOTÃO 1</label><input id="cust-lbl-cal" placeholder="CALENDÁRIO"></div><div class="input-group" style="margin-bottom:5px"><label>BOTÃO 2</label><input id="cust-lbl-tempos" placeholder="TEMPOS"></div><div class="input-group" style="margin-bottom:5px"><label>BOTÃO 3</label><input id="cust-lbl-ranking" placeholder="RANKING"></div><button class="btn" style="background:var(--pe-green); margin-top:15px" onclick="saveCustomization()">SALVAR TUDO</button><button class="btn" style="background:#ddd; color:#333; margin-top:5px" onclick="fecharModal('modal-customize')">CANCELAR</button></div></div>
 
 <div class="app-container" id="main-app-container">
     <div id="screen-login" class="screen active">
@@ -105,7 +105,7 @@
             <div class="input-group"><label>CPF</label><div class="input-wrapper"><input type="tel" id="login-cpf" placeholder="000.000.000-00" oninput="mascaraCPF(this);" maxlength="14"></div></div>
             <div class="input-group"><label>SENHA</label><div class="input-wrapper"><input type="password" id="login-pass" placeholder="••••"><i class="fas fa-eye pass-eye" onclick="togglePass('login-pass')"></i></div></div>
             <div class="checkbox-wrapper"><input type="checkbox" id="login-remember"> MANTER CONECTADO</div>
-            <button id="btn-acessar" class="btn" style="background:var(--pe-yellow); color:var(--pe-blue); font-weight:900;" onclick="fazerLogin()">ACESSAR CONTA</button>
+            <button id="btn-acessar" class="btn" onclick="fazerLogin()">ACESSAR CONTA</button>
             <div style="display:flex; gap:10px; width:100%; margin-top:10px;">
                 <button class="btn" onclick="trocarTela('cadastro')" style="background:rgba(255,255,255,0.2); color:white; margin:0; font-size:12px">CRIAR CONTA</button>
                 <button class="btn" onclick="abrirRecuperacao()" style="background:rgba(255,255,255,0.1); color:#eee; margin:0; border:none; font-size:12px">ESQUECI SENHA</button>
@@ -134,6 +134,8 @@
                     <option value="ELITE">ELITE</option>
                     <option value="OPEN">OPEN</option>
                     <option value="RÍGIDA">RÍGIDA</option>
+                    <option value="ESTREANTE">ESTREANTE</option>
+                    <option value="PCD">PCD</option>
                 </select>
                 <input type="hidden" id="cad-cat-final">
             </div>
@@ -150,8 +152,7 @@
         <div id="main-app-header" class="app-header">
             <div class="header-logo-text"><img src="logo.png" class="header-mini-logo"></div>
             <div style="display:flex; align-items:center; gap:10px;">
-                 <div class="version-badge" onclick="toggleDarkMode()"><i class="fas fa-moon"></i></div>
-                 <div class="version-badge" onclick="appRefresh()">v4.4</div>
+                 <div class="version-badge" onclick="appRefresh()">v6.0</div>
             </div>
         </div>
         
@@ -183,26 +184,45 @@
         </div>
 
         <div id="cont-profile" class="c-sec" style="display:none; padding-bottom:80px">
-            <div class="profile-card">
-                <div class="profile-header">
-                    <div class="profile-avatar" id="prof-img-area" onclick="document.getElementById('file-upload').click()">
-                        <i class="fas fa-camera"></i><img id="prof-img-display" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:50%">
+            <div class="profile-card" style="display:none"></div>
+            
+            <div style="padding:20px; text-align:center;">
+                <div id="digital-id-card" class="id-card-premium">
+                    <div class="id-card-header">
+                        <img src="logo.png">
+                        <span>FEDERAÇÃO PERNAMBUCANA</span>
                     </div>
-                    <input type="file" id="file-upload" accept="image/*" style="display:none" onchange="uploadSelfie(this)">
-                    <div style="text-align:left"><div class="profile-name" id="prof-name">...</div><div class="profile-cat" id="prof-cat">...</div></div>
+                    <div class="id-card-body">
+                        <div class="id-photo-box">
+                            <img id="card-img-display" src="https://via.placeholder.com/80">
+                        </div>
+                        <div class="id-info-box">
+                            <div class="id-name" id="card-name">...</div>
+                            <div class="id-row"><span>CATEGORIA</span><b id="card-cat">...</b></div>
+                            <div class="id-row"><span>CIDADE</span><b id="card-city">...</b></div>
+                            <div class="id-row"><span>CPF</span><b id="card-cpf">...</b></div>
+                            <div class="id-row"><span>EQUIPE</span><b id="card-team">...</b></div>
+                        </div>
+                    </div>
+                    <div class="id-footer">VÁLIDO PARA TEMPORADA 2026 • FILIAÇÃO DIGITAL</div>
                 </div>
-                <div class="profile-info"><div><b>CPF:</b> <span id="prof-cpf">...</span></div><div><b>Equipe:</b> <span id="prof-team">...</span></div><div><b>Cidade:</b> <span id="prof-city">...</span></div></div>
+                
+                <button class="btn" style="background:var(--pe-blue); margin-top:10px" onclick="baixarImagem('digital-id-card', 'carteirinha')"><i class="fas fa-download"></i> BAIXAR CARTEIRINHA HD</button>
             </div>
-            <button class="btn" style="background:var(--pe-blue); margin-bottom:15px" onclick="toggleCarteirinha()"><i class="fas fa-id-card"></i> MINHA CARTEIRINHA DIGITAL</button>
-            <div id="carteirinha-area" style="display:none; margin-bottom:20px;">
-                <div id="digital-id-card" class="id-card">
-                    <div class="id-card-top"></div><div class="id-card-logo"><img src="logo.png" style="width:30px"> DH-PE OFICIAL</div>
-                    <div class="id-card-content"><div class="id-card-photo"><img id="card-img-display" src="https://via.placeholder.com/80" style="width:100%; height:100%; object-fit:cover"></div><div class="id-card-data"><div class="id-card-name" id="card-name">...</div><div class="id-card-row"><span>CAT: <b id="card-cat">...</b></span><span>Nº: <b id="card-num">...</b></span></div><div class="id-card-row"><span>CPF: <b id="card-cpf">...</b></span><span>RH: <b id="card-rh">...</b></span></div><div class="id-card-valid">VÁLIDO 2026</div></div></div>
-                </div>
-                <button class="btn-mini" style="margin-top:5px; width:100%" onclick="baixarImagem('digital-id-card', 'carteirinha')">BAIXAR IMAGEM</button>
+            
+            <div class="section-title" style="text-align:left; margin-top:20px;">ATUALIZAR MEUS DADOS</div>
+            <div style="background:white; padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05); margin:0 15px 20px 15px;">
+                <div class="input-group"><label>FOTO PERFIL</label><input type="file" id="file-upload" accept="image/*" onchange="uploadSelfie(this)"></div>
+                
+                <div class="input-group"><label>NOME COMPLETO (BLOQUEADO)</label><input id="prof-edit-name" class="uppercase-input" readonly style="background:#eee; color:#666"></div>
+                <div class="input-group"><label>CIDADE (BLOQUEADO)</label><input id="prof-edit-city" class="uppercase-input" readonly style="background:#eee; color:#666"></div>
+                <div class="input-group"><label>CATEGORIA (BLOQUEADO)</label><input id="prof-edit-cat" class="uppercase-input" readonly style="background:#eee; color:#666;"></div>
+                
+                <div class="input-group"><label style="color:var(--pe-green)">EQUIPE (EDITÁVEL)</label><input id="prof-edit-team" class="uppercase-input" style="border:2px solid var(--pe-green)" oninput="updateCardLive()"></div>
+                <div class="input-group"><label>TELEFONE/ZAP</label><input id="prof-edit-tel" type="tel" oninput="mascaraTel(this)"></div>
+                
+                <button class="btn-mini" style="width:100%; background:var(--pe-green); padding:10px; margin-top:10px" onclick="salvarFullProfile()">SALVAR ALTERAÇÕES</button>
             </div>
-            <div class="section-title" style="text-align:left">MEUS DADOS</div>
-            <div style="background:white; padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05); margin-bottom:20px"><div class="input-group"><label>TELEFONE/ZAP</label><input id="prof-edit-tel" type="tel" oninput="mascaraTel(this)"></div><div class="input-group"><label>EQUIPE</label><input id="prof-edit-team" type="text" class="uppercase-input"></div><button class="btn-mini" style="width:100%; background:var(--pe-green)" onclick="salvarDadosPerfil()">ATUALIZAR DADOS</button></div>
         </div>
 
         <div id="cont-adm" class="c-sec" style="display:none; padding:10px; padding-bottom:90px">
@@ -217,6 +237,7 @@
                     <div class="adm-dash-btn" onclick="openAdmSection('results')"><i class="fas fa-stopwatch"></i><span>LANÇAR RESULTADOS</span></div>
                     <div class="adm-dash-btn" onclick="openAdmSection('financial')"><i class="fas fa-file-invoice-dollar"></i><span>STATUS DOS ATLETAS</span></div>
                     <div class="adm-dash-btn" id="btn-adm-users" onclick="openAdmSection('users-edit')"><i class="fas fa-user-edit"></i><span>GERENCIAR ATLETAS</span></div>
+                    <div class="adm-dash-btn" onclick="openAdmSection('history')"><i class="fas fa-history"></i><span>HISTÓRICO GERAL</span></div>
                     <div class="adm-dash-btn" id="btn-adm-org" onclick="openAdmSection('organizer')"><i class="fas fa-users-cog"></i><span>EQUIPE</span></div>
                     <div class="adm-dash-btn" id="btn-adm-cfg" onclick="openAdmSection('config-global')"><i class="fas fa-cogs"></i><span>CONFIGURAÇÕES</span></div>
                 </div>
@@ -237,8 +258,9 @@
                         <div style="margin-top:5px"><label>DATA LIMITE</label><input type="date" id="adm-evt-close-date" oninput="persistEventForm()"></div>
                         <div style="margin-top:5px"><label>STATUS</label><select id="adm-evt-status" onchange="persistEventForm()"><option value="OPEN">ABERTO</option><option value="CLOSED">ENCERRADO</option></select></div>
                         <input id="adm-evt-pix" placeholder="CHAVE PIX" class="input-field" style="margin-top:5px; padding:8px" oninput="persistEventForm()">
-                        <div style="margin-top:5px"><label>CARTAZ (LINK OU FILE)</label><input type="file" id="adm-evt-img" accept="image/*"></div>
+                        <input id="adm-evt-wpp" placeholder="WHATSAPP DO RESPONSÁVEL (COM DDD)" type="tel" class="input-field" style="margin-top:5px; padding:8px" oninput="mascaraTel(this)">
                         
+                        <div style="margin-top:5px"><label>CARTAZ (LINK OU FILE)</label><input type="file" id="adm-evt-img" accept="image/*"></div>
                         <div style="margin-top:10px; border-top:1px dashed #ccc; padding-top:5px">
                             <b style="font-size:10px">PONTUAÇÃO (1º ao 20º)</b>
                             <div style="display:flex; gap:5px; margin-bottom:5px;">
@@ -247,11 +269,29 @@
                             </div>
                             <div id="evt-points-grid" style="display:grid; grid-template-columns: repeat(5, 1fr); gap:3px; margin-top:5px;"></div>
                         </div>
-
                         <button class="btn" id="btn-save-event" onclick="addEvent()" style="background:var(--pe-green); margin-top:10px">SALVAR EVENTO</button>
                         <button class="btn" style="background:#999; margin-top:5px" onclick="clearEventForm()">LIMPAR</button>
                     </div>
                     <div style="margin-top:10px; border-top:1px solid #eee; padding-top:5px"><b style="font-size:10px">LISTA DE EVENTOS</b><div id="adm-list-events"></div></div>
+                    <button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
+                </div>
+
+                <div id="adm-sec-history" class="adm-section" style="display:none">
+                    <div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;">
+                        <b style="color:var(--pe-blue)">HISTÓRICO COMPLETO DO ATLETA</b>
+                        <div class="smart-search-container" style="margin-top:10px;">
+                            <input type="text" id="adm-hist-search" placeholder="BUSCAR POR NOME OU CPF..." class="input-field uppercase-input" oninput="filterPilots('hist')">
+                            <div id="adm-hist-list" class="smart-list" style="display:none; max-height:150px; overflow-y:auto; border:1px solid #ccc;"></div>
+                        </div>
+                        <div id="hist-result-area" style="margin-top:20px; display:none;">
+                            <div style="background:#f8f9fa; padding:10px; border-radius:5px; margin-bottom:10px; border:1px solid #ddd;">
+                                <h3 id="hist-name" style="color:var(--pe-blue)">NOME</h3>
+                                <div style="font-size:10px; color:#666" id="hist-details">CPF: - | Cidade: -</div>
+                            </div>
+                            <b style="font-size:10px">PARTICIPAÇÕES & RESULTADOS</b>
+                            <div id="hist-timeline" style="margin-top:5px"></div>
+                        </div>
+                    </div>
                     <button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
                 </div>
 
@@ -261,18 +301,15 @@
                             <b style="color:var(--pe-green); font-size:12px">LANÇAR RESULTADO</b>
                             <button class="btn-mini-adm" style="background:#E1306C; color:white; padding:5px 10px;" onclick="abrirPopUpLive()">ABRIR JANELA LIVE <i class="fas fa-external-link-alt"></i></button>
                         </div>
-                        
                         <div style="display:flex; gap:5px; margin-top:10px;">
                              <select id="adm-res-evt" class="input-field" onchange="refreshAdmLists()"><option value="">SELECIONE EVENTO...</option></select>
                         </div>
-                        
                         <div style="background:#222; padding:5px; border-radius:5px; margin-top:10px; color:white;">
                             <label style="font-size:10px; color:#ffe500">CATEGORIA NA TV (LIVE):</label>
                             <select id="adm-live-cat-selector" style="width:100%; padding:5px; margin-top:2px;" onchange="updateLiveFilterConfig()">
                                 <option value="ALL">MOSTRAR GERAL (TODOS)</option>
                             </select>
                         </div>
-
                         <div style="display:flex; gap:5px; margin-top:10px">
                             <input type="hidden" id="adm-res-id">
                             <input type="hidden" id="adm-res-idx-edit" value="">
@@ -282,17 +319,14 @@
                             <input type="text" id="adm-res-search" placeholder="BUSCAR ATLETA..." class="input-field uppercase-input" oninput="filterPilots('res')">
                             <div id="adm-res-list" class="smart-list" style="display:none; max-height:150px; overflow-y:auto; border:1px solid #ccc;"></div>
                         </div>
-                        
                         <div style="display:flex; gap:5px; margin-top:5px">
                             <input id="adm-res-city-edit" placeholder="CIDADE" class="uppercase-input input-field">
                             <input id="adm-res-cat-edit" placeholder="CATEGORIA" class="uppercase-input input-field">
                         </div>
-
                         <div style="display:flex; gap:5px; margin-top:5px">
                             <input id="adm-res-num" placeholder="Nº" type="tel" class="input-field" style="width:60px; text-align:center;">
                             <input id="adm-res-val" placeholder="00:00.000" class="input-field" oninput="maskTimeOrPoints(this)">
                         </div>
-                        
                         <button class="btn" id="btn-save-res" style="background:var(--pe-green); margin-top:10px" onclick="addResult()">LANÇAR / SALVAR</button>
                         <button class="btn" id="btn-cancel-res" style="background:#999; margin-top:5px; display:none" onclick="cancelEditRes()">CANCELAR EDIÇÃO</button>
                     </div>
@@ -301,20 +335,18 @@
                 </div>
 
                 <div id="adm-sec-financial" class="adm-section" style="display:none"><div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;"><b style="color:var(--pe-blue); font-size:12px">STATUS DOS ATLETAS</b><select id="fin-evt-select" class="input-field" style="margin:10px 0" onchange="renderInscriptions()"></select><div class="stats-box" style="display:flex; justify-content:space-between; background:#e0f2fe; padding:10px; border-radius:5px; font-size:11px; font-weight:bold"><span id="stat-total">Total: 0</span><span id="stat-paid" style="color:green">Pagos: 0</span></div><div style="display:flex;gap:5px;margin-bottom:5px; margin-top:10px"><button class="btn-mini-adm" style="background:#ccc;color:black;flex:1" onclick="filterFinList('ALL')">GERAL</button><button class="btn-mini-adm" style="background:green;color:white;flex:1" onclick="filterFinList('CONFIRMADO')">PAGOS</button><button class="btn-mini-adm" style="background:orange;color:white;flex:1" onclick="filterFinList('PENDENTE')">PEND</button></div><div id="fin-list-container" style="max-height:300px; overflow-y:auto; background:white; border:1px solid #eee"></div></div><button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button></div>
-                
                 <div id="adm-sec-users-edit" class="adm-section" style="display:none"><div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;"><b style="color:var(--pe-blue); font-size:12px">GERENCIAR ATLETAS</b><input type="text" id="adm-edit-user-search" placeholder="Buscar Nome/CPF/Cidade..." class="input-field" style="margin-top:10px" oninput="filterPilots('edit-user', true)"><div id="adm-edit-user-list" style="margin-top:10px; max-height:400px; overflow-y:auto"></div></div><button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button></div>
-                
                 <div id="adm-sec-organizer" class="adm-section" style="display:none"><div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;"><b>EQUIPE</b><div class="smart-search-container" style="margin-top:10px;"><input type="text" id="adm-org-search" placeholder="Buscar..." class="input-field" oninput="filterPilots('org', true)"><div id="adm-org-list-search" class="smart-list" style="display:none; border:1px solid #ccc"></div></div><div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; border-bottom:1px solid #eee; padding-bottom:5px; cursor:pointer" onclick="toggleOrgList()"><b style="font-size:12px">LISTA DE ORGANIZADORES</b><i class="fas fa-chevron-down" id="icon-org-toggle"></i></div><input type="hidden" id="adm-org-selected-cpf"><div id="org-perms-area" style="display:none; margin-top:10px; border:1px dashed #ccc; padding:10px"><p style="font-size:10px">Selecione as etapas:</p><div id="org-events-list"></div><button class="btn" style="background:var(--pe-blue); margin-top:5px" onclick="promoteToOrganizer()">PROMOVER</button></div><div id="adm-list-orgs" style="margin-top:10px; display:none"></div></div><button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button></div>
-                
-                <div id="adm-sec-config-global" class="adm-section" style="display:none"><div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;"><b>CONFIGURAÇÕES</b><div class="input-group"><label>ZAP SUPORTE</label><input id="adm-cfg-phone" class="input-field"></div><button class="btn" onclick="saveGlobalConfig()">SALVAR</button></div><button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button></div>
+                <div id="adm-sec-config-global" class="adm-section" style="display:none"><div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;"><b>CONFIGURAÇÕES</b><div class="input-group"><label>ZAP SUPORTE</label><input id="adm-cfg-phone" class="input-field"></div><button class="btn" onclick="saveGlobalConfig()">SALVAR</button><div style="margin-top:20px; border-top:1px solid #eee; padding-top:10px"><b>PERSONALIZAÇÃO VISUAL</b><button class="btn" style="background:#666; margin-top:5px" onclick="openModal('modal-customize')">PERSONALIZAR BOTÕES E CORES <i class="fas fa-pen"></i></button></div></div><button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button></div>
             </div>
         </div>
     </div>
 
     <div class="bottom-bar" id="main-nav-bar">
-        <div class="bar-item active" id="btn-calendar" onclick="nav('calendar')"><i class="far fa-calendar-alt"></i><span>CAL</span></div>
-        <div class="bar-item" id="btn-tempos" onclick="nav('tempos')"><i class="fas fa-stopwatch"></i><span>TEMPO</span></div>
-        <div class="bar-item" id="btn-ranking" onclick="nav('ranking')"><i class="fas fa-trophy"></i><span>RANK</span></div>
+        <div class="bar-item active" id="btn-calendar" onclick="nav('calendar')"><i class="far fa-calendar-alt"></i><span id="nav-lbl-calendar">CAL</span></div>
+        <div class="bar-item" id="btn-tempos" onclick="nav('tempos')"><i class="fas fa-stopwatch"></i><span id="nav-lbl-tempos">TEMPO</span></div>
+        <div class="bar-item" id="btn-ranking" onclick="nav('ranking')"><i class="fas fa-trophy"></i><span id="nav-lbl-ranking">RANK</span></div>
+        <div class="bar-item" id="btn-profile" onclick="nav('profile')"><i class="fas fa-user-circle"></i><span>PERFIL</span></div>
         <div class="bar-item" id="btn-adm" onclick="tryOpenAdmin()" style="display:none"><i class="fas fa-user-shield"></i><span>ADM</span></div>
         <div class="bar-item" onclick="fazerLogout()"><i class="fas fa-sign-out-alt"></i><span>SAIR</span></div>
     </div>
