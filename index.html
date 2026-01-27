@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DH-PE v3.3 LIVE</title>
+    <title>DH-PE v4.1 LIVE</title>
     
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="logo.png">
@@ -18,18 +18,23 @@
 
 <div id="screen-live-monitor" class="live-screen" style="display:none;">
     <div class="live-header-bar">
-        <div class="live-logo"><img src="logo.png" style="height:30px"> DH-PE LIVE TIMING</div>
-        <div class="live-event-title" id="live-title-display">EVENTO</div>
-        <button class="btn-live-close" onclick="fecharLiveScreen()">FECHAR <i class="fas fa-times"></i></button>
-    </div>
-    <div class="live-grid-container">
-        <div class="live-col">
-            <div class="live-col-header"><i class="fas fa-flag-checkered"></i> ÚLTIMAS CHEGADAS</div>
-            <div id="live-feed-list" class="live-list-content"></div>
+        <div class="live-logo"><img src="logo.png" style="height:50px"></div>
+        <div style="text-align:center; flex:1">
+            <div class="live-event-title" id="live-title-display" style="font-size:24px; text-transform: uppercase;">CARREGANDO EVENTO...</div>
+            <div class="live-cat-title" id="live-cat-display" style="font-size:30px; color:var(--pe-yellow); font-weight:900; margin-top:5px; text-shadow: 1px 1px 3px black;">AGUARDANDO COMANDO...</div>
         </div>
+        <div style="width:50px"></div> 
+    </div>
+    
+    <div class="live-grid-container" style="height: calc(100vh - 80px); overflow:hidden;">
+        <div class="live-col" style="border-right: 2px solid #333;">
+            <div class="live-col-header" style="background:var(--pe-blue); font-size:20px; padding:15px;"><i class="fas fa-stopwatch"></i> ÚLTIMOS NA PISTA</div>
+            <div id="live-feed-list" class="live-list-content" style="padding:10px;"></div>
+        </div>
+        
         <div class="live-col">
-            <div class="live-col-header"><i class="fas fa-trophy"></i> RANKING GERAL</div>
-            <div id="live-ranking-list" class="live-list-content"></div>
+            <div class="live-col-header" style="background:var(--pe-green); font-size:20px; padding:15px;"><i class="fas fa-trophy"></i> CLASSIFICAÇÃO <span id="live-cat-label"></span></div>
+            <div id="live-ranking-list" class="live-list-content" style="padding:10px;"></div>
         </div>
     </div>
 </div>
@@ -69,13 +74,21 @@
     </div>
 </div>
 
-<div class="modal-overlay" id="modal-points"><div class="modal-box"><h3 style="color:var(--pe-blue)">TABELA DE PONTOS</h3><div id="public-points-list" style="margin-top:10px; text-align:left;"></div><button class="btn" style="background:#ddd; color:#333; margin-top:15px" onclick="fecharModal('modal-points')">FECHAR</button></div></div>
-<div class="modal-overlay" id="modal-print-options"><div class="modal-box"><h3 style="color:var(--pe-blue)">IMPRIMIR</h3><button class="btn" onclick="generatePrint('ALL')">TODAS CATEGORIAS</button><div style="margin:10px 0; border-top:1px solid #eee; padding-top:10px; font-size:10px; font-weight:bold; color:#666">POR CATEGORIA:</div><div id="print-cat-list" style="max-height:200px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;"></div><button class="btn" style="background:#ddd; color:#333; margin-top:10px" onclick="fecharModal('modal-print-options')">CANCELAR</button></div></div>
+<div class="modal-overlay" id="modal-points">
+    <div class="modal-box">
+        <h3 style="color:var(--pe-blue)" id="modal-points-title">TABELA DE PONTOS</h3>
+        <div id="public-points-list" style="margin-top:10px; text-align:left; max-height:300px; overflow-y:auto;"></div>
+        <button class="btn" style="background:#ddd; color:#333; margin-top:15px" onclick="fecharModal('modal-points')">FECHAR</button>
+    </div>
+</div>
+
 <div class="modal-overlay" id="modal-edit-user"><div class="modal-box"><h3 style="color:var(--pe-blue)">EDITAR ATLETA</h3><input type="hidden" id="edit-user-original-cpf"><div class="input-group"><label>NOME</label><input id="edit-user-name" class="uppercase-input"></div><div class="input-group"><label>CPF</label><input id="edit-user-cpf" oninput="mascaraCPF(this)"></div><div class="input-group"><label>WHATSAPP</label><input id="edit-user-tel" oninput="mascaraTel(this)"></div><div class="input-group"><label>CIDADE</label><input id="edit-user-city" class="uppercase-input"></div><div class="input-group"><label>CATEGORIA</label><input id="edit-user-cat"></div><div class="input-group"><label>GÊNERO</label><input id="edit-user-gender" maxlength="1" class="uppercase-input"></div><div class="input-group"><label>SENHA</label><input id="edit-user-pass"></div><button class="btn" onclick="saveUserEdit()">SALVAR TUDO</button><button class="btn" style="background:#ddd; color:#333; margin-top:5px" onclick="fecharModal('modal-edit-user')">CANCELAR</button></div></div>
+
 <div class="modal-overlay" id="modal-poster"><div class="modal-box" style="padding:0; background:black; border:none; width:95%; max-width:400px"><div style="position:relative"><img id="img-poster-view" style="width:100%; display:block"><button onclick="fecharModal('modal-poster')" style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.5); color:white; border:none; padding:10px; border-radius:50%; cursor:pointer"><i class="fas fa-times"></i></button></div></div></div>
+
 <div class="modal-overlay" id="modal-recovery"><div class="modal-box"><h3 style="color:var(--pe-blue)">RECUPERAR SENHA</h3><div class="input-group"><label>SEU CPF</label><input type="tel" id="rec-cpf" oninput="mascaraCPF(this)"></div><div class="input-group"><label>SEU TELEFONE</label><input type="tel" id="rec-tel" oninput="mascaraTel(this)"></div><div id="rec-security-area" style="display:none; margin-top:10px; border-top:1px dashed #ccc; padding-top:10px;"><p style="font-size:10px; font-weight:bold; color:var(--pe-blue); margin-bottom:5px">PALAVRA-CHAVE</p><div class="input-group"><label>SUA RESPOSTA</label><input id="rec-answer" class="uppercase-input"></div><button class="btn" onclick="revelarSenha()">MOSTRAR SENHA</button></div><button class="btn" id="btn-buscart-rec" onclick="buscarUsuarioRecuperacao()">CONTINUAR</button><button class="btn" style="background:#ddd; color:#333; margin-top:5px" onclick="fecharModal('modal-recovery')">FECHAR</button></div></div>
 
-<div class="app-container">
+<div class="app-container" id="main-app-container">
     <div id="screen-login" class="screen active">
         <div class="login-overlay-layer"></div>
         <div class="login-content-layer">
@@ -99,7 +112,7 @@
         </div>
         <div style="width:100%; padding:20px; background:white; height:100%; overflow-y:auto;">
             <div class="input-group"><label>NOME COMPLETO</label><div class="input-wrapper"><input id="cad-nome" class="uppercase-input"></div></div>
-            <div class="input-group"><label>CPF</label><div class="input-wrapper"><input type="tel" id="cad-cpf" oninput="mascaraCPF(this);" maxlength="14"></div></div>
+            <div class="input-group"><label>CPF (FICARÁ VERDE SE VÁLIDO)</label><div class="input-wrapper"><input type="tel" id="cad-cpf" oninput="mascaraCPF(this);" maxlength="14"></div></div>
             <div class="input-group"><label>WHATSAPP</label><div class="input-wrapper"><input type="tel" id="cad-tel" oninput="mascaraTel(this);" maxlength="15"></div></div>
             <div class="input-group"><label>CIDADE</label><div class="input-wrapper"><input id="cad-city" class="uppercase-input"></div></div>
             <div class="input-group"><label>GÊNERO</label><select id="cad-gender" onchange="reCalcCat()"><option value="">SELECIONE</option><option value="M">MASCULINO</option><option value="F">FEMININO</option></select></div>
@@ -130,7 +143,7 @@
             <div class="header-logo-text"><img src="logo.png" class="header-mini-logo"> DH-PE</div>
             <div style="display:flex; align-items:center; gap:10px;">
                  <div class="version-badge" onclick="toggleDarkMode()"><i class="fas fa-moon"></i></div>
-                 <div class="version-badge" onclick="appRefresh()">v3.3</div>
+                 <div class="version-badge" onclick="appRefresh()">v4.1</div>
             </div>
         </div>
         
@@ -217,7 +230,16 @@
                         <div style="margin-top:5px"><label>STATUS</label><select id="adm-evt-status" onchange="persistEventForm()"><option value="OPEN">ABERTO</option><option value="CLOSED">ENCERRADO</option></select></div>
                         <input id="adm-evt-pix" placeholder="CHAVE PIX" class="input-field" style="margin-top:5px; padding:8px" oninput="persistEventForm()">
                         <div style="margin-top:5px"><label>CARTAZ (LINK OU FILE)</label><input type="file" id="adm-evt-img" accept="image/*"></div>
-                        <div style="margin-top:10px; border-top:1px dashed #ccc; padding-top:5px"><b style="font-size:10px">PONTUAÇÃO (1º ao 20º)</b><div id="evt-points-grid" style="display:grid; grid-template-columns: repeat(5, 1fr); gap:3px; margin-top:5px;"></div></div>
+                        
+                        <div style="margin-top:10px; border-top:1px dashed #ccc; padding-top:5px">
+                            <b style="font-size:10px">PONTUAÇÃO (1º ao 20º)</b>
+                            <div style="display:flex; gap:5px; margin-bottom:5px;">
+                                <select id="adm-copy-points-source" style="font-size:9px; padding:5px"><option value="">Copiar de...</option></select>
+                                <button class="btn-mini-adm" style="background:var(--pe-blue)" onclick="copyPointsFrom(document.getElementById('adm-copy-points-source').value)">COPIAR</button>
+                            </div>
+                            <div id="evt-points-grid" style="display:grid; grid-template-columns: repeat(5, 1fr); gap:3px; margin-top:5px;"></div>
+                        </div>
+
                         <button class="btn" id="btn-save-event" onclick="addEvent()" style="background:var(--pe-green); margin-top:10px">SALVAR EVENTO</button>
                         <button class="btn" style="background:#999; margin-top:5px" onclick="clearEventForm()">LIMPAR</button>
                     </div>
@@ -229,31 +251,53 @@
                     <div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <b style="color:var(--pe-green); font-size:12px">LANÇAR RESULTADO</b>
-                            <button class="btn-mini-adm" style="background:#000; color:white; padding:5px 10px;" onclick="abrirLiveScreen()">ABRIR TELA LIVE <i class="fas fa-tv"></i></button>
+                            <button class="btn-mini-adm" style="background:#E1306C; color:white; padding:5px 10px;" onclick="abrirPopUpLive()">ABRIR JANELA LIVE <i class="fas fa-external-link-alt"></i></button>
                         </div>
-                        <select id="adm-res-evt" class="input-field" style="margin-top:10px" onchange="refreshAdmLists()"><option value="">SELECIONE EVENTO...</option></select>
-                        <div style="display:flex; gap:5px; margin-top:5px">
-                            <select id="adm-res-type" style="width:auto"><option value="tempos">TEMPO</option><option value="ranking">RANKING</option></select>
+                        <div style="display:flex; gap:5px; margin-top:10px;">
+                             <select id="adm-res-evt" class="input-field" onchange="refreshAdmLists()"><option value="">SELECIONE EVENTO...</option></select>
+                             <button class="btn-mini-adm" style="background:var(--pe-blue); width:auto; padding:0 10px; font-size:10px;" onclick="viewEventPoints()">VER PONTOS</button>
+                        </div>
+                        
+                        <div style="background:#222; padding:5px; border-radius:5px; margin-top:10px; color:white;">
+                            <label style="font-size:10px; color:#ffe500">CATEGORIA NA TV (LIVE):</label>
+                            <select id="adm-live-cat-selector" style="width:100%; padding:5px; margin-top:2px;" onchange="updateLiveFilterConfig()">
+                                <option value="ALL">MOSTRAR GERAL (TODOS)</option>
+                            </select>
+                        </div>
+
+                        <div style="display:flex; gap:5px; margin-top:10px">
                             <input type="hidden" id="adm-res-id">
+                            <input type="hidden" id="adm-res-idx-edit" value="">
                             <input type="text" id="adm-res-name-display" disabled placeholder="Selecione abaixo..." class="input-field" style="background:#eee">
                         </div>
                         <div class="smart-search-container" style="margin-top:5px;">
-                            <input type="text" id="adm-res-search" placeholder="BUSCAR ATLETA (CONFIRMADO)..." class="input-field uppercase-input" oninput="filterPilots('res')">
+                            <input type="text" id="adm-res-search" placeholder="BUSCAR ATLETA..." class="input-field uppercase-input" oninput="filterPilots('res')">
                             <div id="adm-res-list" class="smart-list" style="display:none; max-height:150px; overflow-y:auto; border:1px solid #ccc;"></div>
                         </div>
+                        
+                        <div style="display:flex; gap:5px; margin-top:5px">
+                            <input id="adm-res-city-edit" placeholder="CIDADE" class="uppercase-input input-field">
+                            <input id="adm-res-cat-edit" placeholder="CATEGORIA" class="uppercase-input input-field">
+                        </div>
+
                         <div style="display:flex; gap:5px; margin-top:5px">
                             <input id="adm-res-num" placeholder="Nº" type="tel" class="input-field" style="width:60px; text-align:center;">
-                            <input id="adm-res-val" placeholder="00:00.000 ou PONTOS" class="input-field" oninput="maskTimeOrPoints(this)">
+                            <input id="adm-res-val" placeholder="00:00.000" class="input-field" oninput="maskTimeOrPoints(this)">
                         </div>
-                        <button class="btn" id="btn-save-res" style="background:var(--pe-green); margin-top:10px" onclick="addResult()">LANÇAR</button>
+                        
+                        <button class="btn" id="btn-save-res" style="background:var(--pe-green); margin-top:10px" onclick="addResult()">LANÇAR / SALVAR</button>
+                        <button class="btn" id="btn-cancel-res" style="background:#999; margin-top:5px; display:none" onclick="cancelEditRes()">CANCELAR EDIÇÃO</button>
                     </div>
                     <div style="margin-top:10px"><b style="font-size:10px">ÚLTIMOS LANÇAMENTOS</b><div id="adm-list-results"></div></div>
                     <button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
                 </div>
 
                 <div id="adm-sec-financial" class="adm-section" style="display:none"><div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;"><b style="color:var(--pe-blue); font-size:12px">STATUS DOS ATLETAS</b><select id="fin-evt-select" class="input-field" style="margin:10px 0" onchange="renderInscriptions()"></select><div class="stats-box" style="display:flex; justify-content:space-between; background:#e0f2fe; padding:10px; border-radius:5px; font-size:11px; font-weight:bold"><span id="stat-total">Total: 0</span><span id="stat-paid" style="color:green">Pagos: 0</span></div><div style="display:flex;gap:5px;margin-bottom:5px; margin-top:10px"><button class="btn-mini-adm" style="background:#ccc;color:black;flex:1" onclick="filterFinList('ALL')">GERAL</button><button class="btn-mini-adm" style="background:green;color:white;flex:1" onclick="filterFinList('CONFIRMADO')">PAGOS</button><button class="btn-mini-adm" style="background:orange;color:white;flex:1" onclick="filterFinList('PENDENTE')">PEND</button></div><div id="fin-list-container" style="max-height:300px; overflow-y:auto; background:white; border:1px solid #eee"></div></div><button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button></div>
+                
                 <div id="adm-sec-users-edit" class="adm-section" style="display:none"><div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;"><b style="color:var(--pe-blue); font-size:12px">GERENCIAR ATLETAS</b><input type="text" id="adm-edit-user-search" placeholder="Buscar Nome/CPF/Cidade..." class="input-field" style="margin-top:10px" oninput="filterPilots('edit-user', true)"><div id="adm-edit-user-list" style="margin-top:10px; max-height:400px; overflow-y:auto"></div></div><button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button></div>
+                
                 <div id="adm-sec-organizer" class="adm-section" style="display:none"><div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;"><b>EQUIPE</b><div class="smart-search-container" style="margin-top:10px;"><input type="text" id="adm-org-search" placeholder="Buscar..." class="input-field" oninput="filterPilots('org', true)"><div id="adm-org-list-search" class="smart-list" style="display:none; border:1px solid #ccc"></div></div><div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; border-bottom:1px solid #eee; padding-bottom:5px; cursor:pointer" onclick="toggleOrgList()"><b style="font-size:12px">LISTA DE ORGANIZADORES</b><i class="fas fa-chevron-down" id="icon-org-toggle"></i></div><input type="hidden" id="adm-org-selected-cpf"><div id="org-perms-area" style="display:none; margin-top:10px; border:1px dashed #ccc; padding:10px"><p style="font-size:10px">Selecione as etapas:</p><div id="org-events-list"></div><button class="btn" style="background:var(--pe-blue); margin-top:5px" onclick="promoteToOrganizer()">PROMOVER</button></div><div id="adm-list-orgs" style="margin-top:10px; display:none"></div></div><button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button></div>
+                
                 <div id="adm-sec-config-global" class="adm-section" style="display:none"><div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;"><b>CONFIGURAÇÕES</b><div class="input-group"><label>ZAP SUPORTE</label><input id="adm-cfg-phone" class="input-field"></div><button class="btn" onclick="saveGlobalConfig()">SALVAR</button></div><button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button></div>
             </div>
         </div>
