@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DH-PE v4.3 PRO LIVE</title>
+    <title>DH-PE v4.4 PRO</title>
     
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="logo.png">
@@ -11,35 +11,40 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <style>
+        /* Ajuste Específico para Live Vermelha */
+        .live-red-theme { color: #ff0000 !important; }
+        .live-bg-red { background: #d50000 !important; }
+        .live-border-red { border-color: #d50000 !important; }
+    </style>
 </head>
 <body>
 
 <div class="toast" id="toast">MSG</div>
 
 <div id="screen-live-monitor" class="live-screen" style="display:none;">
-    <div class="live-header-bar" style="height: 80px; flex-shrink: 0;">
+    <div class="live-header-bar" style="height: 80px; flex-shrink: 0; justify-content: center;">
         <div class="live-logo"><img src="logo.png" style="height:60px"></div>
-        <div style="text-align:center; flex:1">
-            <div class="live-event-title" id="live-title-display" style="font-size:2vw; text-transform: uppercase;">CARREGANDO...</div>
-            <div class="live-cat-title" id="live-cat-display" style="font-size:2.5vw; color:var(--pe-yellow); font-weight:900; margin-top:0px; text-shadow: 2px 2px 4px black;">AGUARDANDO...</div>
+        <div style="text-align:center; margin-left: 20px;">
+            <div class="live-event-title" id="live-title-display" style="font-size:1.5vw; text-transform: uppercase;">CARREGANDO...</div>
+            <div class="live-cat-title live-red-theme" id="live-cat-display" style="font-size:2.5vw; font-weight:900; margin-top:0px; text-shadow: 2px 2px 0px #000;">AGUARDANDO...</div>
         </div>
-        <div style="width:60px"></div> 
     </div>
     
     <div class="live-grid-container" style="height: calc(100vh - 80px); overflow:hidden; display:flex;">
         
         <div class="live-col" style="flex:1; border-right: 3px solid #444; display:flex; flex-direction:column;">
-            <div class="live-col-header" style="background:var(--pe-blue); font-size:1.5vw; padding:15px; text-align:center; color:white; font-weight:bold;">
-                <i class="fas fa-stopwatch"></i> FEED DE CHEGADA
+            <div class="live-col-header live-bg-red" style="font-size:1.5vw; padding:15px; text-align:center; color:white; font-weight:bold;">
+                <i class="fas fa-filter"></i> CATEGORIA ATUAL
             </div>
-            <div id="live-feed-list" class="live-list-content" style="padding:10px; flex:1; overflow-y:auto;"></div>
+            <div id="live-cat-list" class="live-list-content" style="padding:10px; flex:1; overflow-y:auto;"></div>
         </div>
         
         <div class="live-col" style="flex:1; display:flex; flex-direction:column;">
-            <div class="live-col-header" style="background:var(--pe-green); font-size:1.5vw; padding:15px; text-align:center; color:white; font-weight:bold;">
-                <i class="fas fa-trophy"></i> CLASSIFICAÇÃO <span id="live-cat-label"></span>
+            <div class="live-col-header" style="background:#111; border-bottom: 3px solid #d50000; font-size:1.5vw; padding:15px; text-align:center; color:white; font-weight:bold;">
+                <i class="fas fa-trophy"></i> GERAL (TOP TEMPOS)
             </div>
-            <div id="live-ranking-list" class="live-list-content" style="padding:10px; flex:1; overflow-y:auto;"></div>
+            <div id="live-general-list" class="live-list-content" style="padding:10px; flex:1; overflow-y:auto;"></div>
         </div>
     </div>
 </div>
@@ -121,11 +126,11 @@
             <div class="input-group"><label>GÊNERO</label><select id="cad-gender" onchange="reCalcCat()"><option value="">SELECIONE</option><option value="M">MASCULINO</option><option value="F">FEMININO</option></select></div>
             <div class="input-group"><label>DATA NASCIMENTO</label><div class="input-wrapper"><input type="date" id="cad-nasc" onchange="reCalcCat()"></div></div>
             <div class="input-group" style="background:#f0f9ff; padding:10px; border-radius:5px; border:1px solid #bae6fd;">
-                <label>CATEGORIA (AUTO)</label>
+                <label>CATEGORIA (CBC 2026)</label>
                 <div class="input-wrapper"><input id="cad-cat-age" readonly style="background:#eef2ff; color:#132047; font-weight:900; margin-bottom:5px;"></div>
-                <label style="margin-top:5px; color:#666">OPCIONAL:</label>
+                <label style="margin-top:5px; color:#666">OPCIONAL (MANUAL):</label>
                 <select id="cad-cat-override" onchange="applyCatOverride()">
-                    <option value="">(MANTER POR IDADE)</option>
+                    <option value="">(SEGUIR IDADE)</option>
                     <option value="ELITE">ELITE</option>
                     <option value="OPEN">OPEN</option>
                     <option value="RÍGIDA">RÍGIDA</option>
@@ -143,10 +148,10 @@
 
     <div id="screen-app" class="screen">
         <div id="main-app-header" class="app-header">
-            <div class="header-logo-text"><img src="logo.png" class="header-mini-logo"> DH-PE</div>
+            <div class="header-logo-text"><img src="logo.png" class="header-mini-logo"></div>
             <div style="display:flex; align-items:center; gap:10px;">
                  <div class="version-badge" onclick="toggleDarkMode()"><i class="fas fa-moon"></i></div>
-                 <div class="version-badge" onclick="appRefresh()">v4.3</div>
+                 <div class="version-badge" onclick="appRefresh()">v4.4</div>
             </div>
         </div>
         
@@ -256,9 +261,9 @@
                             <b style="color:var(--pe-green); font-size:12px">LANÇAR RESULTADO</b>
                             <button class="btn-mini-adm" style="background:#E1306C; color:white; padding:5px 10px;" onclick="abrirPopUpLive()">ABRIR JANELA LIVE <i class="fas fa-external-link-alt"></i></button>
                         </div>
+                        
                         <div style="display:flex; gap:5px; margin-top:10px;">
                              <select id="adm-res-evt" class="input-field" onchange="refreshAdmLists()"><option value="">SELECIONE EVENTO...</option></select>
-                             <button class="btn-mini-adm" style="background:var(--pe-blue); width:auto; padding:0 10px; font-size:10px;" onclick="viewEventPoints()">VER PONTOS</button>
                         </div>
                         
                         <div style="background:#222; padding:5px; border-radius:5px; margin-top:10px; color:white;">
