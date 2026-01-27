@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DH-PE v4.2 PRO</title>
+    <title>DH-PE v4.3 PRO LIVE</title>
     
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="logo.png">
@@ -17,23 +17,29 @@
 <div class="toast" id="toast">MSG</div>
 
 <div id="screen-live-monitor" class="live-screen" style="display:none;">
-    <div class="live-header-bar">
-        <div class="live-logo"><img src="logo.png" style="height:50px"></div>
+    <div class="live-header-bar" style="height: 80px; flex-shrink: 0;">
+        <div class="live-logo"><img src="logo.png" style="height:60px"></div>
         <div style="text-align:center; flex:1">
-            <div class="live-event-title" id="live-title-display" style="font-size:24px; text-transform: uppercase;">CARREGANDO...</div>
-            <div class="live-cat-title" id="live-cat-display" style="font-size:30px; color:var(--pe-yellow); font-weight:900; margin-top:5px; text-shadow: 1px 1px 3px black;">AGUARDANDO...</div>
+            <div class="live-event-title" id="live-title-display" style="font-size:2vw; text-transform: uppercase;">CARREGANDO...</div>
+            <div class="live-cat-title" id="live-cat-display" style="font-size:2.5vw; color:var(--pe-yellow); font-weight:900; margin-top:0px; text-shadow: 2px 2px 4px black;">AGUARDANDO...</div>
         </div>
-        <div style="width:50px"></div> 
+        <div style="width:60px"></div> 
     </div>
     
-    <div class="live-grid-container" style="height: calc(100vh - 80px); overflow:hidden;">
-        <div class="live-col" style="border-right: 2px solid #333;">
-            <div class="live-col-header" style="background:var(--pe-blue); font-size:20px; padding:15px;"><i class="fas fa-stopwatch"></i> ÚLTIMOS NA PISTA</div>
-            <div id="live-feed-list" class="live-list-content" style="padding:10px;"></div>
+    <div class="live-grid-container" style="height: calc(100vh - 80px); overflow:hidden; display:flex;">
+        
+        <div class="live-col" style="flex:1; border-right: 3px solid #444; display:flex; flex-direction:column;">
+            <div class="live-col-header" style="background:var(--pe-blue); font-size:1.5vw; padding:15px; text-align:center; color:white; font-weight:bold;">
+                <i class="fas fa-stopwatch"></i> FEED DE CHEGADA
+            </div>
+            <div id="live-feed-list" class="live-list-content" style="padding:10px; flex:1; overflow-y:auto;"></div>
         </div>
-        <div class="live-col">
-            <div class="live-col-header" style="background:var(--pe-green); font-size:20px; padding:15px;"><i class="fas fa-trophy"></i> CLASSIFICAÇÃO</div>
-            <div id="live-ranking-list" class="live-list-content" style="padding:10px;"></div>
+        
+        <div class="live-col" style="flex:1; display:flex; flex-direction:column;">
+            <div class="live-col-header" style="background:var(--pe-green); font-size:1.5vw; padding:15px; text-align:center; color:white; font-weight:bold;">
+                <i class="fas fa-trophy"></i> CLASSIFICAÇÃO <span id="live-cat-label"></span>
+            </div>
+            <div id="live-ranking-list" class="live-list-content" style="padding:10px; flex:1; overflow-y:auto;"></div>
         </div>
     </div>
 </div>
@@ -140,7 +146,7 @@
             <div class="header-logo-text"><img src="logo.png" class="header-mini-logo"> DH-PE</div>
             <div style="display:flex; align-items:center; gap:10px;">
                  <div class="version-badge" onclick="toggleDarkMode()"><i class="fas fa-moon"></i></div>
-                 <div class="version-badge" onclick="appRefresh()">v4.2</div>
+                 <div class="version-badge" onclick="appRefresh()">v4.3</div>
             </div>
         </div>
         
