@@ -553,7 +553,7 @@ function abrirPopUpLive() {
     if(!evtId) return toast("Selecione um evento!");
     // Salva o ID do evento para a live saber o que abrir
     localStorage.setItem('live_event_id', evtId);
-    window.open('?mode=live', 'DHPE_LIVE_VIEW', 'width=1000,height=600');
+    window.open('?mode=live', 'DHPE_LIVE_VIEW', 'width=1000,height=600,resizable=yes');
 }
 
 // Lógica de Controle da Categoria na Live
@@ -566,7 +566,7 @@ function populateLiveCategorySelector(evtId) {
     const cats = [...new Set(temposEvento.map(t => t.cat))].sort();
     
     const currentVal = select.value;
-    let html = '<option value="ALL">MOSTRAR GERAL (TODOS)</option>';
+    let html = '<option value="ALL">MOSTRAR GERAL (TODOS)</option><option value="KING_OF_HILL">👑 RANKING GERAL (PISTA)</option>';
     cats.forEach(c => {
         html += `<option value="${c}">${c}</option>`;
     });
@@ -609,20 +609,33 @@ function atualizarLiveScreen() {
 
     const filterCat = localStorage.getItem('live_filter_cat') || 'ALL';
     
-    document.getElementById('live-cat-display').innerText = filterCat === 'ALL' ? "GERAL" : filterCat;
-    document.getElementById('live-cat-label').innerText = filterCat === 'ALL' ? "" : `(${filterCat})`;
+    let label = filterCat;
+    if(filterCat === 'ALL') label = "FEED GERAL";
+    if(filterCat === 'KING_OF_HILL') label = "👑 RANKING GERAL (TOP PISTA)";
+
+    document.getElementById('live-cat-display').innerText = label;
+    document.getElementById('live-cat-label').innerText = label;
 
     let tempos = db.tempos.filter(t => t.evtId == evtId);
     
-    if(filterCat !== 'ALL') {
+    // Lógica Específica para GERAL vs CATEGORIA
+    if(filterCat === 'KING_OF_HILL') {
+        // Se for King of Hill, não filtra por categoria, mostra todos ordenados por tempo
+        // Já está pegando todos do evento acima
+    } else if(filterCat !== 'ALL') {
         tempos = tempos.filter(t => t.cat === filterCat);
     }
 
-    // Ordenação e Display
+    // Ordenação (Sempre menor tempo primeiro)
     tempos.sort((a,b) => a.val.localeCompare(b.val));
 
-    // Feed (Últimos desta categoria)
-    const feed = [...tempos].reverse().slice(0, 8);
+    // Feed (Lado Esquerdo): Sempre mostra os últimos que desceram, independente do filtro
+    // Mas se o filtro for especifico de categoria, foca nela
+    let feedTempos = db.tempos.filter(t => t.evtId == evtId);
+    if(filterCat !== 'ALL' && filterCat !== 'KING_OF_HILL') {
+        feedTempos = feedTempos.filter(t => t.cat === filterCat);
+    }
+    const feed = [...feedTempos].reverse().slice(0, 8);
     
     document.getElementById('live-feed-list').innerHTML = feed.map(t => 
         `<div class="live-item">
@@ -634,12 +647,12 @@ function atualizarLiveScreen() {
         </div>`
     ).join('');
 
-    // Ranking (Top 15 desta categoria)
+    // Ranking (Lado Direito): Segue estritamente o filtro
     document.getElementById('live-ranking-list').innerHTML = tempos.slice(0, 15).map((t, i) => 
         `<div class="live-item">
             <span class="pos">${i+1}</span> 
             <div style="flex:1; text-align:left; margin-left:10px;">
-                <div style="font-size:10px; color:#aaa">${t.city}</div>
+                <div style="font-size:10px; color:#aaa">${t.city} | ${t.cat}</div>
                 <div style="font-weight:bold">${t.name}</div>
             </div>
             <b style="font-size:18px">${t.val}</b>
