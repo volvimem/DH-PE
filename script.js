@@ -63,11 +63,10 @@ function saveDB() {
 
 function cleanCPF(v) { if(!v) return ""; return String(v).replace(/\D/g, ""); } 
 
-/* 2 e 3. TOAST PARA STATUS DE DOWNLOAD */
 function toast(m, loading=false) { 
     const t=document.getElementById('toast'); 
     if(t) { 
-        t.innerHTML = loading ? `<i class="fas fa-spinner fa-spin"></i> ${m}` : `<i class="fas fa-check"></i> ${m.toUpperCase()}`; 
+        t.innerHTML = loading ? `<i class="fas fa-spinner fa-spin"></i> ${m.toUpperCase()}` : `<i class="fas fa-check"></i> ${m.toUpperCase()}`; 
         t.style.background = loading ? "#0038a8" : "#28a745"; 
         t.classList.add('show'); 
         if(!loading) setTimeout(()=>t.classList.remove('show'),3000); 
@@ -257,7 +256,7 @@ function addEvent() { const btn = document.getElementById('btn-save-event'); btn
     const evtObj = { 
         id: getVal('adm-evt-id-edit') ? parseInt(getVal('adm-evt-id-edit')) : Date.now(), 
         t: t, d: d, m: getVal('adm-evt-month'), 
-        type: getVal('adm-evt-type') || 'PE', /* 5. SALVAR TIPO */
+        type: getVal('adm-evt-type') || 'PE', 
         city: getVal('adm-evt-c').toUpperCase(), val: getVal('adm-evt-v'), pix: getVal('adm-evt-pix'), status: getVal('adm-evt-status'), points: newPoints, closeDate: getVal('adm-evt-close-date'), open: true, img: null, wpp: document.getElementById('adm-evt-wpp').value 
     }; 
     if(getVal('adm-evt-id-edit')) { const old = db.events.find(e => e.id == evtObj.id); if(old && old.img) evtObj.img = old.img; } const fileInput = document.getElementById('adm-evt-img'); if (fileInput && fileInput.files[0]) { compressImage(fileInput.files[0], 800, (base64) => { evtObj.img = base64; finishSavingEvent(evtObj); }); } else { finishSavingEvent(evtObj); } 
@@ -269,14 +268,50 @@ function editEvent(id) { const e = db.events.find(ev => ev.id == id); if(e) { do
 function clearEventForm() { document.getElementById('adm-evt-id-edit').value = ''; document.getElementById('adm-evt-t').value = ''; document.getElementById('btn-save-event').innerText = "SALVAR EVENTO"; renderPointsInputs(DEFAULT_POINTS); }
 function persistEventForm() { saveInput(document.getElementById('adm-evt-t')); }
 
-// --- RENDERIZAÇÃO DE CONTEÚDO ---
+// --- FUNÇÃO DE FILTROS ADICIONADA (CORREÇÃO) ---
+function populatePublicFilters(t) {
+    const evtSel = document.getElementById('filter-evt-' + t);
+    const catSel = document.getElementById('filter-cat-' + t);
+    if (!evtSel || !catSel) return;
+
+    // Salvar seleção atual
+    const curEvt = evtSel.value;
+    const curCat = catSel.value;
+
+    // Preencher Eventos
+    let htmlEvt = '<option value="ALL">GERAL (TODAS ETAPAS)</option>';
+    if (db.events) {
+        db.events.forEach(e => {
+            htmlEvt += `<option value="${e.id}">${e.t}</option>`;
+        });
+    }
+    evtSel.innerHTML = htmlEvt;
+    // Restaurar seleção se ainda existir
+    if (curEvt && [...evtSel.options].some(o => o.value == curEvt)) evtSel.value = curEvt;
+
+    // Preencher Categorias
+    let source = (t === 'tempos') ? db.tempos : db.ranking;
+    let cats = [];
+    if (source) {
+        cats = [...new Set(source.map(i => i.cat))].sort();
+    }
+    let htmlCat = '<option value="ALL">TODAS CATEGORIAS</option>';
+    if (t === 'tempos') htmlCat += '<option value="KING_OF_HILL">👑 TOP PISTA (GERAL)</option>';
+    
+    cats.forEach(c => {
+        htmlCat += `<option value="${c}">${c}</option>`;
+    });
+    catSel.innerHTML = htmlCat;
+    if (curCat && [...catSel.options].some(o => o.value == curCat)) catSel.value = curCat;
+}
+
+// --- RENDERIZAÇÃO E CORREÇÃO DO FILTRO ---
 function renderContent(t) { 
     if(t === 'calendar') { 
         const hD = document.getElementById('calendar-highlight'); const oD = document.getElementById('calendar-others'); 
         if(!db.events || db.events.length === 0) { hD.innerHTML = '<div style="padding:20px;text-align:center">Nenhum evento.</div>'; oD.innerHTML = ''; return; } 
         const events = db.events; const h = events.find(e => e.status === 'OPEN') || events[events.length-1]; if (!h) return; 
         
-        /* 5. LOGICA DO BADGE */
         const getBadge = (evt) => {
             const type = evt.type || 'PE';
             const cls = type === 'CBC' ? 'badge-cbc' : 'badge-pe';
@@ -302,12 +337,22 @@ function renderContent(t) {
         hD.innerHTML = `<div class="highlight-event">${getBadge(h)}${imgHtml(h)}<div class="event-body"><div style="font-size:14px; font-weight:900; color:var(--pe-blue)">${h.t}</div><div style="font-size:12px; color:#666; margin:5px 0">${h.d} ${h.m} | ${h.city}</div><div class="event-price">INSCRIÇÃO: R$ ${h.val}</div><div style="margin-top:10px; font-size:10px"><b>STATUS:</b> <span style="color:${h.status==='OPEN'?'green':'red'}">${h.status==='OPEN'?'ABERTO':'ENCERRADO'}</span><br><b>ENCERRA EM:</b> ${h.closeDate ? h.closeDate.split('-').reverse().join('/') : 'INDEFINIDO'}</div>${getBtn(h)}</div></div>`; 
         oD.innerHTML = events.filter(e => e.id !== h.id).map(e => `<div class="event-card" style="position:relative">${getBadge(e)}${imgHtml(e)}<div class="event-body" style="text-align:left"><div style="font-size:12px; font-weight:bold; color:var(--pe-blue)">${e.t}</div><div style="font-size:10px; color:#666">${e.d} ${e.m} - ${e.city}</div>${getBtn(e)}</div></div>`).join(''); 
     } else if (t === 'tempos' || t === 'ranking') { 
-        const list = db[t] ? db[t].filter(i => i.status === 'OK') : []; const div = document.getElementById('list-'+t); if(!div) return; 
-        const fEvt = document.getElementById('filter-evt-'+t).value; const fCat = document.getElementById('filter-cat-'+t).value; 
-        let filteredList = list; if (fEvt !== 'ALL') filteredList = filteredList.filter(i => i.evtId == fEvt); 
+        // 1. CORREÇÃO DE STATUS E FILTRO DE ID
+        const list = db[t] ? db[t].filter(i => i.status === 'OK' || !i.status) : []; 
+        const div = document.getElementById('list-'+t); if(!div) return; 
+        
+        const fEvt = document.getElementById('filter-evt-'+t).value; 
+        const fCat = document.getElementById('filter-cat-'+t).value; 
+        
+        let filteredList = list; 
+        // Força comparação de String para evitar erro de tipo
+        if (fEvt !== 'ALL') filteredList = filteredList.filter(i => String(i.evtId) === String(fEvt)); 
+        
         if (fCat === 'KING_OF_HILL') { filteredList.sort((a,b) => a.val.localeCompare(b.val)); filteredList = filteredList.slice(0, 20); } 
         else if (fCat !== 'ALL') { filteredList = filteredList.filter(i => i.cat === fCat); } 
-        div.innerHTML = filteredList.map((r, i) => `<div class="rank-row"><div class="rank-pos">${i+1}</div><div class="rank-name">${r.name}<span class="rank-cat">${r.city} - ${r.cat}</span></div><div class="rank-val">${r.val}</div></div>`).join(''); 
+        
+        if(filteredList.length === 0) div.innerHTML = '<div style="padding:20px; text-align:center; color:#999">Nenhum resultado encontrado.</div>';
+        else div.innerHTML = filteredList.map((r, i) => `<div class="rank-row"><div class="rank-pos">${i+1}</div><div class="rank-name">${r.name}<span class="rank-cat">${r.city} - ${r.cat}</span></div><div class="rank-val">${r.val}</div></div>`).join(''); 
     } else if (t === 'profile') { 
         if(loggedUser) { 
             document.getElementById('prof-edit-name').value = loggedUser.nome;
@@ -347,7 +392,6 @@ function salvarFullProfile() {
     }
 }
 
-/* 2 e 3. DOWNLOAD AGILIZADO E OTIMIZADO */
 function baixarImagem(id, nome){
     toast("GERANDO IMAGEM...", true);
     const el = document.getElementById(id);
@@ -364,10 +408,10 @@ function baixarImagem(id, nome){
             hideToast();
             toast("ERRO AO GERAR");
         });
-    }, 150); // Delay mínimo para renderizar o Toast antes de travar
+    }, 150);
 }
 
-// --- 6, 7, 8, 9. LÓGICA LIVE TIMING (COMPLETA) ---
+// --- LÓGICA LIVE TIMING ---
 let liveInterval = null;
 let chronoInterval = null;
 let liveStartTime = 0;
@@ -399,7 +443,6 @@ function iniciarLiveLoop() {
     populateLiveCatFilter();
 }
 
-/* BUSCA E FILA DE PILOTO */
 function liveSearchPilot() {
     const term = document.getElementById('live-search-pilot').value.toUpperCase();
     const resDiv = document.getElementById('live-search-res');
@@ -426,34 +469,25 @@ function sendToTrack() {
     const u = db.users.find(x => x.cpf === cpf);
     if(!u) return;
     const evtId = localStorage.getItem('live_event_id');
-    
-    /* Validar se já correu */
     const exists = db.tempos.find(t => t.evtId == evtId && t.name === u.nome);
     if(exists) { if(!confirm("ATENÇÃO: Este piloto já tem tempo registrado! Deseja sobrescrever?")) return; }
 
     liveCurrentPilot = u;
-    
-    /* Tentar achar número de placa */
     let plate = "??";
     if(u.inscricoes) {
         const sub = u.inscricoes.find(i=>i.id==evtId);
         if(sub && sub.num) plate = sub.num;
     }
-
-    /* Atualizar Tela Central */
     document.getElementById('live-plate').innerText = plate;
     document.getElementById('live-name').innerText = u.nome;
-    document.getElementById('live-city').innerText = u.city;
-    document.getElementById('live-team').innerText = u.team || u.secA || "-";
-    document.getElementById('live-cat').innerText = u.cat;
+    document.getElementById('live-info').innerHTML = `<span id="live-city">${u.city}</span> • <span id="live-team">${u.team || u.secA || "-"}</span>`;
+    document.getElementById('live-cat-badge').innerText = u.cat;
     
-    /* Resetar Crono */
     document.getElementById('next-pilot-box').style.display = 'none';
     document.getElementById('live-chrono').innerText = "00:00.000";
     document.getElementById('live-chrono').style.color = "#d50000";
 }
 
-/* CRONOMETRO */
 function startChrono() {
     if(!liveCurrentPilot) return toast("ENVIE UM PILOTO PARA A PISTA");
     if(chronoInterval) clearInterval(chronoInterval);
@@ -462,7 +496,7 @@ function startChrono() {
     chronoInterval = setInterval(() => {
         const diff = Date.now() - liveStartTime;
         document.getElementById('live-chrono').innerText = formatTimeMs(diff);
-    }, 45); // Atualização visual
+    }, 45); 
 }
 
 function stopChrono() {
@@ -472,9 +506,9 @@ function stopChrono() {
     const finalDiff = Date.now() - liveStartTime;
     const finalString = formatTimeMs(finalDiff);
     document.getElementById('live-chrono').innerText = finalString;
-    document.getElementById('live-chrono').style.color = "#009b3a"; // Verde
+    document.getElementById('live-chrono').style.color = "#009b3a";
 
-    /* REGISTRO AUTOMATICO */
+    /* 1. REGISTRO AUTOMATICO COM STATUS OK */
     const evtId = localStorage.getItem('live_event_id');
     const newData = { 
         evtId: evtId, 
@@ -486,7 +520,6 @@ function stopChrono() {
         status: 'OK' 
     };
 
-    /* Remover anterior se houver */
     const existingIdx = db.tempos.findIndex(t => t.evtId == evtId && t.name === liveCurrentPilot.nome);
     if(existingIdx > -1) db.tempos.splice(existingIdx, 1);
 
@@ -506,14 +539,11 @@ function formatTimeMs(ms) {
 }
 function pad(n, z=2) { return ('000' + n).slice(-z); }
 
-/* RANKING NA LIVE */
 function renderLiveRanking() {
     const evtId = localStorage.getItem('live_event_id');
     const filter = document.getElementById('live-rank-filter').value;
     let list = db.tempos.filter(t => t.evtId == evtId);
     if(filter !== 'ALL') list = list.filter(t => t.cat === filter);
-    
-    // Ordenar Menor Tempo -> Maior Tempo
     list.sort((a,b) => a.val.localeCompare(b.val));
 
     document.getElementById('live-ranking-list').innerHTML = list.map((t, i) => `
@@ -540,13 +570,12 @@ function populateLiveCatFilter() {
     sel.value = current;
 }
 
-/* 9. ZOOM MANUAL NA LIVE */
 function changeLiveScale(val) {
     const wrap = document.getElementById('live-wrapper');
     if(wrap) wrap.style.transform = `scale(${val})`;
 }
 
-// --- FUNÇÕES DE SUPORTE ---
+// --- FUNÇÕES DE SUPORTE E ADMIN ---
 function uploadSelfie(input){if(input.files[0]){compressImage(input.files[0],300,(base64)=>{if(loggedUser){loggedUser.selfie=base64;saveDB();}document.getElementById('prof-img-display').src=base64;document.getElementById('card-img-display').src=base64;});}}
 function compressImage(file, maxWidth, callback) { const reader = new FileReader(); reader.readAsDataURL(file); reader.onload = event => { const img = new Image(); img.src = event.target.result; img.onload = () => { const canvas = document.createElement('canvas'); let width = img.width; let height = img.height; if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; } canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height); callback(canvas.toDataURL('image/jpeg', 0.7)); }; }; }
 function openEditUserModal(cpf){const u=db.users.find(x=>x.cpf===cpf);if(u){document.getElementById('edit-user-original-cpf').value=u.cpf;document.getElementById('edit-user-name').value=u.nome;document.getElementById('edit-user-cpf').value=u.cpf;document.getElementById('edit-user-tel').value=u.tel;document.getElementById('edit-user-city').value=u.city;document.getElementById('edit-user-cat').value=u.cat;document.getElementById('edit-user-gender').value=u.gender;document.getElementById('edit-user-pass').value=u.pass;document.getElementById('modal-edit-user').style.display='flex';}}
@@ -606,6 +635,75 @@ function approveRes(idx) { db.tempos[idx].status = 'OK'; saveDB(); renderAdmResu
 function maskTimeOrPoints(i){ let v = i.value.replace(/\D/g, ""); if(v.length > 7) v = v.substring(0, 7); if(v.length > 4) { v = v.substring(0, 2) + ':' + v.substring(2, 4) + '.' + v.substring(4); } else if(v.length > 2) { v = v.substring(0, 2) + ':' + v.substring(2); } i.value = v; }
 function populateLiveCategorySelector(evtId) { if(!evtId) return; const select = document.getElementById('adm-live-cat-selector'); if(!select) return; const temposEvento = db.tempos.filter(t => t.evtId == evtId); const cats = [...new Set(temposEvento.map(t => t.cat))].sort(); const currentVal = select.value; let html = '<option value="ALL">MOSTRAR GERAL (TODOS)</option><option value="KING_OF_HILL">👑 RANKING GERAL (TOP PISTA)</option>'; cats.forEach(c => { html += `<option value="${c}">${c}</option>`; }); select.innerHTML = html; select.value = currentVal; }
 function updateLiveFilterConfig() { const val = document.getElementById('adm-live-cat-selector').value; localStorage.setItem('live_filter_cat', val); toast("TV ATUALIZADA"); }
-function recalcEventRanking(evtId) { if (!db.tempos) return; const temposEvento = db.tempos.filter(t => t.evtId == evtId); temposEvento.sort((a, b) => a.val.localeCompare(b.val)); const evt = db.events.find(e => e.id == evtId); const pontosRef = (evt && evt.points) ? evt.points : DEFAULT_POINTS; if(!db.ranking) db.ranking = []; db.ranking = db.ranking.filter(r => r.evtId != evtId); temposEvento.forEach((t, index) => { let pontos = 0; if(index < pontosRef.length) pontos = pontosRef[index]; db.ranking.push({ evtId: t.evtId, name: t.name, cat: t.cat, city: t.city, num: t.num, val: pontos + " PTS", status: 'OK' }); }); }
+
+/* 1. CORREÇÃO CRÍTICA: STATUS E RANKING */
+function recalcEventRanking(evtId) { 
+    if (!db.tempos) return; 
+    const temposEvento = db.tempos.filter(t => t.evtId == evtId); 
+    temposEvento.sort((a, b) => a.val.localeCompare(b.val)); 
+    const evt = db.events.find(e => e.id == evtId); 
+    const pontosRef = (evt && evt.points) ? evt.points : DEFAULT_POINTS; 
+    if(!db.ranking) db.ranking = []; 
+    // Remove antigos
+    db.ranking = db.ranking.filter(r => r.evtId != evtId); 
+    temposEvento.forEach((t, index) => { 
+        let pontos = 0; 
+        if(index < pontosRef.length) pontos = pontosRef[index]; 
+        db.ranking.push({ 
+            evtId: t.evtId, 
+            name: t.name, 
+            cat: t.cat, 
+            city: t.city, 
+            num: t.num, 
+            val: pontos + " PTS", 
+            status: 'OK' // Garante que o ranking tenha status OK
+        }); 
+    }); 
+}
+
+/* 1. CORREÇÃO CRÍTICA: SALVAR TEMPO COM STATUS OK */
+function addResult() { 
+    if(!db.tempos) db.tempos = []; 
+    if(!db.ranking) db.ranking = []; 
+    if(!loggedUser) return toast("SESSÃO EXPIROU, FAÇA LOGIN"); 
+    const evtId = document.getElementById('adm-res-evt').value; 
+    const cpf = document.getElementById('adm-res-id').value; 
+    const val = document.getElementById('adm-res-val').value; 
+    const num = document.getElementById('adm-res-num').value; 
+    const city = document.getElementById('adm-res-city-edit').value.toUpperCase(); 
+    const cat = document.getElementById('adm-res-cat-edit').value.toUpperCase(); 
+    const idxEdit = document.getElementById('adm-res-idx-edit').value; 
+    if(!evtId || !cpf || !val || !city || !cat) return toast("PREENCHA TUDO"); 
+    const user = db.users.find(u => cleanCPF(u.cpf) === cleanCPF(cpf)); 
+    if(!user) return toast("ERRO AO BUSCAR USUÁRIO"); 
+    
+    // FORÇA O STATUS PARA OK AO LANÇAR
+    const status = 'OK'; 
+    const newData = { evtId, name: user.nome, cat: cat, city: city, val, num, status: status }; 
+    
+    if (idxEdit !== "") { 
+        db.tempos[idxEdit] = newData; 
+        toast("ATUALIZADO!"); 
+        cancelEditRes(); 
+    } else { 
+        const exists = db.tempos.find(t => t.evtId == evtId && t.name === document.getElementById('adm-res-name-display').value); 
+        if(exists) return toast("PILOTO JÁ TEM TEMPO!"); 
+        db.tempos.push(newData); 
+        toast("LANÇADO!"); 
+    } 
+    recalcEventRanking(evtId); 
+    saveDB(); 
+    renderAdmResults(); 
+    if(window.liveInterval) atualizarLiveScreen(); 
+    if(idxEdit === "") { 
+        document.getElementById('adm-res-id').value = ''; 
+        document.getElementById('adm-res-name-display').value = ''; 
+        document.getElementById('adm-res-val').value = ''; 
+        document.getElementById('adm-res-num').value = ''; 
+        document.getElementById('adm-res-city-edit').value = ''; 
+        document.getElementById('adm-res-cat-edit').value = ''; 
+        document.getElementById('adm-res-search').value = ''; 
+    } 
+}
 
 document.addEventListener('DOMContentLoaded', () => { const urlParams = new URLSearchParams(window.location.search); if (urlParams.get('mode') === 'live') { document.getElementById('main-app-container').style.display = 'none'; document.getElementById('screen-live-monitor').style.display = 'flex'; document.getElementById('screen-live-monitor').classList.add('fullscreen-mode'); iniciarLiveLoop(); return; } restoreInputs(); document.querySelectorAll('input').forEach(el => { el.addEventListener('input', () => saveInput(el)); }); const b = document.getElementById('btn-acessar'); if(b) b.addEventListener('click', fazerLogin); const s = getUser(); if(s && db.users) { loggedUser = db.users.find(u=>cleanCPF(u.cpf)===cleanCPF(s.cpf)); if(loggedUser) initApp(); } });
