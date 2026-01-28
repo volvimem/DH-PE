@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DH-PE v13.1 PRO</title>
+    <title>DH-PE v13.9 FINAL</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="apple-touch-icon" href="logo.png">
@@ -84,9 +84,7 @@
         <div class="login-content-layer">
             <img src="logo.png" class="login-logo-img" alt="Logo">
             <h1>CAMPEONATO PERNAMBUCANO DE DOWNHILL</h1><p>TEMPORADA 2026</p>
-            
             <div class="input-group"><label>CPF</label><div class="input-wrapper"><input type="tel" id="login-cpf" placeholder="000.000.000-00" oninput="mascaraCPF(this);" maxlength="14"></div></div>
-            
             <div class="input-group">
                 <label>SENHA</label>
                 <div class="input-wrapper" style="position:relative">
@@ -94,11 +92,9 @@
                     <i class="fas fa-eye pass-eye" onclick="togglePass('login-pass')"></i>
                 </div>
             </div>
-
             <div style="width:100%; text-align:right; margin-bottom:15px; margin-top:-10px;">
                 <span onclick="abrirRecuperacao()" style="color:white; font-size:12px; cursor:pointer; text-decoration:underline; opacity:0.8;">Esqueci minha senha</span>
             </div>
-
             <button id="btn-acessar" class="btn" onclick="fazerLogin()">ACESSAR CONTA</button>
             <button class="btn" onclick="trocarTela('cadastro')" style="background:rgba(255,255,255,0.2); color:white; margin-top:10px; font-size:12px">CRIAR NOVA CONTA</button>
         </div>
@@ -149,16 +145,20 @@
         <div id="main-app-header" class="app-header">
             <div class="header-logo-text"><img src="logo.png" class="header-mini-logo"></div>
             <div style="display:flex; align-items:center; gap:8px;">
-                 <a href="https://wa.me/5581900000000" target="_blank" class="header-support-btn">
+                 <a href="#" id="btn-support-header" class="header-support-btn" onclick="falarComSuporte(event)">
                     <i class="fab fa-whatsapp"></i> SUPORTE
                  </a>
-                 <div class="version-badge" onclick="appRefresh()">v13.1</div>
+                 <div class="version-badge" onclick="appRefresh()">v13.9</div>
             </div>
         </div>
         
         <div id="cont-calendar" class="c-sec active">
             <div class="section-header-area"><div class="section-title">CALENDÁRIO 2026</div></div>
-            <div class="calendar-wrapper"><div id="calendar-highlight"></div><div id="calendar-others" class="mini-events-grid"></div></div>
+            <div id="calendar-past-bar" class="past-events-bar" style="display:none"></div>
+            <div class="calendar-wrapper">
+                <div id="calendar-highlight"></div>
+                <div id="calendar-others" class="mini-events-grid"></div>
+            </div>
         </div>
 
         <div id="cont-tempos" class="c-sec" style="display:none">
@@ -212,7 +212,6 @@
                 </div>
                 <button class="btn" style="background:var(--pe-blue); margin-top:10px" onclick="baixarImagem('digital-id-card', 'carteirinha')"><i class="fas fa-download"></i> BAIXAR CARTEIRINHA HD</button>
             </div>
-            
             <div class="section-title" style="text-align:left; margin-top:20px;">ATUALIZAR MEUS DADOS</div>
             <div style="background:white; padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05); margin:0 15px 20px 15px;">
                 <input type="file" id="hidden-upload" accept="image/*" style="display:none" onchange="uploadSelfie(this)">
@@ -254,7 +253,14 @@
                             <input id="adm-evt-v" placeholder="VALOR" type="tel" class="input-field" style="padding:8px">
                         </div>
                         <div style="margin-top:5px"><label>DATA LIMITE</label><input type="date" id="adm-evt-close-date"></div>
-                        <div style="margin-top:5px"><label>STATUS</label><select id="adm-evt-status"><option value="OPEN">ABERTO</option><option value="CLOSED">ENCERRADO</option></select></div>
+                        <div style="margin-top:5px"><label>STATUS</label>
+                            <select id="adm-evt-status">
+                                <option value="OPEN">ABERTO</option>
+                                <option value="CLOSED">ENCERRADO</option>
+                                <option value="CANCELLED">CANCELADO</option>
+                                <option value="POSTPONED">ADIADO</option>
+                            </select>
+                        </div>
                         <input id="adm-evt-pix" placeholder="CHAVE PIX" class="input-field" style="margin-top:5px; padding:8px">
                         <input id="adm-evt-wpp" placeholder="WHATSAPP DO RESPONSÁVEL" type="tel" class="input-field" style="margin-top:5px; padding:8px" oninput="mascaraTel(this)">
                         <div style="margin-top:5px"><label>CARTAZ (LINK OU FILE)</label><input type="file" id="adm-evt-img" accept="image/*"></div>
@@ -313,9 +319,26 @@
                 </div>
 
                 <div id="adm-sec-financial" class="adm-section" style="display:none"><div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;"><b style="color:var(--pe-blue); font-size:12px">STATUS DOS ATLETAS</b><select id="fin-evt-select" class="input-field" style="margin:10px 0" onchange="renderInscriptions()"></select><div class="stats-box" style="display:flex; justify-content:space-between; background:#e0f2fe; padding:10px; border-radius:5px; font-size:11px; font-weight:bold"><span id="stat-total">Total: 0</span><span id="stat-paid" style="color:green">Pagos: 0</span></div><div style="display:flex;gap:5px;margin-bottom:5px; margin-top:10px"><button class="btn-mini-adm" style="background:#ccc;color:black;flex:1" onclick="filterFinList('ALL')">GERAL</button><button class="btn-mini-adm" style="background:green;color:white;flex:1" onclick="filterFinList('CONFIRMADO')">PAGOS</button><button class="btn-mini-adm" style="background:orange;color:white;flex:1" onclick="filterFinList('PENDENTE')">PEND</button></div><div id="fin-list-container" style="max-height:300px; overflow-y:auto; background:white; border:1px solid #eee"></div></div><button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button></div>
-                <div id="adm-sec-users-edit" class="adm-section" style="display:none"><div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;"><b style="color:var(--pe-blue); font-size:12px">GERENCIAR ATLETAS</b><input type="text" id="adm-edit-user-search" placeholder="Buscar Nome/CPF/Cidade..." class="input-field" style="margin-top:10px" oninput="filterPilots('edit-user', true)"><div id="adm-edit-user-list" style="margin-top:10px; max-height:400px; overflow-y:auto"></div></div><button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button></div>
+                
+                <div id="adm-sec-users-edit" class="adm-section" style="display:none">
+                    <div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;">
+                        <b style="color:var(--pe-blue); font-size:12px">BUSCAR NO SISTEMA (GERAL)</b>
+                        <input type="text" id="adm-edit-user-search" placeholder="Nome, CPF ou Cidade..." class="input-field" style="margin-top:10px" oninput="filterPilots('edit-user', true)">
+                        <div id="adm-edit-user-list" style="margin-top:10px; max-height:400px; overflow-y:auto"></div>
+                    </div>
+                    <button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
+                </div>
+                
                 <div id="adm-sec-organizer" class="adm-section" style="display:none"><div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;"><b>EQUIPE</b><div class="smart-search-container" style="margin-top:10px;"><input type="text" id="adm-org-search" placeholder="Buscar..." class="input-field" oninput="filterPilots('org', true)"><div id="adm-org-list-search" class="smart-list" style="display:none; border:1px solid #ccc"></div></div><div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; border-bottom:1px solid #eee; padding-bottom:5px; cursor:pointer" onclick="toggleOrgList()"><b style="font-size:12px">LISTA DE ORGANIZADORES</b><i class="fas fa-chevron-down" id="icon-org-toggle"></i></div><input type="hidden" id="adm-org-selected-cpf"><div id="org-perms-area" style="display:none; margin-top:10px; border:1px dashed #ccc; padding:10px"><p style="font-size:10px">Selecione as etapas:</p><div id="org-events-list"></div><button class="btn" style="background:var(--pe-blue); margin-top:5px" onclick="promoteToOrganizer()">PROMOVER</button></div><div id="adm-list-orgs" style="margin-top:10px; display:none"></div></div><button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button></div>
-                <div id="adm-sec-config-global" class="adm-section" style="display:none"><div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;"><b>CONFIGURAÇÕES</b><div class="input-group"><label>ZAP SUPORTE</label><input id="adm-cfg-phone" class="input-field"></div><button class="btn" onclick="saveGlobalConfig()">SALVAR</button><div style="margin-top:20px; border-top:1px solid #eee; padding-top:10px"><b>PERSONALIZAÇÃO VISUAL</b><button class="btn" style="background:#666; margin-top:5px" onclick="openModal('modal-customize')">PERSONALIZAR BOTÕES E CORES <i class="fas fa-pen"></i></button></div></div><button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button></div>
+                
+                <div id="adm-sec-config-global" class="adm-section" style="display:none">
+                    <div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;">
+                        <b>CONFIGURAÇÕES GERAIS</b>
+                        <div class="input-group" style="margin-top:10px"><label>ZAP SUPORTE</label><input id="adm-cfg-phone" class="input-field" placeholder="Ex: 81900000000"></div>
+                        <button class="btn" onclick="saveGlobalConfig()">SALVAR CONFIG</button>
+                    </div>
+                    <button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
+                </div>
             </div>
         </div>
     </div>
@@ -330,46 +353,26 @@
     </div>
 </div>
 
-<div class="modal-overlay" id="modal-share">
-    <div class="modal-box" style="background:transparent; box-shadow:none; border:none; width:auto; padding:0;">
-        <div id="ticket-capture-area" class="share-card" style="background:white; padding:20px; border-radius:10px; width:300px; text-align:center">
-            <div style="font-weight:900; color:var(--pe-blue); margin-bottom:10px">DH-PE OFICIAL</div>
-            <div style="border:2px dashed #ccc; padding:10px; margin-bottom:10px">
-                <div id="share-piloto-name" style="font-weight:bold; font-size:18px">NOME PILOTO</div>
-                <div id="share-cat" style="font-size:12px; color:#666">CATEGORIA</div>
-            </div>
-            <div id="share-event-name" style="font-weight:900; color:var(--pe-red)">NOME DO EVENTO</div>
-            <div style="color:green; font-weight:bold; margin-top:5px"><i class="fas fa-check-circle"></i> CONFIRMADO</div>
-        </div>
-        <button class="btn" style="background:#E1306C; margin-top:10px" onclick="baixarImagem('ticket-capture-area', 'ticket_dhpe')">BAIXAR <i class="fas fa-download"></i></button>
-        <button class="btn" style="background:white; color:#333" onclick="fecharModal('modal-share')">FECHAR</button>
-    </div>
-</div>
-
-<div class="modal-overlay" id="modal-pix">
-    <div class="modal-box">
-        <h3 style="color:var(--pe-green)"><i class="fas fa-qrcode"></i> PAGAMENTO</h3>
-        <p style="font-size:12px; color:#666; margin:5px 0">VALOR: <b style="color:var(--pe-blue)" id="pix-valor-display">R$ 0,00</b></p>
-        <div style="background:#f0fdf4; border:1px dashed var(--pe-green); padding:10px; margin:10px 0; font-size:10px; word-break:break-all; font-weight:bold" id="pix-copy">...</div>
-        <button class="btn" style="background:#64748b; margin-top:0" onclick="copiarPix()"><i class="far fa-copy"></i> COPIAR CHAVE PIX</button>
-        <hr style="border:0; border-top:1px solid #eee; margin:15px 0">
-        <button class="btn" style="background:#25D366" onclick="enviarComprovanteWhatsApp()"><i class="fab fa-whatsapp"></i> ENVIAR COMPROVANTE</button>
-        <button class="btn" style="background:var(--pe-blue); margin-top:5px" onclick="confirmarJaPaguei()">JÁ FIZ O PIX (REGISTRAR)</button>
-        <button class="btn" style="background:#ddd; color:#333; margin-top:5px" onclick="fecharModal('modal-pix')">CANCELAR</button>
-    </div>
-</div>
-
-<div class="modal-overlay" id="modal-points">
-    <div class="modal-box">
-        <h3 style="color:var(--pe-blue)" id="modal-points-title">TABELA DE PONTOS</h3>
-        <div id="public-points-list" style="margin-top:10px; text-align:left; max-height:300px; overflow-y:auto;"></div>
-        <button class="btn" style="background:#ddd; color:#333; margin-top:15px" onclick="fecharModal('modal-points')">FECHAR</button>
-    </div>
-</div>
-
+<div class="modal-overlay" id="modal-share"><div class="modal-box" style="background:transparent; box-shadow:none; border:none; width:auto; padding:0;"><div id="ticket-capture-area" class="share-card" style="background:white; padding:20px; border-radius:10px; width:300px; text-align:center"><div style="font-weight:900; color:var(--pe-blue); margin-bottom:10px">DH-PE OFICIAL</div><div style="border:2px dashed #ccc; padding:10px; margin-bottom:10px"><div id="share-piloto-name" style="font-weight:bold; font-size:18px">NOME PILOTO</div><div id="share-cat" style="font-size:12px; color:#666">CATEGORIA</div></div><div id="share-event-name" style="font-weight:900; color:var(--pe-red)">NOME DO EVENTO</div><div style="color:green; font-weight:bold; margin-top:5px"><i class="fas fa-check-circle"></i> CONFIRMADO</div></div><button class="btn" style="background:#E1306C; margin-top:10px" onclick="baixarImagem('ticket-capture-area', 'ticket_dhpe')">BAIXAR <i class="fas fa-download"></i></button><button class="btn" style="background:white; color:#333" onclick="fecharModal('modal-share')">FECHAR</button></div></div>
+<div class="modal-overlay" id="modal-pix"><div class="modal-box"><h3 style="color:var(--pe-green)"><i class="fas fa-qrcode"></i> PAGAMENTO</h3><p style="font-size:12px; color:#666; margin:5px 0">VALOR: <b style="color:var(--pe-blue)" id="pix-valor-display">R$ 0,00</b></p><div style="background:#f0fdf4; border:1px dashed var(--pe-green); padding:10px; margin:10px 0; font-size:10px; word-break:break-all; font-weight:bold" id="pix-copy">...</div><button class="btn" style="background:#64748b; margin-top:0" onclick="copiarPix()"><i class="far fa-copy"></i> COPIAR CHAVE PIX</button><hr style="border:0; border-top:1px solid #eee; margin:15px 0"><button class="btn" style="background:#25D366" onclick="enviarComprovanteWhatsApp()"><i class="fab fa-whatsapp"></i> ENVIAR COMPROVANTE</button><button class="btn" style="background:var(--pe-blue); margin-top:5px" onclick="confirmarJaPaguei()">JÁ FIZ O PIX (REGISTRAR)</button><button class="btn" style="background:#ddd; color:#333; margin-top:5px" onclick="fecharModal('modal-pix')">CANCELAR</button></div></div>
+<div class="modal-overlay" id="modal-points"><div class="modal-box"><h3 style="color:var(--pe-blue)" id="modal-points-title">TABELA DE PONTOS</h3><div id="public-points-list" style="margin-top:10px; text-align:left; max-height:300px; overflow-y:auto;"></div><button class="btn" style="background:#ddd; color:#333; margin-top:15px" onclick="fecharModal('modal-points')">FECHAR</button></div></div>
 <div class="modal-overlay" id="modal-poster"><div class="modal-box" style="padding:0; background:black; border:none; width:95%; max-width:400px"><div style="position:relative"><img id="img-poster-view" style="width:100%; display:block"><button onclick="fecharModal('modal-poster')" style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.5); color:white; border:none; padding:10px; border-radius:50%; cursor:pointer"><i class="fas fa-times"></i></button></div></div></div>
 <div class="modal-overlay" id="modal-recovery"><div class="modal-box"><h3 style="color:var(--pe-blue)">RECUPERAR SENHA</h3><div class="input-group"><label>SEU CPF</label><input type="tel" id="rec-cpf" oninput="mascaraCPF(this)"></div><div class="input-group"><label>SEU TELEFONE</label><input type="tel" id="rec-tel" oninput="mascaraTel(this)"></div><div id="rec-security-area" style="display:none; margin-top:10px; border-top:1px dashed #ccc; padding-top:10px;"><p style="font-size:10px; font-weight:bold; color:var(--pe-blue); margin-bottom:5px">PALAVRA-CHAVE</p><div class="input-group"><label>SUA RESPOSTA</label><input id="rec-answer" class="uppercase-input"></div><button class="btn" onclick="revelarSenha()">MOSTRAR SENHA</button></div><button class="btn" id="btn-buscart-rec" onclick="buscarUsuarioRecuperacao()">CONTINUAR</button><button class="btn" style="background:#ddd; color:#333; margin-top:5px" onclick="fecharModal('modal-recovery')">FECHAR</button></div></div>
-<div class="modal-overlay" id="modal-customize"><div class="modal-box" style="text-align:left"><h3 style="color:var(--pe-blue); text-align:center; margin-bottom:15px">PERSONALIZAR SISTEMA</h3><b style="font-size:10px; color:#666">CORES GERAIS</b><div class="edit-row"><span>COR PRINCIPAL (AZUL)</span><input type="color" id="cust-color-blue" style="width:40px; padding:0;"></div><div class="edit-row"><span>COR DESTAQUE (AMARELO)</span><input type="color" id="cust-color-yellow" style="width:40px; padding:0;"></div><div class="edit-row"><span>COR ALERTA (VERMELHO)</span><input type="color" id="cust-color-red" style="width:40px; padding:0;"></div><div class="edit-row"><span>COR SUCESSO (VERDE)</span><input type="color" id="cust-color-green" style="width:40px; padding:0;"></div><b style="font-size:10px; color:#666; margin-top:10px; display:block">BOTÕES GLOBAIS (MENU)</b><div class="input-group" style="margin-bottom:5px"><label>BOTÃO 1</label><input id="cust-lbl-cal" placeholder="CALENDÁRIO"></div><div class="input-group" style="margin-bottom:5px"><label>BOTÃO 2</label><input id="cust-lbl-tempos" placeholder="TEMPOS"></div><div class="input-group" style="margin-bottom:5px"><label>BOTÃO 3</label><input id="cust-lbl-ranking" placeholder="RANKING"></div><button class="btn" style="background:var(--pe-green); margin-top:15px" onclick="saveCustomization()">SALVAR TUDO</button><button class="btn" style="background:#ddd; color:#333; margin-top:5px" onclick="fecharModal('modal-customize')">CANCELAR</button></div></div>
+
+<div class="modal-overlay" id="modal-super-edit">
+    <div class="modal-box" style="text-align:left;">
+        <h3 style="color:var(--pe-blue); border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px;">EDITAR DADOS (ADMIN)</h3>
+        <input type="hidden" id="super-edit-old-cpf">
+        <div class="input-group"><label>NOME COMPLETO</label><input id="super-edit-name" class="uppercase-input"></div>
+        <div class="input-group"><label>CPF</label><input id="super-edit-cpf" oninput="mascaraCPF(this)"></div>
+        <div class="input-group"><label>CIDADE</label><input id="super-edit-city" class="uppercase-input"></div>
+        <div class="input-group"><label>CATEGORIA</label><input id="super-edit-cat" class="uppercase-input"></div>
+        <div class="input-group"><label>TELEFONE</label><input id="super-edit-tel" oninput="mascaraTel(this)"></div>
+        <div class="input-group"><label>DATA NASCIMENTO</label><input type="date" id="super-edit-nasc"></div>
+        <button class="btn" style="background:var(--pe-green); margin-top:15px" onclick="saveSuperEdit()">SALVAR ALTERAÇÕES</button>
+        <button class="btn" style="background:#ddd; color:#333; margin-top:5px" onclick="fecharModal('modal-super-edit')">CANCELAR</button>
+    </div>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
