@@ -367,7 +367,7 @@ function renderContent(t) {
             document.getElementById('card-city').innerText = loggedUser.city;
             document.getElementById('card-team').innerText = userTeam || "SEM EQUIPE";
             if(loggedUser.selfie) {
-                document.getElementById('prof-img-display').src = loggedUser.selfie; 
+                // CORREÇÃO: Removida referência ao ID que não existia (prof-img-display)
                 document.getElementById('card-img-display').src = loggedUser.selfie;
             }
         } 
@@ -576,7 +576,17 @@ function changeLiveScale(val) {
 }
 
 // --- FUNÇÕES DE SUPORTE E ADMIN ---
-function uploadSelfie(input){if(input.files[0]){compressImage(input.files[0],300,(base64)=>{if(loggedUser){loggedUser.selfie=base64;saveDB();}document.getElementById('prof-img-display').src=base64;document.getElementById('card-img-display').src=base64;});}}
+// CORREÇÃO: Função uploadSelfie agora atualiza o elemento correto
+function uploadSelfie(input){
+    if(input.files[0]){
+        compressImage(input.files[0],300,(base64)=>{
+            if(loggedUser){loggedUser.selfie=base64;saveDB();}
+            // Apenas atualiza o que existe no HTML
+            const cardImg = document.getElementById('card-img-display');
+            if(cardImg) cardImg.src=base64;
+        });
+    }
+}
 function compressImage(file, maxWidth, callback) { const reader = new FileReader(); reader.readAsDataURL(file); reader.onload = event => { const img = new Image(); img.src = event.target.result; img.onload = () => { const canvas = document.createElement('canvas'); let width = img.width; let height = img.height; if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; } canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height); callback(canvas.toDataURL('image/jpeg', 0.7)); }; }; }
 function openEditUserModal(cpf){const u=db.users.find(x=>x.cpf===cpf);if(u){document.getElementById('edit-user-original-cpf').value=u.cpf;document.getElementById('edit-user-name').value=u.nome;document.getElementById('edit-user-cpf').value=u.cpf;document.getElementById('edit-user-tel').value=u.tel;document.getElementById('edit-user-city').value=u.city;document.getElementById('edit-user-cat').value=u.cat;document.getElementById('edit-user-gender').value=u.gender;document.getElementById('edit-user-pass').value=u.pass;document.getElementById('modal-edit-user').style.display='flex';}}
 function saveUserEdit(){const old=document.getElementById('edit-user-original-cpf').value;const idx=db.users.findIndex(x=>x.cpf===old);if(idx>-1){db.users[idx].nome=document.getElementById('edit-user-name').value.toUpperCase();db.users[idx].cpf=document.getElementById('edit-user-cpf').value;db.users[idx].cat=document.getElementById('edit-user-cat').value.toUpperCase();saveDB();toast("SALVO");document.getElementById('modal-edit-user').style.display='none';filterPilots('edit-user',true);}}
