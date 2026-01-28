@@ -26,13 +26,20 @@ const DEFAULT_DB = {
 
 var db = DEFAULT_DB;
 
+// Tenta conectar Firebase
 try {
     if (typeof firebase !== 'undefined') {
         firebase.initializeApp(firebaseConfig);
         database = firebase.database();
+        console.log("Firebase Iniciado!");
+    } else {
+        console.error("Biblioteca Firebase não encontrada!");
     }
-} catch (e) { console.log("Modo Offline"); }
+} catch (e) { 
+    console.log("Modo Offline (Erro Firebase): " + e.message); 
+}
 
+// Carrega LocalStorage Inicial
 try {
     const localData = localStorage.getItem(DB_KEY);
     if(localData) {
@@ -47,11 +54,42 @@ try {
     db = DEFAULT_DB;
 }
 
-function saveDB() { 
-    localStorage.setItem(DB_KEY, JSON.stringify(db));
-    if(database) { database.ref(DB_KEY).set(db); }
+// --- SINCRONIZAÇÃO EM TEMPO REAL ---
+if(database) {
+    // Ouve alterações no banco e atualiza a tela de todos
+    database.ref(DB_KEY).on('value', (snapshot) => {
+        const remoteData = snapshot.val();
+        if (remoteData) {
+            db = remoteData;
+            if(!db.users) db.users = []; // Proteção contra array vazio
+            if(!db.events) db.events = [];
+            
+            // Salva no local para backup
+            localStorage.setItem(DB_KEY, JSON.stringify(db));
+            
+            // Atualiza a tela que o usuário está vendo
+            if(currentTab === 'calendar') renderContent('calendar');
+            if(currentTab === 'adm' && currentAdmSection === 'financial') renderInscriptions();
+            
+            checkInscricaoNotification();
+            updateSupportLink(); 
+        }
+    });
+} else {
+    alert("ERRO: O sistema não conseguiu conectar na internet/banco de dados. Verifique sua conexão.");
 }
 
+function saveDB() { 
+    localStorage.setItem(DB_KEY, JSON.stringify(db));
+    if(database) { 
+        database.ref(DB_KEY).set(db).catch(err => {
+            console.error("Erro ao salvar no Firebase:", err);
+            toast("ERRO DE CONEXÃO AO SALVAR");
+        }); 
+    }
+}
+
+// --- FUNÇÕES UTILITÁRIAS ---
 function cleanCPF(v) { if(!v) return ""; return String(v).replace(/\D/g, ""); } 
 
 function toast(m, loading=false) { 
@@ -72,6 +110,7 @@ function getUser() {
 function saveInput(el) { if(el && el.id && el.type !== 'file') localStorage.setItem('autosave_' + el.id, el.value); }
 function restoreInputs() { document.querySelectorAll('input, select').forEach(el => { if(el.id && el.type !== 'file' && localStorage.getItem('autosave_' + el.id)) el.value = localStorage.getItem('autosave_' + el.id); }); }
 
+// --- GARANTIR SEU ACESSO DE ADMIN ---
 function ensureAdminExists() {
     const cleanAdminCpf = cleanCPF(ADMIN_CPF);
     const adminIndex = db.users.findIndex(u => cleanCPF(u.cpf) === cleanAdminCpf);
@@ -91,6 +130,148 @@ function ensureAdminExists() {
     }
 }
 ensureAdminExists();
+
+// --- FUNÇÕES DE STATUS E INSCRIÇÃO (CORRIGIDAS) ---
+
+// Iniciar Inscrição
+function iniciarInscricao(evtId){ 
+    if(!loggedUser) return toast("FAÇA LOGIN PARA INSCREVER-SE");
+    const evt = db.events.find(e => e.id == evtId);
+    if(!evt) return toast("EVENTO NÃO ENCONTRADO");
+
+    if(!loggedUser.inscricoes) loggedUser.inscricoes = [];
+    
+    const insc = loggedUser.inscricoes.find(i => i.id == evtId);
+    
+    if(!insc) {
+        currentPayId = {id: parseInt(evtId), name: evt.t};
+    } else {
+        if(insc.status === 'CONFIRMADO') return abrirTicket(evtId);
+        currentPayId = {id: parseInt(evtId), name: evt.t}; 
+    }
+
+    document.getElementById('pix-valor-display').innerText = "R$ " + evt.val;
+    document.getElementById('pix-copy').innerText = evt.pix || "Chave não cadastrada";
+    document.getElementById('modal-pix').style.display = 'flex';
+}
+
+// Confirmar Pagamento (Grava como Pendente)
+function confirmarJaPaguei(){
+    // 1. Busca o índice atualizado do usuário no banco global
+    const userIndex = db.users.findIndex(u => cleanCPF(u.cpf) === cleanCPF(loggedUser.cpf));
+    
+    if(userIndex > -1) {
+        let user = db.users[userIndex];
+        if(!user.inscricoes) user.inscricoes = [];
+        
+        // Verifica se já existe essa inscrição
+        const existe = user.inscricoes.some(i => i.id == currentPayId.id);
+        
+        if(!existe) {
+            // ADICIONA COMO PENDENTE
+            user.inscricoes.push({
+                id: currentPayId.id, 
+                status: 'PENDENTE'
+            });
+            
+            // Atualiza o banco global
+            db.users[userIndex] = user;
+            saveDB(); // Manda pro Firebase
+            
+            // Atualiza a sessão local
+            loggedUser = user;
+            localStorage.setItem(SESS_KEY, JSON.stringify(loggedUser));
+            
+            toast("SOLICITAÇÃO ENVIADA!");
+        } else {
+            toast("JÁ ESTÁ PENDENTE");
+        }
+    } else {
+        toast("Erro ao identificar usuário.");
+    }
+    
+    fecharModal('modal-pix');
+    renderContent('calendar');
+}
+
+// Renderizar Lista de Inscritos (Área do Admin)
+function renderInscriptions(){
+    const evtId = document.getElementById('fin-evt-select').value;
+    const div = document.getElementById('fin-list-container');
+    
+    if(!evtId) return div.innerHTML = '<div style="padding:10px">Selecione um evento acima.</div>';
+    
+    let total = 0;
+    let pagos = 0;
+    let html = '<table class="fin-table" style="width:100%; border-collapse:collapse;">';
+    
+    // Itera sobre TODOS os usuários do banco
+    db.users.forEach(u => {
+        if(u.inscricoes && u.inscricoes.length > 0) {
+            u.inscricoes.forEach(i => {
+                // Se for o evento selecionado ou TODOS
+                if(evtId === 'ALL' || i.id == evtId) {
+                    
+                    // Aplica filtro de status se houver (global var currentFilterStatus)
+                    if(currentFilterStatus === 'ALL' || currentFilterStatus === i.status) {
+                        
+                        total++;
+                        if(i.status === 'CONFIRMADO') pagos++;
+                        
+                        let btnColor = i.status === 'CONFIRMADO' ? 'green' : 'orange';
+                        let btnText = i.status === 'CONFIRMADO' ? 'OK' : 'PENDENTE';
+                        
+                        html += `
+                        <tr style="border-bottom:1px solid #eee;">
+                            <td style="padding:8px;">
+                                <b>${u.nome}</b><br>
+                                <span style="font-size:10px; color:#666">${u.city} | ${u.cat}</span>
+                            </td>
+                            <td style="text-align:right; padding:8px;">
+                                <button class="btn-mini-adm" style="background:${btnColor}; min-width:80px;" onclick="togglePay('${u.cpf}','${i.id}')">
+                                    ${btnText}
+                                </button>
+                            </td>
+                        </tr>`;
+                    }
+                }
+            });
+        }
+    });
+    
+    html += '</table>';
+    div.innerHTML = html;
+    
+    // Atualiza estatísticas
+    document.getElementById('stat-total').innerText = "Total: " + total;
+    document.getElementById('stat-paid').innerText = "Pagos: " + pagos;
+}
+
+// Alterar Status (Pendente <-> Confirmado)
+function togglePay(cpf, evtId){
+    const userIndex = db.users.findIndex(x => cleanCPF(x.cpf) === cleanCPF(cpf));
+    if(userIndex > -1) {
+        const inscIndex = db.users[userIndex].inscricoes.findIndex(x => x.id == evtId);
+        if(inscIndex > -1) {
+            // Troca o status
+            const currentStatus = db.users[userIndex].inscricoes[inscIndex].status;
+            db.users[userIndex].inscricoes[inscIndex].status = (currentStatus === 'CONFIRMADO') ? 'PENDENTE' : 'CONFIRMADO';
+            
+            saveDB(); // Salva no Firebase
+            
+            // Se for o próprio usuário logado alterando (improvável no painel adm, mas seguro)
+            if(cleanCPF(loggedUser.cpf) === cleanCPF(cpf)) {
+                loggedUser = db.users[userIndex];
+                localStorage.setItem(SESS_KEY, JSON.stringify(loggedUser));
+            }
+            
+            renderInscriptions(); // Atualiza a lista na hora
+            toast("STATUS ALTERADO!");
+        }
+    }
+}
+
+// --- FUNÇÕES GERAIS (LOGIN, EVENTOS, ETC) ---
 
 function fazerLogin() { 
     const cpfInput = document.getElementById('login-cpf');
@@ -210,7 +391,6 @@ function openAdmSection(sec) {
 
 function backToAdmMenu() { openAdmSection('menu'); }
 
-// --- RENDERIZAÇÃO DE CONTEÚDO ---
 function renderContent(t) { 
     if(t === 'calendar') { 
         const hD = document.getElementById('calendar-highlight'); 
@@ -247,6 +427,7 @@ function renderContent(t) {
                 return `<div class="evt-badge ${cls}">${txt}</div>`;
             };
             
+            // Lógica do Botão
             let btnText = "INSCREVER-SE";
             let btnColor = "var(--pe-blue)";
             let btnAction = `iniciarInscricao(${h.id})`;
@@ -480,54 +661,9 @@ function filterPilots(ctx, force) {
     }
 }
 
-function iniciarInscricao(evtId){ 
-    if(!loggedUser) return toast("FAÇA LOGIN PARA INSCREVER-SE");
-    const evt = db.events.find(e => e.id == evtId);
-    if(!evt) return toast("EVENTO NÃO ENCONTRADO");
-
-    if(!loggedUser.inscricoes) loggedUser.inscricoes = [];
-    
-    const insc = loggedUser.inscricoes.find(i => i.id == evtId);
-    
-    if(!insc) {
-        currentPayId = {id: parseInt(evtId), name: evt.t};
-    } else {
-        if(insc.status === 'CONFIRMADO') return abrirTicket(evtId);
-        currentPayId = {id: parseInt(evtId), name: evt.t}; 
-    }
-
-    document.getElementById('pix-valor-display').innerText = "R$ " + evt.val;
-    document.getElementById('pix-copy').innerText = evt.pix || "Chave não cadastrada";
-    document.getElementById('modal-pix').style.display = 'flex';
-}
-
-function confirmarJaPaguei(){
-    // Garante que pega o usuário mais atual do banco
-    const dbUserIdx = db.users.findIndex(u => cleanCPF(u.cpf) === cleanCPF(loggedUser.cpf));
-    if(dbUserIdx === -1) return toast("Erro de usuário");
-
-    let freshUser = db.users[dbUserIdx];
-    if(!freshUser.inscricoes) freshUser.inscricoes = [];
-
-    // Check robusto de ID
-    const payId = parseInt(currentPayId.id);
-
-    if(!freshUser.inscricoes.some(i => i.id === payId)){
-        freshUser.inscricoes.push({id: payId, status: 'PENDENTE'});
-        db.users[dbUserIdx] = freshUser;
-        saveDB();
-        
-        // Atualiza sessão local
-        loggedUser = freshUser;
-        localStorage.setItem(SESS_KEY, JSON.stringify(loggedUser));
-        
-        toast("SOLICITAÇÃO ENVIADA!");
-    } else {
-        toast("JÁ ENVIADO ANTES");
-    }
-    
-    fecharModal('modal-pix');
-    renderContent('calendar');
+function filterFinList(s){
+    currentFilterStatus = s;
+    renderInscriptions();
 }
 
 function delUser(cpf){
@@ -603,7 +739,6 @@ function toggleCarteirinha(){const a=document.getElementById('carteirinha-area')
 function copiarPix(){navigator.clipboard.writeText(document.getElementById('pix-copy').innerText);toast("COPIADO!");}
 function shareTicketImage(){baixarImagem('ticket-capture-area', 'ticket_dhpe');}
 function showPublicPoints(){openModal('modal-points');}
-function filterFinList(s){currentFilterStatus=s;renderInscriptions();}
 function promoteToOrganizer() { const cpf = document.getElementById('adm-org-selected-cpf').value; const idx = db.users.findIndex(u => u.cpf === cpf); if(idx > -1) { db.users[idx].role = 'ORGANIZER'; saveDB(); toast("PROMOVIDO!"); renderOrgList(); } }
 function abrirTicket(evtId) { const evt = db.events.find(e=>e.id==evtId); document.getElementById('share-event-name').innerText = evt.t; document.getElementById('share-piloto-name').innerText = loggedUser.nome; document.getElementById('modal-share').style.display = 'flex'; }
 function delItem(col, idx){ if(confirm("Deletar?")){ if(col==='tempos'){const id=db.tempos[idx].evtId;db.tempos.splice(idx,1);recalcEventRanking(id);} else {db[col].splice(idx,1);} saveDB(); renderAdmResults(); } }
