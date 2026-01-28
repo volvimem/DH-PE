@@ -14,16 +14,47 @@
 .uppercase-input { text-transform: uppercase; }
 
 /* FIX: TRAVAR A TELA (EVITA ROLAGEM GERAL) */
-html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-body); position: fixed; }
+html, body { width: 100%; height: 100%; overflow-x: hidden; background: var(--bg-body); position: fixed; }
 
 /* O CONTEÚDO ROLA DENTRO DA CAIXA */
 .app-container { 
     width: 100%; max-width: 600px; margin: 0 auto; 
     position: relative; height: 100%; 
     background: var(--bg-card); 
-    overflow-y: auto; /* Rolagem interna */
+    overflow-y: auto; 
     -webkit-overflow-scrolling: touch;
     display: flex; flex-direction: column;
+}
+
+/* CORREÇÃO DO OLHINHO DE SENHA */
+.pass-eye {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666;
+    cursor: pointer;
+    z-index: 10;
+    font-size: 16px;
+}
+
+/* BOTÃO DE SUPORTE NO HEADER (NOVO) */
+.header-support-btn {
+    background-color: #25D366;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 900;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+.header-support-btn:active {
+    transform: scale(0.95);
 }
 
 /* BOTÕES GERAIS */
