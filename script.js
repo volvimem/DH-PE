@@ -428,11 +428,21 @@ function abrirPopUpLive() {
 }
 
 function sairModoLive() {
+    // 1. Para os cronômetros para não gastar memória
     if(chronoInterval) clearInterval(chronoInterval);
     if(liveInterval) clearInterval(liveInterval);
+
+    // 2. Esconde a tela de Live
     document.getElementById('screen-live-monitor').style.display = 'none';
-    document.getElementById('main-app-container').style.display = 'block';
+    
+    // 3. CORREÇÃO: Mostra a tela principal do App de volta
+    // Antes estava faltando isso ou estava 'block' errado. 
+    // O correto para o app-container é 'flex' pois ele usa flexbox no CSS.
+    document.getElementById('main-app-container').style.display = 'flex'; 
+
+    // 4. Garante que o usuário volte para a aba de ADMIN (onde ele estava)
     renderContent('adm');
+};
 }
 
 function iniciarLiveLoop() { 
