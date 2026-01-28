@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DH-PE v6.0 PRO</title>
-    
+    <title>DH-PE v9.0 PRO</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="apple-touch-icon" href="logo.png">
@@ -16,56 +15,84 @@
 
 <div class="toast" id="toast">MSG</div>
 
-<div id="screen-live-monitor" class="live-screen" style="display:none; background:white;">
-    <div class="live-header-bar" style="background:#fff; border-bottom:3px solid #000; height:70px;">
-        <div class="live-logo"><img src="logo.png" style="height:50px"></div>
-        <div style="text-align:center; flex:1">
-            <div id="live-title-display" style="font-size:1.8vw; font-weight:900; color:#000; text-transform: uppercase;">EVENTO AO VIVO</div>
+<div id="screen-live-monitor" class="live-screen" style="display:none;">
+    <div class="live-top-bar">
+        <div style="display:flex; align-items:center; gap:10px">
+            <img src="logo.png" style="height:40px">
+            <div>
+                <div style="font-weight:900; font-size:16px; line-height:1">LIVE TIMING</div>
+                <div style="font-size:10px; color:#666">SISTEMA OFICIAL</div>
+            </div>
         </div>
-        <div style="width:50px"></div> 
+        <div style="font-weight:900; font-size:20px; color:var(--pe-blue); text-transform:uppercase" id="live-header-event">EVENTO</div>
+        <button onclick="sairModoLive()" style="background:#333; color:white; border:none; padding:8px 15px; border-radius:4px; font-weight:bold; cursor:pointer"><i class="fas fa-times"></i> SAIR</button>
+    </div>
+
+    <div class="live-content-wrapper" id="live-wrapper">
+        <div class="live-grid">
+            <div class="live-col">
+                <div class="live-panel-header"><i class="fas fa-users"></i> CALL ROOM</div>
+                <div style="padding:10px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; margin-bottom:10px">
+                    <input id="live-search-pilot" placeholder="Buscar Piloto (Nº ou Nome)" class="uppercase-input" style="width:100%; padding:8px; border:1px solid #ccc" oninput="liveSearchPilot()">
+                    <div id="live-search-res" style="max-height:150px; overflow-y:auto; background:white; margin-top:5px; border:1px solid #eee; display:none"></div>
+                </div>
+
+                <div id="next-pilot-box" style="display:none; text-align:center; border:2px dashed #ccc; padding:15px; border-radius:10px">
+                    <div style="font-size:11px; font-weight:bold; color:#666">PRÓXIMO A LARGAR</div>
+                    <div style="font-weight:900; font-size:18px; color:var(--pe-blue); margin-top:5px" id="preview-name">...</div>
+                    <div style="font-size:12px; font-weight:bold; background:#eee; padding:2px 8px; border-radius:4px; display:inline-block; margin-top:5px" id="preview-cat">...</div>
+                    <input type="hidden" id="preview-cpf">
+                    <button class="btn" style="background:var(--pe-blue); margin-top:10px" onclick="sendToTrack()">ENVIAR P/ PISTA <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <div class="live-col live-center">
+                <div class="live-panel-header" style="border:none; color:#999; font-size:12px">PISTA PRINCIPAL</div>
+                
+                <div class="live-pilot-card">
+                    <div class="live-plate" id="live-plate">--</div>
+                    <div class="live-name" id="live-name">AGUARDANDO</div>
+                    <div class="live-info"><span id="live-city">-</span> • <span id="live-team">-</span></div>
+                    <div class="live-cat-badge" id="live-cat">-</div>
+                </div>
+
+                <div class="live-chrono-box" id="live-chrono">00:00.000</div>
+
+                <div class="live-controls">
+                    <button class="btn-live btn-start" onclick="startChrono()"><i class="fas fa-play"></i> INICIAR</button>
+                    <button class="btn-live btn-stop" onclick="stopChrono()"><i class="fas fa-flag-checkered"></i> PARAR</button>
+                </div>
+            </div>
+
+            <div class="live-col">
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--pe-yellow); padding-bottom:5px; margin-bottom:10px">
+                    <div style="font-size:14px; font-weight:900; color:var(--pe-blue)">RANKING</div>
+                    <select id="live-rank-filter" style="font-size:10px; padding:2px" onchange="renderLiveRanking()"><option value="ALL">GERAL</option></select>
+                </div>
+                <div id="live-ranking-list" style="flex:1; overflow-y:auto"></div>
+            </div>
+        </div>
     </div>
     
-    <div class="live-layout-grid">
-        <div class="live-col-side">
-            <div class="live-header-box live-header-blue"><i class="fas fa-filter"></i> <span id="live-cat-label">CATEGORIA</span></div>
-            <div id="live-cat-list" style="flex:1; overflow-y:auto;"></div>
-        </div>
-        <div class="live-col-center">
-            <div style="font-size:1vw; font-weight:bold; color:#666; margin-top:10px;">TEMPO DE CORRIDA</div>
-            <div class="chrono-box" id="live-chronometer">00:00:00</div>
-            <div class="live-last-athlete">
-                <div style="font-size:1vw; font-weight:bold; margin-bottom:5px;">ÚLTIMO NA PISTA</div>
-                <div id="live-last-name" style="font-size:2vw; font-weight:900; color:#0038a8;">-</div>
-                <div id="live-last-city" style="font-size:1.2vw; color:#333;">-</div>
-                <div id="live-last-time" style="font-size:2.5vw; font-weight:900; color:#d50000; margin-top:5px;">--:--.--</div>
-            </div>
-            <div style="margin-top:auto; font-size:0.8vw; color:#999;">SISTEMA DH-PE LIVE TIMING</div>
-        </div>
-        <div class="live-col-side">
-            <div class="live-header-box live-header-red"><i class="fas fa-crown"></i> TOP PISTA (GERAL)</div>
-            <div id="live-general-list" style="flex:1; overflow-y:auto;"></div>
-        </div>
+    <div class="zoom-controls">
+        <i class="fas fa-search-minus"></i>
+        <input type="range" class="zoom-slider" min="0.5" max="1.5" step="0.1" value="1" oninput="changeLiveScale(this.value)">
+        <i class="fas fa-search-plus"></i>
     </div>
 </div>
 
 <div class="modal-overlay" id="modal-share">
     <div class="modal-box" style="background:transparent; box-shadow:none; border:none; width:auto; padding:0;">
-        <div id="ticket-capture-area" class="share-card">
-            <div class="share-top-band"></div>
-            <div class="share-content-box">
-                <div class="share-logo">DH-PE OFICIAL</div>
-                <div class="share-sub">COMPROVANTE DE INSCRIÇÃO</div>
-                <div style="margin: 15px 0; border-top: 1px dashed #ccc; border-bottom: 1px dashed #ccc; padding: 10px 0;">
-                    <div id="share-piloto-name" class="share-piloto">NOME PILOTO</div>
-                    <div id="share-cpf" style="font-size:10px; color:#666; margin-bottom:5px">000.000.000-00</div>
-                    <div id="share-cat" style="font-weight:bold; font-size:12px; color:var(--pe-blue)">CATEGORIA</div>
-                </div>
-                <div id="share-event-name" class="share-event">NOME DO EVENTO</div>
-                <div class="share-check"><i class="fas fa-check-circle"></i> <span id="share-status-txt">CONFIRMADO</span></div>
-                <div style="font-size:8px; color:#999; margin-top:5px">APRESENTE ESTE COMPROVANTE NO DIA</div>
+        <div id="ticket-capture-area" class="share-card" style="background:white; padding:20px; border-radius:10px; width:300px; text-align:center">
+            <div style="font-weight:900; color:var(--pe-blue); margin-bottom:10px">DH-PE OFICIAL</div>
+            <div style="border:2px dashed #ccc; padding:10px; margin-bottom:10px">
+                <div id="share-piloto-name" style="font-weight:bold; font-size:18px">NOME PILOTO</div>
+                <div id="share-cat" style="font-size:12px; color:#666">CATEGORIA</div>
             </div>
+            <div id="share-event-name" style="font-weight:900; color:var(--pe-red)">NOME DO EVENTO</div>
+            <div style="color:green; font-weight:bold; margin-top:5px"><i class="fas fa-check-circle"></i> CONFIRMADO</div>
         </div>
-        <button class="btn" style="background:#E1306C; margin-bottom:5px; margin-top:15px" onclick="baixarImagem('ticket-capture-area', 'ticket_dhpe')">BAIXAR IMAGEM <i class="fas fa-download"></i></button>
+        <button class="btn" style="background:#E1306C; margin-top:10px" onclick="baixarImagem('ticket-capture-area', 'ticket_dhpe')">BAIXAR <i class="fas fa-download"></i></button>
         <button class="btn" style="background:white; color:#333" onclick="fecharModal('modal-share')">FECHAR</button>
     </div>
 </div>
@@ -75,7 +102,7 @@
         <h3 style="color:var(--pe-green)"><i class="fas fa-qrcode"></i> PAGAMENTO</h3>
         <p style="font-size:12px; color:#666; margin:5px 0">VALOR: <b style="color:var(--pe-blue)" id="pix-valor-display">R$ 0,00</b></p>
         <div style="background:#f0fdf4; border:1px dashed var(--pe-green); padding:10px; margin:10px 0; font-size:10px; word-break:break-all; font-weight:bold" id="pix-copy">...</div>
-        <button class="btn" style="margin-top:0; background:#64748b" onclick="copiarPix()"><i class="far fa-copy"></i> COPIAR CHAVE PIX</button>
+        <button class="btn" style="background:#64748b; margin-top:0" onclick="copiarPix()"><i class="far fa-copy"></i> COPIAR CHAVE PIX</button>
         <hr style="border:0; border-top:1px solid #eee; margin:15px 0">
         <button class="btn" style="background:#25D366" onclick="enviarComprovanteWhatsApp()"><i class="fab fa-whatsapp"></i> ENVIAR COMPROVANTE</button>
         <button class="btn" style="background:var(--pe-blue); margin-top:5px" onclick="confirmarJaPaguei()">JÁ FIZ O PIX (REGISTRAR)</button>
@@ -104,7 +131,6 @@
             <h1>CAMPEONATO PERNAMBUCANO DE DOWNHILL</h1><p>TEMPORADA 2026</p>
             <div class="input-group"><label>CPF</label><div class="input-wrapper"><input type="tel" id="login-cpf" placeholder="000.000.000-00" oninput="mascaraCPF(this);" maxlength="14"></div></div>
             <div class="input-group"><label>SENHA</label><div class="input-wrapper"><input type="password" id="login-pass" placeholder="••••"><i class="fas fa-eye pass-eye" onclick="togglePass('login-pass')"></i></div></div>
-            <div class="checkbox-wrapper"><input type="checkbox" id="login-remember"> MANTER CONECTADO</div>
             <button id="btn-acessar" class="btn" onclick="fazerLogin()">ACESSAR CONTA</button>
             <div style="display:flex; gap:10px; width:100%; margin-top:10px;">
                 <button class="btn" onclick="trocarTela('cadastro')" style="background:rgba(255,255,255,0.2); color:white; margin:0; font-size:12px">CRIAR CONTA</button>
@@ -152,7 +178,7 @@
         <div id="main-app-header" class="app-header">
             <div class="header-logo-text"><img src="logo.png" class="header-mini-logo"></div>
             <div style="display:flex; align-items:center; gap:10px;">
-                 <div class="version-badge" onclick="appRefresh()">v6.0</div>
+                 <div class="version-badge" onclick="appRefresh()">v9.0</div>
             </div>
         </div>
         
@@ -163,7 +189,10 @@
 
         <div id="cont-tempos" class="c-sec" style="display:none">
             <div class="section-header-area">
-                <div class="section-title-row"><div class="section-title">TEMPOS</div><div><button class="btn-icon" onclick="baixarImagem('list-tempos', 'tempos')"><i class="fas fa-camera"></i></button></div></div>
+                <div class="section-title-row">
+                    <div class="section-title">TEMPOS</div>
+                    <div><button class="btn-icon" onclick="baixarImagem('list-tempos', 'tempos')"><i class="fas fa-camera"></i></button></div>
+                </div>
                 <div class="filter-row">
                     <select id="filter-evt-tempos" onchange="renderContent('tempos')" style="flex:1"><option value="ALL">TODAS ETAPAS</option></select>
                     <select id="filter-cat-tempos" onchange="renderContent('tempos')" style="flex:1"><option value="ALL">TODAS CATEGORIAS</option></select>
@@ -174,7 +203,10 @@
 
         <div id="cont-ranking" class="c-sec" style="display:none">
             <div class="section-header-area">
-                <div class="section-title-row"><div class="section-title">RANKING</div><div><button class="btn-icon" onclick="baixarImagem('list-ranking', 'ranking')"><i class="fas fa-camera"></i></button></div></div>
+                <div class="section-title-row">
+                    <div class="section-title">RANKING</div>
+                    <div><button class="btn-icon" onclick="baixarImagem('list-ranking', 'ranking')"><i class="fas fa-camera"></i></button></div>
+                </div>
                 <div class="filter-row">
                     <select id="filter-evt-ranking" onchange="renderContent('ranking')" style="flex:1"><option value="ALL">GERAL (SOMA)</option></select>
                     <select id="filter-cat-ranking" onchange="renderContent('ranking')" style="flex:1"><option value="ALL">CATEGORIAS</option></select>
@@ -184,8 +216,6 @@
         </div>
 
         <div id="cont-profile" class="c-sec" style="display:none; padding-bottom:80px">
-            <div class="profile-card" style="display:none"></div>
-            
             <div style="padding:20px; text-align:center;">
                 <div id="digital-id-card" class="id-card-premium">
                     <div class="id-card-header">
@@ -193,7 +223,7 @@
                         <span>FEDERAÇÃO PERNAMBUCANA</span>
                     </div>
                     <div class="id-card-body">
-                        <div class="id-photo-box">
+                        <div class="id-photo-box" onclick="document.getElementById('hidden-upload').click()">
                             <img id="card-img-display" src="https://via.placeholder.com/80">
                         </div>
                         <div class="id-info-box">
@@ -206,13 +236,12 @@
                     </div>
                     <div class="id-footer">VÁLIDO PARA TEMPORADA 2026 • FILIAÇÃO DIGITAL</div>
                 </div>
-                
                 <button class="btn" style="background:var(--pe-blue); margin-top:10px" onclick="baixarImagem('digital-id-card', 'carteirinha')"><i class="fas fa-download"></i> BAIXAR CARTEIRINHA HD</button>
             </div>
             
             <div class="section-title" style="text-align:left; margin-top:20px;">ATUALIZAR MEUS DADOS</div>
             <div style="background:white; padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05); margin:0 15px 20px 15px;">
-                <div class="input-group"><label>FOTO PERFIL</label><input type="file" id="file-upload" accept="image/*" onchange="uploadSelfie(this)"></div>
+                <input type="file" id="hidden-upload" accept="image/*" style="display:none" onchange="uploadSelfie(this)">
                 
                 <div class="input-group"><label>NOME COMPLETO (BLOQUEADO)</label><input id="prof-edit-name" class="uppercase-input" readonly style="background:#eee; color:#666"></div>
                 <div class="input-group"><label>CIDADE (BLOQUEADO)</label><input id="prof-edit-city" class="uppercase-input" readonly style="background:#eee; color:#666"></div>
@@ -237,7 +266,6 @@
                     <div class="adm-dash-btn" onclick="openAdmSection('results')"><i class="fas fa-stopwatch"></i><span>LANÇAR RESULTADOS</span></div>
                     <div class="adm-dash-btn" onclick="openAdmSection('financial')"><i class="fas fa-file-invoice-dollar"></i><span>STATUS DOS ATLETAS</span></div>
                     <div class="adm-dash-btn" id="btn-adm-users" onclick="openAdmSection('users-edit')"><i class="fas fa-user-edit"></i><span>GERENCIAR ATLETAS</span></div>
-                    <div class="adm-dash-btn" onclick="openAdmSection('history')"><i class="fas fa-history"></i><span>HISTÓRICO GERAL</span></div>
                     <div class="adm-dash-btn" id="btn-adm-org" onclick="openAdmSection('organizer')"><i class="fas fa-users-cog"></i><span>EQUIPE</span></div>
                     <div class="adm-dash-btn" id="btn-adm-cfg" onclick="openAdmSection('config-global')"><i class="fas fa-cogs"></i><span>CONFIGURAÇÕES</span></div>
                 </div>
@@ -248,17 +276,19 @@
                         <input type="hidden" id="adm-evt-id-edit">
                         <input id="adm-evt-t" placeholder="NOME DO EVENTO" class="uppercase-input input-field" style="margin-top:5px; padding:8px" oninput="persistEventForm()">
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-top:5px">
-                            <div><label style="font-size:9px">MÊS</label><select id="adm-evt-month" onchange="persistEventForm()"><option value="JAN">JAN</option><option value="FEV">FEV</option><option value="MAR">MAR</option><option value="ABR">ABR</option><option value="MAI">MAI</option><option value="JUN">JUN</option><option value="JUL">JUL</option><option value="AGO">AGO</option><option value="SET">SET</option><option value="OUT">OUT</option><option value="NOV">NOV</option><option value="DEZ">DEZ</option></select></div>
-                            <div><label style="font-size:9px">DIAS</label><input id="adm-evt-d" placeholder="00/00" class="input-field" style="padding:8px" oninput="mascaraDias(this)"></div>
+                            <div><label style="font-size:9px">MÊS</label><select id="adm-evt-month"><option value="JAN">JAN</option><option value="FEV">FEV</option><option value="MAR">MAR</option><option value="ABR">ABR</option><option value="MAI">MAI</option><option value="JUN">JUN</option><option value="JUL">JUL</option><option value="AGO">AGO</option><option value="SET">SET</option><option value="OUT">OUT</option><option value="NOV">NOV</option><option value="DEZ">DEZ</option></select></div>
+                            <div><label style="font-size:9px">TIPO</label><select id="adm-evt-type"><option value="PE">FPC/PE (AZUL)</option><option value="CBC">CBC (DOURADO)</option></select></div>
                         </div>
+                        <input id="adm-evt-d" placeholder="DIAS (Ex: 10/11)" class="input-field" style="margin-top:5px; padding:8px" oninput="mascaraDias(this)">
+                        
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-top:5px">
-                            <input id="adm-evt-c" placeholder="CIDADE" class="uppercase-input input-field" style="padding:8px" oninput="persistEventForm()">
-                            <input id="adm-evt-v" placeholder="VALOR" type="tel" class="input-field" style="padding:8px" oninput="persistEventForm()">
+                            <input id="adm-evt-c" placeholder="CIDADE" class="uppercase-input input-field" style="padding:8px">
+                            <input id="adm-evt-v" placeholder="VALOR" type="tel" class="input-field" style="padding:8px">
                         </div>
-                        <div style="margin-top:5px"><label>DATA LIMITE</label><input type="date" id="adm-evt-close-date" oninput="persistEventForm()"></div>
-                        <div style="margin-top:5px"><label>STATUS</label><select id="adm-evt-status" onchange="persistEventForm()"><option value="OPEN">ABERTO</option><option value="CLOSED">ENCERRADO</option></select></div>
-                        <input id="adm-evt-pix" placeholder="CHAVE PIX" class="input-field" style="margin-top:5px; padding:8px" oninput="persistEventForm()">
-                        <input id="adm-evt-wpp" placeholder="WHATSAPP DO RESPONSÁVEL (COM DDD)" type="tel" class="input-field" style="margin-top:5px; padding:8px" oninput="mascaraTel(this)">
+                        <div style="margin-top:5px"><label>DATA LIMITE</label><input type="date" id="adm-evt-close-date"></div>
+                        <div style="margin-top:5px"><label>STATUS</label><select id="adm-evt-status"><option value="OPEN">ABERTO</option><option value="CLOSED">ENCERRADO</option></select></div>
+                        <input id="adm-evt-pix" placeholder="CHAVE PIX" class="input-field" style="margin-top:5px; padding:8px">
+                        <input id="adm-evt-wpp" placeholder="WHATSAPP DO RESPONSÁVEL" type="tel" class="input-field" style="margin-top:5px; padding:8px" oninput="mascaraTel(this)">
                         
                         <div style="margin-top:5px"><label>CARTAZ (LINK OU FILE)</label><input type="file" id="adm-evt-img" accept="image/*"></div>
                         <div style="margin-top:10px; border-top:1px dashed #ccc; padding-top:5px">
@@ -273,25 +303,6 @@
                         <button class="btn" style="background:#999; margin-top:5px" onclick="clearEventForm()">LIMPAR</button>
                     </div>
                     <div style="margin-top:10px; border-top:1px solid #eee; padding-top:5px"><b style="font-size:10px">LISTA DE EVENTOS</b><div id="adm-list-events"></div></div>
-                    <button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
-                </div>
-
-                <div id="adm-sec-history" class="adm-section" style="display:none">
-                    <div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;">
-                        <b style="color:var(--pe-blue)">HISTÓRICO COMPLETO DO ATLETA</b>
-                        <div class="smart-search-container" style="margin-top:10px;">
-                            <input type="text" id="adm-hist-search" placeholder="BUSCAR POR NOME OU CPF..." class="input-field uppercase-input" oninput="filterPilots('hist')">
-                            <div id="adm-hist-list" class="smart-list" style="display:none; max-height:150px; overflow-y:auto; border:1px solid #ccc;"></div>
-                        </div>
-                        <div id="hist-result-area" style="margin-top:20px; display:none;">
-                            <div style="background:#f8f9fa; padding:10px; border-radius:5px; margin-bottom:10px; border:1px solid #ddd;">
-                                <h3 id="hist-name" style="color:var(--pe-blue)">NOME</h3>
-                                <div style="font-size:10px; color:#666" id="hist-details">CPF: - | Cidade: -</div>
-                            </div>
-                            <b style="font-size:10px">PARTICIPAÇÕES & RESULTADOS</b>
-                            <div id="hist-timeline" style="margin-top:5px"></div>
-                        </div>
-                    </div>
                     <button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
                 </div>
 
@@ -350,7 +361,6 @@
         <div class="bar-item" id="btn-adm" onclick="tryOpenAdmin()" style="display:none"><i class="fas fa-user-shield"></i><span>ADM</span></div>
         <div class="bar-item" onclick="fazerLogout()"><i class="fas fa-sign-out-alt"></i><span>SAIR</span></div>
     </div>
-
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
