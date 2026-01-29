@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DH-PE v13.9 FINAL</title>
+    <title>DH-PE v13.11 FINAL</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="apple-touch-icon" href="logo.png">
@@ -123,6 +123,7 @@
                     <option value="RÍGIDA">RÍGIDA</option>
                     <option value="ESTREANTE">ESTREANTE</option>
                     <option value="PCD">PCD</option>
+                    <option value="E-BIKE">E-BIKE</option>
                 </select>
                 <input type="hidden" id="cad-cat-final">
             </div>
@@ -148,7 +149,7 @@
                  <a href="#" id="btn-support-header" class="header-support-btn" onclick="falarComSuporte(event)">
                     <i class="fab fa-whatsapp"></i> SUPORTE
                  </a>
-                 <div class="version-badge" onclick="appRefresh()">v13.9</div>
+                 <div class="version-badge" onclick="appRefresh()">v13.11</div>
             </div>
         </div>
         
@@ -358,6 +359,25 @@
 <div class="modal-overlay" id="modal-points"><div class="modal-box"><h3 style="color:var(--pe-blue)" id="modal-points-title">TABELA DE PONTOS</h3><div id="public-points-list" style="margin-top:10px; text-align:left; max-height:300px; overflow-y:auto;"></div><button class="btn" style="background:#ddd; color:#333; margin-top:15px" onclick="fecharModal('modal-points')">FECHAR</button></div></div>
 <div class="modal-overlay" id="modal-poster"><div class="modal-box" style="padding:0; background:black; border:none; width:95%; max-width:400px"><div style="position:relative"><img id="img-poster-view" style="width:100%; display:block"><button onclick="fecharModal('modal-poster')" style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.5); color:white; border:none; padding:10px; border-radius:50%; cursor:pointer"><i class="fas fa-times"></i></button></div></div></div>
 <div class="modal-overlay" id="modal-recovery"><div class="modal-box"><h3 style="color:var(--pe-blue)">RECUPERAR SENHA</h3><div class="input-group"><label>SEU CPF</label><input type="tel" id="rec-cpf" oninput="mascaraCPF(this)"></div><div class="input-group"><label>SEU TELEFONE</label><input type="tel" id="rec-tel" oninput="mascaraTel(this)"></div><div id="rec-security-area" style="display:none; margin-top:10px; border-top:1px dashed #ccc; padding-top:10px;"><p style="font-size:10px; font-weight:bold; color:var(--pe-blue); margin-bottom:5px">PALAVRA-CHAVE</p><div class="input-group"><label>SUA RESPOSTA</label><input id="rec-answer" class="uppercase-input"></div><button class="btn" onclick="revelarSenha()">MOSTRAR SENHA</button></div><button class="btn" id="btn-buscart-rec" onclick="buscarUsuarioRecuperacao()">CONTINUAR</button><button class="btn" style="background:#ddd; color:#333; margin-top:5px" onclick="fecharModal('modal-recovery')">FECHAR</button></div></div>
+
+<div class="modal-overlay" id="modal-congrats">
+    <div class="modal-box" style="border-top: 5px solid #25D366;">
+        <i class="fas fa-check-circle" style="font-size: 50px; color: #25D366; margin-bottom: 15px;"></i>
+        <h2 style="color: #25D366; margin-bottom: 10px;">SOLICITAÇÃO ENVIADA!</h2>
+        <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Aguarde a confirmação do administrador.</p>
+        <button class="btn" onclick="fecharModal('modal-congrats')">ENTENDI</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modal-install">
+    <div class="modal-box" style="border-top: 5px solid var(--pe-blue);">
+        <img src="logo.png" style="width: 60px; margin-bottom: 10px;">
+        <h3 style="color:var(--pe-blue); margin-bottom: 10px;">INSTALAR APP</h3>
+        <p style="color: #666; font-size: 13px; margin-bottom: 20px;">Instale o App oficial para acessar mais rápido e receber notificações!</p>
+        <button class="btn" id="btn-install-action" style="background:var(--pe-blue)">INSTALAR AGORA</button>
+        <button class="btn" style="background:#ddd; color:#333; margin-top:5px" onclick="fecharModal('modal-install')">AGORA NÃO</button>
+    </div>
+</div>
 
 <div class="modal-overlay" id="modal-super-edit">
     <div class="modal-box" style="text-align:left;">
