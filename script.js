@@ -2667,26 +2667,3 @@ window.dispararPushParaEquipe = function(evtId, titulo, mensagem) {
         console.log("Erro ao disparar push para a equipe:", e);
     }
 };
-// --- FORÇAR SOM E AVISO COM O SISTEMA ABERTO NA TELA ---
-if (firebase.messaging.isSupported()) {
-    firebase.messaging().onMessage((payload) => {
-        console.log("Notificação recebida com o app aberto!", payload);
-        
-        // 1. Tocar o áudio BIKEEEE!
-        const audio = document.getElementById('som-notificacao');
-        if (audio) {
-            audio.play().catch(e => console.log("Áudio bloqueado:", e));
-        }
-        
-        // 2. Pegar o título e a mensagem
-        let titulo = payload.notification ? payload.notification.title : "Nova Notificação";
-        let corpo = payload.notification ? payload.notification.body : "Você tem uma nova mensagem.";
-        
-        // 3. Mostrar o alerta na tela
-        if (typeof toast === "function") {
-            toast("🔔 " + titulo + " | " + corpo);
-        } else {
-            alert("🔔 " + titulo + "\n" + corpo);
-        }
-    });
-}
