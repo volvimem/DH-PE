@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#ffffff">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="DH-PE">
+    
+    <title>DH-PE v1.0 OFICIAL | SISTEMA UNIFICADO</title>
+    
+    <link rel="manifest" href="manifest.json?v=14">
+    <link rel="icon" type="image/png" href="logo.png?v=14">
+    <link rel="apple-touch-icon" href="logo.png?v=14">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    
+    <link rel="stylesheet" href="style.css"> 
+</head>
+<body>
+
+<div id="archive-badge-display" class="archive-badge" style="display:none;">MODO HISTÓRICO (SOMENTE LEITURA)</div>
+
+<div class="toast" id="toast"><i class="fas fa-info-circle"></i> <span>MSG</span></div>
+<input type="file" id="backup-input-file" accept=".json" style="display:none" onchange="processRestoreFile(this)">
+
+<div class="modal-overlay" id="modal-custom-dialog" style="z-index: 400000; display: none;">
+    <div class="modal-box" style="max-width: 280px; padding: 20px; border-top: none; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); overflow: hidden;">
+        <div id="custom-dialog-icon" style="font-size: 35px; margin-bottom: 10px;"></div>
+        <h3 id="custom-dialog-title" style="color: #1e293b; margin-bottom: 8px; font-weight: 900; font-size: 15px;"></h3>
+        <p id="custom-dialog-msg" style="font-size: 12px; color: #64748b; margin-bottom: 15px; line-height: 1.4; font-weight: 500;"></p>
+        
+        <input type="password" id="custom-dialog-input" class="input-field" style="display:none; text-align:center; margin-bottom: 15px; letter-spacing: 3px; font-size: 14px; font-weight: bold; padding: 10px;" placeholder="SENHA MASTER">
+        
+        <div style="display: flex; gap: 10px; width: 100%; justify-content: center;">
+            <button class="btn" id="btn-dialog-cancel" style="flex: 1; width: auto; flex-shrink: 1; background: #f1f5f9; color: #64748b; margin-top: 0; box-shadow: none; border: 1px solid #cbd5e1; padding: 10px 0; font-size: 12px;" onclick="cancelCustomDialog()">CANCELAR</button>
+            <button class="btn" id="btn-dialog-confirm" style="flex: 1; width: auto; flex-shrink: 1; margin-top: 0; background: var(--pe-green); padding: 10px 0; font-size: 12px;">OK</button>
+        </div>
+    </div>
+</div>
+
+<div class="app-container" id="main-app-container">
+    
+    <div id="screen-login" class="screen active">
+        <div class="login-overlay-layer"></div>
+        <div class="login-content-layer">
+            <img src="logo.png" class="login-logo-img" alt="Logo">
+            <h1>CAMPEONATO PERNAMBUCANO DE DOWNHILL</h1>
+            <span class="login-season-text">TEMPORADA <span id="lbl-season-year">...</span></span>
+        
+            <div class="input-group">
+                <label style="color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">CPF</label>
+                <div class="input-wrapper"><input type="tel" id="login-cpf" placeholder="000.000.000-00" oninput="mascaraCPF(this);" maxlength="14"></div>
+            </div>
+            <div class="input-group">
+                <label style="color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">SENHA</label>
+                <div class="input-wrapper" style="position:relative">
+                    <input type="password" id="login-pass" placeholder="••••" style="padding-right:40px;">
+                    <i class="fas fa-eye pass-eye" onclick="togglePass('login-pass')"></i>
+                </div>
+            </div>
+            
+            <div style="width:100%; text-align:left; margin-bottom:10px; display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="login-remember" style="width:auto; transform:scale(1.2);">
+                <label for="login-remember" style="color:white; margin:0; font-size:12px; cursor:pointer; text-shadow:0 1px 2px rgba(0,0,0,0.5);">MANTER CONECTADO</label>
+            </div>
+
+            <div style="width:100%; text-align:right; margin-bottom:15px; margin-top:-5px;">
+                <span onclick="abrirModalRecovery()" style="color:white; font-size:12px; cursor:pointer; text-decoration:underline; opacity:0.8;">Esqueci minha senha</span>
+            </div>
+            
+            <button id="btn-acessar" class="btn" onclick="fazerLogin()">ACESSAR CONTA</button>
+            <button class="btn" onclick="trocarTela('cadastro')" style="background:rgba(255,255,255,0.2); color:white; margin-top:10px; font-size:12px">CRIAR NOVA CONTA</button>
+        </div>
+    </div>
+    
+    <div id="screen-cadastro" class="screen">
+        <div style="padding:15px; background:white; border-bottom:1px solid #eee; display:flex; align-items:center; gap:10px">
+            <i class="fas fa-arrow-left" onclick="trocarTela('login')" style="font-size:18px; color:#333; cursor:pointer"></i>
+            <h2 style="color:var(--pe-blue); margin:0; font-size:16px">CADASTRO</h2>
+        </div>
+        <div style="width:100%; padding:20px; background:white; height:100%; overflow-y:auto;">
+            <div class="input-group"><label>NOME COMPLETO</label><div class="input-wrapper"><input id="cad-nome" class="uppercase-input"></div></div>
+            <div class="input-group"><label>CPF</label><div class="input-wrapper"><input type="tel" id="cad-cpf" oninput="checkCPFLive(this)" maxlength="14" placeholder="000.000.000-00"></div></div>
+            <div class="input-group"><label>WHATSAPP</label><div class="input-wrapper"><input type="tel" id="cad-tel" oninput="mascaraTel(this);" maxlength="15"></div></div>
+            <div class="input-group"><label>CIDADE</label><div class="input-wrapper"><input id="cad-city" class="uppercase-input"></div></div>
+            
+            <div class="input-group"><label>ESTADO (UF)</label>
+                <select id="cad-uf">
+                    <option value="PE" selected>PERNAMBUCO (PE)</option>
+                    <option value="AL">ALAGOAS (AL)</option>
+                    <option value="PB">PARAÍBA (PB)</option>
+                    <option value="RN">RIO GRANDE DO NORTE (RN)</option>
+                    <option value="BA">BAHIA (BA)</option>
+                    <option value="CE">CEARÁ (CE)</option>
+                    <option value="SE">SERGIPE (SE)</option>
+                    <option value="MA">MARANHÃO (MA)</option>
+                    <option value="PI">PIAUÍ (PI)</option>
+                    <option value="OUTRO">OUTRO ESTADO</option>
+                </select>
+            </div>
+
+            <div class="input-group"><label>GÊNERO</label><select id="cad-gender" onchange="reCalcCat()"><option value="">SELECIONE</option><option value="M">MASCULINO</option><option value="F">FEMININO</option></select></div>
+            <div class="input-group"><label>DATA NASCIMENTO</label><div class="input-wrapper"><input type="date" id="cad-nasc" onchange="reCalcCat()"></div></div>
+            
+            <div class="input-group"><label>Nº LICENÇA CBC (OPCIONAL)</label><div class="input-wrapper"><input type="tel" id="cad-cbc" placeholder="Apenas números (se tiver)"></div></div>
+            
+            <div class="input-group" style="background:#f0f9ff; padding:10px; border-radius:5px; border:1px solid #bae6fd;">
+                <label>CATEGORIA OFICIAL <span id="lbl-cad-season"></span></label>
+                <input id="cad-cat-age" readonly style="background:#eef2ff; color:#132047; font-weight:900; margin-bottom:5px; border:none; padding:10px; width:100%;">
+                <label style="margin-top:5px; color:#666">OPCIONAL (MUDANÇA MANUAL):</label>
+                <select id="cad-cat-override" onchange="applyCatOverride()"><option value="">(SEGUIR CÁLCULO DE IDADE)</option></select>
+                <input type="hidden" id="cad-cat-final">
+            </div>
+            
+            <div class="input-group" style="margin-top:15px"><label>SENHA</label><div class="input-wrapper" style="position:relative"><input type="password" id="cad-pass" style="padding-right:40px;"><i class="fas fa-eye pass-eye" onclick="togglePass('cad-pass')"></i></div></div>
+           
+            <div style="margin-top:20px; border-top:1px solid #eee; padding-top:10px">
+                <b style="color:var(--pe-blue); font-size:12px; display:block; margin-bottom:10px;">RECUPERAÇÃO</b>
+                <div class="input-group"><label>PALAVRA-CHAVE</label><div class="input-wrapper"><input id="cad-sec-a" class="uppercase-input" placeholder="Ex: Nome da mãe"></div></div>
+            </div>
+            
+            <button class="btn" onclick="cadastrar()">CONFIRMAR CADASTRO</button>
+        </div>
+    </div>
+
+    <div id="screen-app" class="screen">
+        <div id="main-app-header" class="app-header">
+            <div class="header-logo-text"><img src="logo.png" class="header-mini-logo"></div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                 <a href="#" id="btn-support-header" class="header-support-btn" onclick="updateSupportLink()"><i class="fab fa-whatsapp"></i> SUPORTE</a>
+                 
+                 <div class="version-badge" style="padding: 2px 10px;">
+                    <select id="season-selector" class="season-selector-ui" onchange="changeSeason(this.value)">
+                    </select>
+                 </div>
+            </div>
+        </div>
+        
+        <div id="cont-calendar" class="c-sec active" style="overflow-y:auto; height:100vh; padding-bottom:120px;">
+            <div class="section-header-area"><div class="section-title">CALENDÁRIO <span id="lbl-cal-year"></span></div></div>
+            <div id="calendar-past-bar" class="past-events-bar" style="display:none"></div>
+            <div class="calendar-wrapper">
+                <div id="calendar-highlight"></div>
+                <div id="calendar-others" class="mini-events-grid"></div>
+            </div>
+        </div>
+
+        <div id="cont-tempos" class="c-sec" style="display:none; overflow-y:auto; height:100vh; padding-bottom:120px;">
+             <div class="section-header-area">
+                <div class="section-title-row">
+                    <div class="section-title">TEMPOS</div>
+                    <div><button class="btn-mini-adm btn-print-pdf" style="background:#0038a8; color:white; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer; margin:0;" onclick="compartilharResultados('tempos')"><i class="fas fa-share-alt"></i> COMPARTILHAR / PDF</button></div>
+                </div>
+                <div class="filter-row" style="margin-top:5px; display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
+                    <select id="filter-region-tempos" onchange="renderContent('tempos')" style="font-size:11px; padding:8px; background:#fff3e0; border-color:#ffa000; color:#e65100; font-weight:bold;">
+                        <option value="PE">APENAS PERNAMBUCO</option>
+                        <option value="NORDESTE">RANKING NORDESTE (GERAL)</option>
+                    </select>
+                    <select id="filter-evt-tempos" onchange="renderContent('tempos')" style="font-size:11px; padding:8px;"><option value="ALL">ETAPAS</option></select>
+                    <select id="filter-type-tempos" onchange="renderContent('tempos')" style="font-size:11px; padding:8px; font-weight:bold; color:var(--pe-blue); grid-column: span 2;">
+                        <option value="ALL">TIPO: GERAL</option>
+                        <option value="qualify">QUALIFY</option>
+                        <option value="1st">OFICIAL</option>
+                        <option value="2nd">2ª DESC.</option>
+                    </select>
+                    <select id="filter-cat-tempos" onchange="renderContent('tempos')" style="font-size:11px; padding:8px; grid-column: span 2;"><option value="ALL">CATS</option></select>
+                </div>
+            </div>
+            <div class="rank-list-container" id="list-tempos" style="background:white"></div>
+        </div>
+
+        <div id="cont-ranking" class="c-sec" style="display:none; overflow-y:auto; height:100vh; padding-bottom:120px;">
+            <div class="section-header-area">
+                <div class="section-title-row">
+                    <div class="section-title">RANKING</div>
+                    <div><button class="btn-mini-adm btn-print-pdf" style="background:#0038a8; color:white; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer; margin:0;" onclick="compartilharResultados('ranking')"><i class="fas fa-share-alt"></i> COMPARTILHAR / PDF</button></div>
+                </div>
+                <div class="filter-row" style="margin-top:5px; display:flex; flex-direction:column; gap:5px;">
+                    <select id="filter-region-ranking" onchange="renderContent('ranking')" style="padding:10px; font-size:12px; font-weight:900; background:#fff3e0; border:2px solid #ffa000; color:#e65100; border-radius:6px;">
+                        <option value="PE">🏆 RANKING PERNAMBUCANO (OFICIAL)</option>
+                        <option value="NORDESTE">🌎 RANKING NORDESTE (OPEN)</option>
+                    </select>
+                    <div style="display:flex; gap:5px;">
+                        <select id="filter-evt-ranking" onchange="renderContent('ranking')" style="flex:1"><option value="ALL">GERAL (SOMA)</option></select>
+                        <select id="filter-cat-ranking" onchange="renderContent('ranking')" style="flex:1"><option value="ALL">CATEGORIAS</option></select>
+                    </div>
+                </div>
+            </div>
+            <div class="rank-list-container" id="list-ranking" style="background:white"></div>
+        </div>
+
+        <div id="cont-profile" class="c-sec" style="display:none; padding-bottom:80px; overflow-y:auto; height:100vh;">
+            <div style="padding:20px; text-align:center;">
+                <div id="digital-id-card" class="id-card-premium">
+                    <div id="id-locked-layer" class="id-card-locked-layer" style="display:none;">
+                        <i class="fas fa-lock" style="font-size:40px; margin-bottom:10px;"></i>
+                        <h3 style="margin:0; font-size:16px;">EM ANÁLISE</h3>
+                        <p style="font-size:10px; margin-top:5px; opacity:0.8;">Aguardando liberação da organização.</p>
+                    </div>
+                    <div class="id-card-header">
+                        <img src="logo.png">
+                        <span>FEDERAÇÃO PERNAMBUCANA</span>
+                    </div>
+                    <div class="id-card-body">
+                        <div class="id-photo-box" onclick="document.getElementById('hidden-upload').click()">
+                            <img id="card-img-display" crossorigin="anonymous" src="https://via.placeholder.com/80">
+                        </div>
+                        <div class="id-info-box">
+                            <div class="id-name" id="card-name">...</div>
+                            <div class="id-row"><span>CATEGORIA</span><b id="card-cat">...</b></div>
+                            <div class="id-row"><span>CIDADE</span><b id="card-city">...</b></div>
+                            <div class="id-row"><span>CPF</span><b id="card-cpf">...</b></div>
+                            <div class="id-row"><span>CBC</span><b id="card-cbc">...</b></div>
+                            <div class="id-row"><span>EQUIPE</span><b id="card-team">...</b></div>
+                        </div>
+                    </div>
+                    <div class="id-footer">VÁLIDO PARA TEMPORADA <span id="card-year-display"></span> • FILIAÇÃO DIGITAL</div>
+                </div>
+                <div style="display:flex; gap:10px; margin-top:10px">
+                    <button id="btn-dl-card" class="btn" style="background:var(--pe-blue); flex:1" onclick="baixarImagem('digital-id-card', 'carteirinha')"><i class="fas fa-download"></i> BAIXAR HD</button>
+                    <button class="btn" style="background:#333; flex:1" onclick="renderPilotHistoryModal(loggedUser.cpf, loggedUser.nome)"><i class="fas fa-history"></i> MEU HISTÓRICO</button>
+                </div>
+                
+                <button id="btn-start-list" class="btn" style="background:#ff9800; color:#fff; font-weight:900; margin-top:10px;" onclick="verOrdemLargada()"><i class="fas fa-list-ol"></i> MINHA ORDEM DE LARGADA</button>
+
+            </div>
+            
+            <div class="section-title" style="text-align:left; margin-top:20px;">ATUALIZAR MEUS DADOS</div>
+            <div style="background:white; padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05); margin:0 15px 20px 15px;">
+                <input type="file" id="hidden-upload" accept="image/*" style="display:none" onchange="uploadSelfie(this)">
+                <div class="input-group"><label>NOME COMPLETO (BLOQUEADO)</label><input id="prof-edit-name" class="uppercase-input" readonly style="background:#eee; color:#666"></div>
+                <div class="input-group"><label>CIDADE (BLOQUEADO)</label><input id="prof-edit-city" class="uppercase-input" readonly style="background:#eee; color:#666"></div>
+                <div class="input-group"><label>ESTADO / UF (BLOQUEADO)</label>
+                    <select id="prof-edit-uf" disabled style="background:#eee; color:#666; border:1px solid #ccc; pointer-events:none;">
+                        <option value="PE">PERNAMBUCO (PE)</option>
+                        <option value="AL">ALAGOAS (AL)</option>
+                        <option value="PB">PARAÍBA (PB)</option>
+                        <option value="RN">RIO GRANDE DO NORTE (RN)</option>
+                        <option value="BA">BAHIA (BA)</option>
+                        <option value="CE">CEARÁ (CE)</option>
+                        <option value="SE">SERGIPE (SE)</option>
+                        <option value="MA">MARANHÃO (MA)</option>
+                        <option value="PI">PIAUÍ (PI)</option>
+                        <option value="OUTRO">OUTRO ESTADO</option>
+                    </select>
+                </div>
+                <div class="input-group"><label>CATEGORIA (BLOQUEADO)</label><input id="prof-edit-cat" class="uppercase-input" readonly style="background:#eee; color:#666;"></div>
+                <div class="input-group"><label style="color:var(--pe-green)">EQUIPE (EDITÁVEL)</label><input id="prof-edit-team" class="uppercase-input" style="border:2px solid var(--pe-green)" oninput="updateCardLive()"></div>
+                
+                <div class="input-group"><label>Nº LICENÇA CBC (BLOQUEADO - CONTATE A ADM)</label><input id="prof-edit-cbc" type="tel" readonly style="background:#eee; color:#666; border:1px solid #ccc; pointer-events:none;" placeholder="Apenas Adm altera"></div>
+                
+                <div class="input-group"><label>TELEFONE/ZAP (EDITÁVEL)</label><input id="prof-edit-tel" type="tel" oninput="mascaraTel(this)"></div>
+                <button class="btn btn-save-profile" style="width:100%; background:var(--pe-green); padding:10px; margin-top:10px" onclick="salvarFullProfile()">SALVAR ALTERAÇÕES</button>
+            </div>
+            
+            <div style="background:white; padding:15px; border-radius:10px; margin:0 15px 20px 15px; border:1px dashed #ccc;">
+                <b style="font-size:12px; color:var(--pe-blue);">ALTERAR MINHA SENHA</b>
+                <div class="input-group" style="margin-top:10px;">
+                    <input type="password" id="prof-new-pass" placeholder="Nova Senha (Mín. 6 dígitos)">
+                </div>
+                <button class="btn" style="background:#333; margin-top:5px; padding:10px;" onclick="mudarSenhaPerfil()">ATUALIZAR SENHA</button>
+            </div>
+
+        </div>
+
+        <div id="cont-adm" class="c-sec" style="display:none; padding:10px; padding-bottom:90px; overflow-y:auto; height:100vh;">
+            <div class="admin-header-flag"></div>
+            <div class="section-title" style="color:var(--pe-red)">PAINEL ORGANIZAÇÃO</div>
+            
+            <div id="adm-login-box">
+                <div class="input-group">
+                    <label>Sua Senha (Segurança)</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="adm-pass-check">
+                        <i class="fas fa-eye pass-eye" onclick="togglePass('adm-pass-check')"></i>
+                    </div>
+                </div>
+                <button class="btn" style="background:var(--pe-red)" onclick="checkAdmPass()">LIBERAR</button>
+            </div>
+            
+            <div id="adm-panel-real" style="display:none">
+                <div class="admin-dashboard-grid" id="adm-menu">
+                    <div class="adm-dash-btn" id="btn-adm-events" onclick="openAdmSection('events')"><i class="far fa-calendar-plus"></i><span>GERENCIAR EVENTOS</span></div>
+                    <div class="adm-dash-btn" id="btn-adm-results" onclick="openAdmSection('results')"><i class="fas fa-stopwatch"></i><span>LANÇAR RESULTADOS</span></div>
+                    <div class="adm-dash-btn" id="btn-adm-cats" onclick="openAdmSection('cats')"><i class="fas fa-list-ul"></i><span>CATEGORIAS</span></div>
+                    <div class="adm-dash-btn" id="btn-adm-fin" onclick="openAdmSection('financial')"><i class="fas fa-file-invoice-dollar"></i><span>STATUS DOS ATLETAS</span></div>
+                    <div class="adm-dash-btn" id="btn-adm-users" onclick="openAdmSection('users-edit')"><i class="fas fa-user-edit"></i><span>GERENCIAR ATLETAS</span></div>
+                    <div class="adm-dash-btn" id="btn-adm-org" onclick="openAdmSection('organizer')"><i class="fas fa-users-cog"></i><span>EQUIPE</span></div>
+                    <div class="adm-dash-btn" id="btn-adm-cfg" onclick="openAdmSection('config-global')"><i class="fas fa-cogs"></i><span>CONFIGURAÇÕES</span></div>
+                    <div class="adm-dash-btn" id="btn-adm-backup" onclick="downloadBackup()" style="border-color: #333;"><i class="fas fa-download" style="color:#333"></i><span>BAIXAR BACKUP</span></div>
+                    <div class="adm-dash-btn" id="btn-adm-restore" onclick="restoreBackup()" style="border-color: #d50000;"><i class="fas fa-upload" style="color:#d50000"></i><span>RESTAURAR DADOS</span></div>
+                </div>
+
+                <div id="adm-sec-cats" class="adm-section" style="display:none">
+                    <div style="background:white; padding:10px; border-radius:8px;">
+                        <b style="color:var(--pe-blue); font-size:12px">GERENCIAR CATEGORIAS ATIVAS</b>
+                        <div id="adm-cats-list" style="margin-top:10px; display:grid; gap:5px;"></div>
+                    </div>
+                    <button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
+                </div>
+
+                <div id="adm-sec-events" class="adm-section" style="display:none">
+                    <div style="background:white; padding:10px; border-radius:8px;">
+                        <b style="color:var(--pe-blue); font-size:12px">CRIAR/EDITAR EVENTO</b>
+                        <input type="hidden" id="adm-evt-id-edit">
+                        
+                        <input id="adm-evt-t" placeholder="NOME DO EVENTO" class="uppercase-input input-field" style="margin-top:5px; padding:8px">
+                        
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-top:5px">
+                            <div><label style="font-size:9px">MÊS</label><select id="adm-evt-month"><option value="JAN">JAN</option><option value="FEV">FEV</option><option value="MAR">MAR</option><option value="ABR">ABR</option><option value="MAI">MAI</option><option value="JUN">JUN</option><option value="JUL">JUL</option><option value="AGO">AGO</option><option value="SET">SET</option><option value="OUT">OUT</option><option value="NOV">NOV</option><option value="DEZ">DEZ</option></select></div>
+                            <div><label style="font-size:9px">TIPO</label><select id="adm-evt-type" onchange="toggleEventType()"><option value="PE">FPC/PE (AZUL)</option><option value="CBC">CBC (DOURADO)</option><option value="NON_OFFICIAL">NÃO OFICIAL</option></select></div>
+                        </div>
+                        
+                        <input id="adm-evt-d" placeholder="DIAS (Ex: 21/22 ou 21)" class="input-field" style="margin-top:5px; padding:8px" oninput="mascaraDias(this)" maxlength="5">
+                        <input id="adm-evt-c" placeholder="CIDADE" class="uppercase-input input-field" style="margin-top:5px; padding:8px">
+            
+                        <div id="adm-evt-official-group">
+                            <input id="adm-evt-v" placeholder="VALOR GERAL (R$)" type="tel" class="input-field" style="margin-top:5px; padding:8px">
+            
+                            <div id="pricing-official" style="margin-top:10px; background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+                                <b style="font-size:10px; color:var(--pe-blue); display:block; margin-bottom:5px;">VALORES CAT. EXTRAS (Deixe em branco p/ usar o Geral)</b>
+                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
+                                    <input id="adm-evt-v-estreante" placeholder="ESTREANTE (R$)" type="tel" class="input-field" style="padding:6px; font-size:12px;">
+                                    <input id="adm-evt-v-open" placeholder="OPEN (R$)" type="tel" class="input-field" style="padding:6px; font-size:12px;">
+                                    <input id="adm-evt-v-rigida" placeholder="RÍGIDA (R$)" type="tel" class="input-field" style="padding:6px; font-size:12px;">
+                                    <input id="adm-evt-v-ebike" placeholder="E-BIKE (R$)" type="tel" class="input-field" style="padding:6px; font-size:12px;">
+                                    <input id="adm-evt-v-pcd" placeholder="PCD (R$)" type="tel" class="input-field" style="padding:6px; font-size:12px;">
+                                </div>
+                            </div>
+            
+                            <div style="margin-top:5px; background:#fff8e1; padding:5px; border:1px solid #ffe500; border-radius:5px;">
+                                <div style="display:flex; align-items:center; gap:5px; margin-bottom:5px;">
+                                    <input type="checkbox" id="adm-evt-has-qualify" style="width:auto;" onchange="toggleQualifyInputs()">
+                                    <label for="adm-evt-has-qualify" style="margin:0; font-size:11px; font-weight:bold;">TERÁ QUALIFY?</label>
+                                </div>
+                                <div id="adm-qualify-inputs" style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; opacity:0.5; pointer-events:none;">
+                                    <input type="date" id="adm-evt-q-date" class="input-field">
+                                    <input type="time" id="adm-evt-q-time" class="input-field">
+                                </div>
+                            </div>
+            
+                            <div style="margin-top:10px; border-top:1px dashed #ccc; padding-top:5px; background:#eef2ff; border-radius:5px; padding:5px;">
+                                <b style="font-size:10px; color:#0038a8;">COPIAR PONTUAÇÃO DE OUTRO EVENTO</b>
+                                <div style="display:flex; gap:5px; margin-top:5px;">
+                                    <select id="adm-evt-copy-source" class="input-field" style="font-size:10px;">
+                                        <option value="">SELECIONE EVENTO PARA COPIAR...</option>
+                                    </select>
+                                    <button class="btn-mini-adm" style="background:var(--pe-blue)" onclick="copiarPontosDe()">COPIAR</button>
+                                </div>
+                            </div>
+            
+                            <div style="margin-top:10px; border-top:1px dashed #ccc; padding-top:5px">
+                                <b style="font-size:10px">PONTUAÇÃO OFICIAL (1º ao 20º)</b>
+                                <div id="evt-points-grid" style="display:grid; grid-template-columns: repeat(5, 1fr); gap:3px; margin-top:5px;"></div>
+                            </div>
+                            <div style="margin-top:10px; border-top:1px dashed #ffa000; padding-top:5px; background:#fff3e0;">
+                                <b style="font-size:10px; color:#e65100">PONTUAÇÃO QUALIFY (1º ao 20º)</b>
+                                <div id="evt-q-points-grid" style="display:grid; grid-template-columns: repeat(5, 1fr); gap:3px; margin-top:5px;"></div>
+                            </div>
+                        </div>
+                        
+                        <div id="adm-evt-nonofficial-group" style="display:none; margin-top:10px; background:#fefce8; padding:8px; border-radius:6px; border:1px solid #fde047;">
+                            <b style="font-size:10px; color:#b45309; display:block; margin-bottom:5px;">CATEGORIAS E VALORES (Deixe em branco se não houver)</b>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
+                                <input id="adm-evt-v-elite" placeholder="ELITE (R$)" type="tel" class="input-field" style="padding:6px; font-size:10px;">
+                                <input id="adm-evt-v-feminino" placeholder="FEMININO (R$)" type="tel" class="input-field" style="padding:6px; font-size:10px;">
+                                <input id="adm-evt-v-sub30" placeholder="SUB-30 (R$)" type="tel" class="input-field" style="padding:6px; font-size:10px;">
+                                <input id="adm-evt-v-junior" placeholder="JUNIOR (R$)" type="tel" class="input-field" style="padding:6px; font-size:10px;">
+                                <input id="adm-evt-v-iniciante" placeholder="INICIANTE (R$)" type="tel" class="input-field" style="padding:6px; font-size:10px;">
+                                <input id="adm-evt-v-mastera" placeholder="MASTER A (R$)" type="tel" class="input-field" style="padding:6px; font-size:10px;">
+                                <input id="adm-evt-v-masterb" placeholder="MASTER B (R$)" type="tel" class="input-field" style="padding:6px; font-size:10px;">
+                                <input id="adm-evt-v-masterc" placeholder="MASTER C (R$)" type="tel" class="input-field" style="padding:6px; font-size:10px;">
+                                <input id="adm-evt-v-rigida-non" placeholder="RÍGIDA (R$)" type="tel" class="input-field" style="padding:6px; font-size:10px;">
+                                
+                                <div style="grid-column: span 2; display: flex; gap: 5px; margin-top: 5px; border-top: 1px dashed #fde047; padding-top: 5px;">
+                                    <input id="adm-evt-n-extra1" placeholder="NOME EXTRA 1" class="uppercase-input input-field" style="padding:6px; font-size:10px;">
+                                    <input id="adm-evt-v-extra1" placeholder="VALOR (R$)" type="tel" class="input-field" style="padding:6px; font-size:10px;">
+                                </div>
+                                <div style="grid-column: span 2; display: flex; gap: 5px;">
+                                    <input id="adm-evt-n-extra2" placeholder="NOME EXTRA 2" class="uppercase-input input-field" style="padding:6px; font-size:10px;">
+                                    <input id="adm-evt-v-extra2" placeholder="VALOR (R$)" type="tel" class="input-field" style="padding:6px; font-size:10px;">
+                                </div>
+                            </div>
+                        </div>
+            
+                        <div style="margin-top:5px"><label>DATA LIMITE DE INSCRIÇÃO</label><input type="date" id="adm-evt-close-date"></div>
+                        
+                        <div style="margin-top:5px; background:#e0f2fe; padding:5px; border-radius:5px; border:1px solid #bae6fd;">
+                            <label style="color:#0369a1;">DATA/HORA P/ REVELAR ORDEM DE LARGADA</label>
+                            <input type="datetime-local" id="adm-evt-startlist-date" class="input-field" style="margin-top:2px;">
+                        </div>
+            
+                        <div style="margin-top:5px"><label>STATUS</label>
+                            <select id="adm-evt-status">
+                                <option value="OPEN">ABERTO</option>
+                                <option value="CLOSED">ENCERRADO</option>
+                                <option value="CANCELLED">CANCELADO</option>
+                                <option value="POSTPONED">ADIADO</option>
+                            </select>
+                        </div>
+                        
+                        <input id="adm-evt-pix" placeholder="CHAVE PIX" class="input-field" style="margin-top:5px; padding:8px">
+                        <input id="adm-evt-wpp" placeholder="WHATSAPP DO RESPONSÁVEL" type="tel" class="input-field" style="margin-top:5px; padding:8px" oninput="mascaraTel(this)">
+                        
+                        <div style="margin-top:5px; border-top:1px solid #eee; padding-top:5px;">
+                            <label style="color:var(--pe-blue)">CARTAZ PRINCIPAL (CAPA)</label>
+                            <input type="file" id="adm-evt-img" accept="image/*">
+                        </div>
+                        <div style="margin-top:5px; background:#f9f9f9; padding:5px; border-radius:5px;">
+                            <label style="color:var(--pe-green)">FOTOS ADICIONAIS (GALERIA)</label>
+                            <div id="adm-gallery-preview-area" class="adm-gallery-edit-grid"></div>
+                            <input type="file" id="adm-evt-gallery" accept="image/*" multiple>
+                        </div>
+                        
+                        <button class="btn" id="btn-save-event" onclick="addEvent()" style="background:var(--pe-green); margin-top:10px">SALVAR EVENTO</button>
+                        <button class="btn" style="background:#999; margin-top:5px" onclick="clearEventForm()">LIMPAR</button>
+                    </div>
+                    <div style="margin-top:10px; border-top:1px solid #eee; padding-top:5px"><b style="font-size:10px">LISTA DE EVENTOS</b><div id="adm-list-events"></div></div>
+                    <button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
+                </div>
+                
+                <div id="adm-sec-results" class="adm-section" style="display:none">
+                    <div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;">
+                        
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap: 5px; flex-wrap: wrap;">
+                            <b style="color:var(--pe-green); font-size:12px">LANÇAR RESULTADO</b>
+                            <div style="display:flex; gap:5px;">
+                                <button class="btn-live-launch" style="background:#ff9800; color:white; padding:6px 10px; border:none; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer;" onclick="imprimirOrdemLargadaGeral()"><i class="fas fa-print"></i> IMPRIMIR LARGADA</button>
+                                <button class="btn-live-launch" style="background:#dc3545; color:white; padding:6px 10px; border:none; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer; display:flex; align-items:center; gap:5px;" onclick="launchUnifiedLiveTiming()">
+                                    LIVE <i class="fas fa-external-link-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div style="display:flex; gap:5px; margin-top:10px;">
+                             <select id="adm-res-evt" class="input-field" onchange="renderAdmResults()"><option value="">SELECIONE EVENTO...</option></select>
+                        </div>
+                         <div style="margin-top:5px;">
+                            <label style="font-size:10px; color:#666; font-weight:bold;">TIPO DE VOLTA:</label>
+                            <select id="adm-res-runtype" class="input-field" style="font-weight:bold; color:#0038a8">
+                                <option value="1st">OFICIAL (1ª Descida)</option>
+                                <option value="qualify">QUALIFY (Classificatória)</option>
+                                <option value="2nd">2ª DESCIDA (Opcional)</option>
+                            </select>
+                        </div>
+                        <input type="hidden" id="adm-res-id"><input type="hidden" id="adm-res-idx-edit" value="">
+                        <div class="smart-search-container" style="margin-top:5px;"><input type="text" id="adm-res-search" placeholder="BUSCAR ATLETA..." class="input-field uppercase-input" oninput="filterPilots('res')"><div id="adm-res-list" class="smart-list" style="display:none; max-height:150px; overflow-y:auto; border:1px solid #ccc;"></div></div>
+                        <div style="margin-top:5px;"><input type="text" id="adm-res-name-display" disabled placeholder="Nome Selecionado" class="input-field" style="background:#eee; font-weight:bold"></div>
+                        <div style="display:flex; gap:5px; margin-top:5px"><input id="adm-res-city-edit" placeholder="CIDADE" class="uppercase-input input-field"><input id="adm-res-cat-edit" placeholder="CATEGORIA" class="uppercase-input input-field"></div>
+                        <div style="display:flex; gap:5px; margin-top:5px"><input id="adm-res-num" placeholder="Nº" type="tel" class="input-field" style="width:60px; text-align:center;"><input id="adm-res-val" placeholder="00:00.000" class="input-field" oninput="mascaraTempo(this)"></div>
+                        <div style="display:flex; gap:10px; margin-top:10px;">
+                            <button class="btn" id="btn-save-res" style="background:var(--pe-green); flex: 1; margin-top:0;" onclick="addResult()">LANÇAR / SALVAR</button>
+                            <button class="btn" id="btn-clear-res" style="background:#dc3545; flex: 1; margin-top:0;" onclick="clearResultFormUI()">LIMPAR</button>
+                        </div>
+                        <button class="btn" id="btn-cancel-res" style="background:#999; margin-top:5px; display:none" onclick="cancelEditRes()">CANCELAR EDIÇÃO</button>
+                    </div>
+                    
+                    <div style="margin-top:10px">
+                        <b style="font-size:10px">LISTA DE TEMPOS</b>
+                        <div style="display:flex; gap:5px; margin-bottom:5px; margin-top:5px;">
+                            <select id="adm-res-filter-cat" class="input-field" style="padding:5px; font-size:10px;" onchange="renderAdmResults()">
+                                <option value="ALL">TODAS CATEGORIAS</option>
+                            </select>
+                            <select id="adm-res-filter-type" class="input-field" style="padding:5px; font-size:10px;" onchange="renderAdmResults()">
+                                <option value="ALL">TODOS TIPOS</option>
+                                <option value="1st">OFICIAL</option>
+                                <option value="qualify">QUALIFY</option>
+                                <option value="2nd">2ª DESC.</option>
+                            </select>
+                        </div>
+                        <div id="adm-list-results"></div>
+                    </div>
+                    
+                    <button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
+                </div>
+                
+                <div id="adm-sec-users-edit" class="adm-section" style="display:none">
+                    <div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;">
+                        <b style="color:var(--pe-blue); font-size:12px">GERENCIAR ATLETAS</b>
+                        <div style="background:#f0f9ff; padding:10px; border-radius:8px; border:1px solid #bae6fd; margin-top:10px; margin-bottom:10px;">
+                            <div style="display:flex; justify-content:space-between; font-size:11px; font-weight:bold; color:#0038a8;">
+                                <span id="adm-stat-total">Total Geral: 0</span>
+                                <span id="adm-stat-filter">Nesta Categoria: 0</span>
+                            </div>
+                            <select id="adm-user-filter-cat" style="margin-top:5px; padding:5px; font-size:12px; font-weight:bold; width:100%; margin-bottom:5px;" onchange="filterPilots('edit-user', true)">
+                                <option value="ALL">TODAS CATEGORIAS</option>
+                            </select>
+                        </div>
+                        <input type="text" id="adm-edit-user-search" placeholder="Buscar Nome/CPF..." class="input-field" oninput="filterPilots('edit-user', true)">
+                        <div id="adm-edit-user-list" style="margin-top:10px; max-height:400px; overflow-y:auto"></div>
+                    </div>
+                    <button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
+                </div>
+                
+                <div id="adm-sec-financial" class="adm-section" style="display:none">
+                    <div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;">
+                        
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <b style="color:var(--pe-blue); font-size:12px">STATUS DOS ATLETAS</b>
+                            <button class="btn-mini-adm" style="background:#25D366; color:white; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer; margin:0; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" onclick="compartilListaInscritos()">
+                                <i class="fas fa-share-alt"></i> COMPARTILHAR LISTA
+                            </button>
+                        </div>
+
+                        <select id="fin-evt-select" class="input-field" style="margin:10px 0" onchange="renderInscriptions()"></select>
+                        <div class="stats-box" style="display:flex; justify-content:space-between; background:#e0f2fe; padding:10px; border-radius:5px; font-size:11px; font-weight:bold"><span id="fin-total-val">Total: 0</span><span id="fin-paid-val" style="color:green">Pagos: 0</span></div>
+                        <div style="display:flex;gap:5px;margin-bottom:5px; margin-top:10px">
+                            <button class="btn-mini-adm" style="background:#ccc;color:black;flex:1" onclick="filterFinList('ALL')">GERAL</button>
+                            <button class="btn-mini-adm" style="background:green;color:white;flex:1" onclick="filterFinList('CONFIRMADO')">PAGOS</button>
+                            <button class="btn-mini-adm" style="background:orange;color:white;flex:1" onclick="filterFinList('PENDENTE')">PEND</button>
+                        </div>
+                        <div id="fin-list-container" style="max-height:300px; overflow-y:auto; background:white; border:1px solid #eee"></div>
+                    </div>
+                    <button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
+                </div>
+                
+                <div id="adm-sec-organizer" class="adm-section" style="display:none"><div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;"><b>EQUIPE</b><div class="smart-search-container" style="margin-top:10px;"><input type="text" id="adm-org-search" placeholder="Buscar (Nome, Cidade, CPF)..." class="input-field" oninput="filterPilots('org', true)"><div id="adm-org-list-search" class="smart-list" style="display:none; border:1px solid #ccc"></div></div><div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; border-bottom:1px solid #eee; padding-bottom:5px; cursor:pointer" onclick="toggleOrgList()"><b style="font-size:12px">LISTA DE ORGANIZADORES</b><i class="fas fa-chevron-down" id="icon-org-toggle"></i></div><input type="hidden" id="adm-org-selected-cpf"><div id="org-perms-area" style="display:none; margin-top:10px; border:1px dashed #ccc; padding:10px"><p style="font-size:10px">Selecione as etapas que ele pode gerenciar:</p><div id="org-events-list"></div><button class="btn" style="background:var(--pe-blue); margin-top:5px" onclick="promoteToOrganizer()">SALVAR PERMISSÕES</button></div><div id="adm-list-orgs" style="margin-top:10px; display:none"></div></div><button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button></div>
+                
+                <div id="adm-sec-config-global" class="adm-section" style="display:none">
+                    <div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;">
+                        <b>CONFIGURAÇÕES GERAIS</b>
+                        <div class="input-group" style="margin-top:10px"><label>ZAP SUPORTE</label><input id="adm-cfg-phone" class="input-field" placeholder="Ex: 81900000000"></div>
+                        <div class="input-group" style="margin-top:10px"><label>SENHA MASTER (Usada para alertas, exclusões e Live)</label><input id="adm-cfg-rerun-pass" class="input-field" placeholder="Senha padrão: admin123"></div>
+
+                        <div style="margin-top:15px; background:#f0fdf4; padding:10px; border:1px solid #bbf7d0; border-radius:6px;">
+                            <label style="color:#15803d; margin-bottom:5px;">REGRA GLOBAL</label>
+                            <div style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="adm-cfg-allow-ids" style="width:auto; transform:scale(1.5);"><span style="font-size:12px; font-weight:bold;">LIBERAR GERAL (TODOS)</span></div>
+                        </div>
+                        
+                        <div style="margin-top:20px; border-top:1px solid #eee; padding-top:10px;">
+                            <b style="color:var(--pe-blue); font-size:12px">GERENCIAR LIBERAÇÃO INDIVIDUAL</b>
+                            <p style="font-size:10px; color:#666; margin-bottom:5px;">Busque por Nome, CPF ou Cidade:</p>
+                            <input type="text" id="adm-cfg-search" placeholder="Digite para buscar..." class="input-field uppercase-input" oninput="filterPilots('cfg-search', true)">
+                            <div id="adm-cfg-list" style="margin-top:10px; max-height:300px; overflow-y:auto; background:#f9f9f9; border:1px solid #eee; padding:5px; border-radius:5px; display:none;"></div>
+                        </div>
+                        
+                        <div style="margin-top:20px; border-top:1px solid #eee; padding-top:10px;">
+                            <b style="color:var(--pe-blue); font-size:12px">EXPORTAÇÕES</b>
+                            <button class="btn" style="background:#107c41; margin-top:10px; width:100%; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="abrirModalExportCBC()">
+                                <i class="fas fa-file-excel"></i> GERAR EXCEL CBC
+                            </button>
+                        </div>
+
+                        <button class="btn" onclick="saveGlobalConfig()" style="margin-top:20px">SALVAR CONFIG</button>
+                    </div>
+                    <button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
+                </div>
+                
+                <div id="adm-sec-audit" class="adm-section" style="display:none">
+                    <div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;">
+                        <b style="color:var(--pe-blue); font-size:12px; display:flex; align-items:center; gap:5px;"><i class="fas fa-clipboard-list"></i> HISTÓRICO DO SISTEMA</b>
+                        <p style="font-size:10px; color:#666; margin-top:5px; margin-bottom:10px;">Monitoramento de ações realizadas por Organizadores e Administradores.</p>
+                        
+                        <select id="adm-audit-filter" class="input-field" style="margin-bottom: 10px; font-size: 11px; padding: 8px; font-weight: bold; border-color: #8b5cf6; color: var(--pe-blue);" onchange="renderAuditLog()">
+                            <option value="ALL">TODOS OS ORGANIZADORES (GERAL)</option>
+                        </select>
+
+                        <div id="adm-audit-list" style="max-height:400px; overflow-y:auto; border:1px solid #eee; padding:5px; border-radius:5px; background:#f8fafc; font-size:11px;"></div>
+                    </div>
+                    <button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    
+    <div id="screen-live-monitor" class="screen" style="background:black; z-index:20000; overflow-y:hidden;">
+        <div style="background:#ffe500; padding:15px; text-align:center; color:black; font-weight:900; font-size:18px; display:flex; justify-content:space-between; align-items:center;">
+            <span>LIVE TIMING <i class="fas fa-satellite-dish" style="color:#d50000; animation: blink 1s infinite;"></i></span>
+            <div style="font-size:12px">FPC/PE</div>
+        </div>
+        <div style="padding:10px; color:white; text-align:center; border-bottom:1px solid #333;">
+            <h2 id="live-evt-title" style="margin:0; font-size:16px; color:var(--pe-blue);">...</h2>
+            <p style="font-size:10px; color:#999; margin-top:5px;">ATUALIZAÇÃO AUTOMÁTICA</p>
+        </div>
+        <div style="padding:10px; display:flex; gap:5px; justify-content:center; background:#111;">
+             <button class="btn-mini-adm" onclick="renderLiveContent('qualify')" style="background:#4B0082">QUALIFY</button>
+             <button class="btn-mini-adm" onclick="renderLiveContent('1st')" style="background:#009b3a">OFICIAL</button>
+        </div>
+        <div id="live-ranking-list" style="flex:1; overflow-y:auto; padding:10px; padding-bottom:50px;"></div>
+    </div>
+
+    <div class="bottom-bar" id="main-nav-bar">
+        <div class="bar-item active" id="btn-calendar" onclick="nav('calendar')"><i class="far fa-calendar-alt"></i><span id="nav-lbl-calendar">CAL</span></div>
+        <div class="bar-item" id="btn-tempos" onclick="nav('tempos')"><i class="fas fa-stopwatch"></i><span id="nav-lbl-tempos">TEMPO</span></div>
+        <div class="bar-item" id="btn-ranking" onclick="nav('ranking')"><i class="fas fa-trophy"></i><span id="nav-lbl-ranking">RANK</span></div>
+        <div class="bar-item" id="btn-profile" onclick="nav('profile')"><i class="fas fa-user-circle"></i><span>PERFIL</span></div>
+        <div class="bar-item" id="btn-adm" onclick="tryOpenAdmin()" style="display:none"><i class="fas fa-user-shield"></i><span>ADM</span></div>
+        <div class="bar-item" onclick="fazerLogout()"><i class="fas fa-sign-out-alt"></i><span>SAIR</span></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modal-gallery-view" style="z-index: 300000;">
+    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: black; display: flex; flex-direction: column;">
+        <div style="padding: 15px; display: flex; justify-content: flex-end;">
+            <button onclick="fecharModal('modal-gallery-view')" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 10px; border-radius: 50%; font-size: 20px;"><i class="fas fa-times"></i></button>
+        </div>
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center; position: relative;">
+            <button onclick="navGallery(-1)" style="position: absolute; left: 10px; background: rgba(0,0,0,0.5); color: white; border: none; padding: 20px 10px; font-size: 24px;"><i class="fas fa-chevron-left"></i></button>
+            <img id="gallery-main-img" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+            <button onclick="navGallery(1)" style="position: absolute; right: 10px; background: rgba(0,0,0,0.5); color: white; border: none; padding: 20px 10px; font-size: 24px;"><i class="fas fa-chevron-right"></i></button>
+        </div>
+        <div id="gallery-counter" style="text-align: center; color: white; padding: 20px; font-weight: bold;"></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modal-ordem-largada">
+    <div class="modal-box" style="text-align:left; padding:15px;">
+        <h3 style="color:var(--pe-blue); border-bottom:1px solid #eee; padding-bottom:10px; margin:0;">MINHA ORDEM DE LARGADA</h3>
+        <p style="font-size:10px; color:#666; margin-top:5px; margin-bottom:0;">Posição definida pela ordem de inscrição.</p>
+        <div id="ordem-largada-list" style="margin-top:10px; max-height:400px; overflow-y:auto; padding-right:5px;"></div>
+        <button class="btn" style="background:#ddd; color:#333; margin-top:15px" onclick="fecharModal('modal-ordem-largada')">FECHAR</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modal-ios-print">
+    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; justify-content: center;">
+        <div style="padding: 15px; position:absolute; top:10px; right:10px;">
+            <button onclick="fecharModal('modal-ios-print')" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 10px 15px; border-radius: 50%; font-size: 20px;"><i class="fas fa-times"></i></button>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center;">
+            <p style="color: white; font-weight: bold; margin-bottom: 25px; font-size: 15px; line-height:1.5;"><i class="fas fa-info-circle" style="color:var(--pe-yellow); font-size:25px; display:block; margin-bottom:10px;"></i> Pressione e segure a imagem abaixo para Salvar<br>ou tire um Print Screen (Captura de Tela).</p>
+            <img id="ios-print-img" style="max-width: 100%; max-height: 60vh; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modal-lock-alert"><div class="modal-box" style="text-align:center; border-top: 5px solid #d50000;"><div style="background:#fee2e2; width:70px; height:70px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 15px auto; box-shadow: 0 4px 10px rgba(213,0,0,0.2);"><i class="fas fa-user-lock" style="font-size:30px; color:#d50000;"></i></div><h3 style="color:#d50000; margin-bottom:5px; text-transform:uppercase;">INSCRIÇÃO RESTRITA</h3><b style="font-size:12px; color:#333;">CATEGORIA OFICIAL</b><p style="font-size:13px; color:#666; margin:15px 0; line-height:1.5;">Sua <b>Carteirinha Digital</b> ainda não foi ativada pela organização.<br><br>Aguarde a liberação para se inscrever na categoria oficial ou participe das categorias abertas.</p><button class="btn" onclick="redirectFromLockToExtra()" style="background:var(--pe-yellow); color:black; font-weight:900; box-shadow:0 4px 10px rgba(255, 229, 0, 0.3);"><i class="fas fa-star"></i> IR PARA NÃO OFICIAIS</button><button class="btn" onclick="fecharModal('modal-lock-alert')" style="background:#f1f5f9; color:#64748b; margin-top:10px; border:1px solid #cbd5e1;">ENTENDI, VOU AGUARDAR</button></div></div>
+<div class="modal-overlay" id="modal-share"><div class="modal-box" style="background:transparent; box-shadow:none; border:none; width:auto; padding:0; display:flex; flex-direction:column; align-items:center;"><div id="ticket-capture-area" class="ticket-visual"><div class="ticket-header"><img src="logo.png" class="ticket-logo-main"><div class="ticket-header-text"><span>CAMPEONATO PERNAMBUCANO</span><b>COMPROVANTE OFICIAL <span id="ticket-year-display"></span></b></div><img src="logo_cbc.png" class="ticket-logo-cbc" onerror="this.style.display='none'"></div><div class="ticket-body"><div class="ticket-row"><span class="ticket-label">EVENTO</span><b class="ticket-value-lg" id="share-event-name">...</b></div><div class="ticket-row"><span class="ticket-label">DATA & LOCAL</span><b class="ticket-value" id="share-event-details">...</b></div><div class="ticket-divider"></div><div class="ticket-row"><span class="ticket-label">ATLETA</span><b class="ticket-value-lg" id="share-piloto-name">...</b></div><div class="ticket-row"><span class="ticket-label">CATEGORIA & ORIGEM</span><b class="ticket-value" id="share-piloto-details">...</b></div><div class="ticket-status"><i class="fas fa-check-circle"></i> INSCRIÇÃO CONFIRMADA</div></div><div class="ticket-footer">APRESENTE ESTE COMPROVANTE NA RETIRADA DO KIT</div></div><div style="width: 100%; max-width: 320px; margin-top: 15px;"><button id="btn-ticket-download" class="btn" style="background:#E1306C; margin-bottom: 10px; box-shadow:0 10px 20px rgba(0,0,0,0.3); border: 2px solid white;" onclick="baixarImagem('ticket-capture-area', 'ticket_dhpe')"><i class="fas fa-camera"></i> BAIXAR TICKET EM HD</button><button class="btn" style="background:white; color:#333" onclick="fecharModal('modal-share')">FECHAR</button></div></div></div>
+<div class="modal-overlay" id="modal-history"><div class="modal-box" style="text-align:left;"><h3 style="color:var(--pe-blue); border-bottom:1px solid #eee; padding-bottom:10px;">MEU HISTÓRICO</h3><div id="my-history-list" style="max-height:300px; overflow-y:auto; margin-top:10px;"></div><button class="btn" style="background:#ddd; color:#333; margin-top:15px" onclick="fecharModal('modal-history')">FECHAR</button></div></div>
+<div class="modal-overlay" id="modal-pix"><div class="modal-box"><h3 style="color:var(--pe-green)">PAGAMENTO</h3><p id="pix-valor-display"></p><div id="pix-copy" style="background:#eee; padding:10px; word-break:break-all; font-size:10px"></div><button class="btn" onclick="copiarPix()" style="background:#f1f5f9; color:#333; border: 1px solid #ccc; margin-bottom: 10px;"><i class="fas fa-copy"></i> COPIAR CHAVE PIX</button><button class="btn" id="btn-confirmar-insc" style="background:var(--pe-blue); margin-bottom: 5px;" onclick="confirmarInscricaoPendente()"><i class="fas fa-check"></i> CONFIRMAR INSCRIÇÃO</button><button class="btn" id="btn-ja-paguei" style="background:#25D366; margin-bottom: 5px;" onclick="enviarComprovanteWhatsApp()"><i class="fab fa-whatsapp"></i> ENVIAR COMPROVANTE</button><button class="btn" style="background:#ccc" onclick="fecharModal('modal-pix')">FECHAR JANELA</button></div></div>
+<div class="modal-overlay" id="modal-recovery">
+    <div class="modal-box">
+        <h3 style="color:var(--pe-blue)">RECUPERAR ACESSO</h3>
+        <input type="tel" id="rec-cpf" placeholder="SEU CPF" class="input-field" oninput="mascaraCPF(this)" maxlength="14" style="margin-top:10px;">
+        <button class="btn" style="background:#333;" onclick="buscarUsuarioRecuperacao()">BUSCAR CADASTRO</button>
+        
+        <div id="rec-security-area" style="display:none; margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
+            <p style="font-size:11px; color:#666; margin-bottom:5px;">Confirme sua palavra-chave cadastrada:</p>
+            <input id="rec-answer" placeholder="Resposta Secreta" class="uppercase-input input-field">
+            <button class="btn" style="background:var(--pe-blue)" onclick="revelarSenha()">VERIFICAR</button>
+        </div>
+        
+        <div id="rec-change-pass-area" style="display:none; margin-top:15px; background:#f0fdf4; padding:15px; border-radius:8px; border:1px solid #bbf7d0;">
+            <p id="rec-show-pass" style="color:#15803d; font-weight:bold; font-size:16px; margin-bottom:15px; letter-spacing:2px;"></p>
+            <p style="font-size:10px; color:#666; margin-bottom:5px;">Você pode manter esta senha ou digitar uma nova abaixo:</p>
+            <input type="password" id="rec-new-pass" placeholder="Nova Senha (Mín 6 dígitos)" class="input-field">
+            <button class="btn" style="background:var(--pe-green)" onclick="mudarSenhaRecuperacao()">SALVAR E ENTRAR</button>
+        </div>
+        
+        <button class="btn" style="background:#ccc; color:#333; margin-top:10px;" onclick="fecharModal('modal-recovery')">FECHAR</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modal-extra-sub"><div class="modal-box"><h3 style="color:var(--pe-blue)">NOVA INSCRIÇÃO</h3><div id="extra-existing-subs" style="background:#f8fafc; padding:10px; border-radius:6px; margin-bottom:15px; display:none; border:1px dashed #cbd5e1;"><span style="font-size:10px; color:#666; display:block; margin-bottom:5px;">JÁ INSCRITO EM:</span><div id="extra-existing-list" style="font-weight:bold; font-size:12px; color:var(--pe-blue); display:flex; flex-direction:column; gap:5px;"></div></div><p style="font-size:12px; color:#666; margin-bottom:15px;">Escolha uma categoria permitida para sua inscrição (Não Oficial):</p><label style="font-size:10px; font-weight:bold; color:var(--pe-blue)">CATEGORIA EXTRA</label><select id="extra-sub-cat" class="input-field" style="margin-bottom:15px;"></select><button class="btn" onclick="confirmarInscricaoExtra()" style="background:var(--pe-green)">CONFIRMAR INSCRIÇÃO</button><button class="btn" onclick="fecharModal('modal-extra-sub')" style="background:#ccc; color:#333; margin-top:5px;">CANCELAR</button></div></div>
+
+<div class="modal-overlay" id="modal-super-edit">
+    <div class="modal-box" style="width: 90%; max-width: 400px; padding: 20px;">
+        <h3 style="text-align: center; color: #333; margin-bottom: 15px;">EDITAR (ADM)</h3>
+        <input type="hidden" id="super-edit-old-cpf">
+        <input id="super-edit-name" placeholder="Nome" class="input-field" style="margin-bottom:10px;">
+        <input id="super-edit-cpf" placeholder="CPF" class="input-field" style="margin-bottom:10px;">
+        <input id="super-edit-city" placeholder="Cidade" class="input-field" style="margin-bottom:10px;">
+        
+        <select id="super-edit-uf" class="input-field" style="margin-bottom:10px;">
+            <option value="PE">PERNAMBUCO (PE)</option>
+            <option value="AL">ALAGOAS (AL)</option>
+            <option value="PB">PARAÍBA (PB)</option>
+            <option value="RN">RIO GRANDE DO NORTE (RN)</option>
+            <option value="BA">BAHIA (BA)</option>
+            <option value="CE">CEARÁ (CE)</option>
+            <option value="SE">SERGIPE (SE)</option>
+            <option value="MA">MARANHÃO (MA)</option>
+            <option value="PI">PIAUÍ (PI)</option>
+            <option value="OUTRO">OUTRO ESTADO</option>
+        </select>
+        
+        <select id="super-edit-cat" class="input-field" style="margin-bottom:10px;"></select>
+        <input id="super-edit-tel" placeholder="Tel" class="input-field" style="margin-bottom:10px;">
+        
+        <input id="super-edit-cbc" placeholder="Nº Licença CBC" class="input-field" style="margin-bottom:10px;" type="tel">
+        
+        <input type="date" id="super-edit-nasc" class="input-field" style="margin-bottom:15px;">
+        
+        <div style="border-top:1px dashed #ccc; padding-top:10px; margin-bottom:15px; text-align: center;">
+            <b style="font-size:10px; color:#0038a8; display:block; margin-bottom:10px; text-transform: uppercase;">Acesso de Emergência</b>
+            <button class="btn" style="background: #ffe500; color: #000; font-weight: 900; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; margin-bottom: 5px; margin-top:0;" onclick="gerarSenhaTemporaria()">GERAR SENHA TEMP. (5 MIN)</button>
+            <div id="super-edit-temp-pass-display" style="font-size: 14px; font-family: monospace; font-weight: bold; color: #d50000; margin-top: 5px; min-height: 20px;"></div>
+        </div>
+
+        <button class="btn" onclick="saveSuperEdit()" style="background: #0038a8; color: white; width: 100%; margin-bottom: 10px; font-weight: bold; margin-top:0;">SALVAR DADOS DO ATLETA</button>
+        <button class="btn" style="background: #ccc; color: white; width: 100%; font-weight: bold; margin-top:0;" onclick="fecharModal('modal-super-edit')">FECHAR</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modal-poster"><div class="modal-box" style="padding:0; background:black; border:none; width:95%; max-width:400px"><div style="position:relative"><img id="img-poster-view" style="width:100%; display:block"><button onclick="fecharModal('modal-poster')" style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.5); color:white; border:none; padding:10px; border-radius:50%; cursor:pointer"><i class="fas fa-times"></i></button></div></div></div>
+<div class="modal-overlay" id="modal-event-details"><div class="modal-box" style="padding:0; overflow:hidden; display:flex; flex-direction:column; max-height:90vh;"><div style="position:relative; width:100%; height:200px; background:#eee;"><img id="det-evt-img" style="width:100%; height:100%; object-fit:contain; background:black;"><button onclick="fecharModal('modal-event-details')" style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.5); color:white; border:none; padding:8px 12px; border-radius:50%; cursor:pointer; font-weight:bold;">X</button></div><div style="padding:20px; overflow-y:auto; text-align:left; flex:1;"><h2 id="det-evt-title" style="color:var(--pe-blue); margin-bottom:5px; line-height:1.1">...</h2><div id="det-evt-info" style="font-size:12px; color:#666; margin-bottom:15px; font-weight:bold;">...</div><div style="border-top:1px dashed #ccc; padding-top:10px; margin-top:10px;"><div id="det-evt-points" style="display:grid; grid-template-columns: repeat(5, 1fr); gap:5px; margin-top:5px;"></div></div><div id="det-evt-gallery-area" style="display:none; border-top:1px dashed #ccc; padding-top:10px; margin-top:10px;"><b style="color:var(--pe-blue); font-size:12px;">GALERIA DE FOTOS</b><div id="det-evt-gallery-scroll" class="gallery-scroll-container"></div></div></div><div style="padding:10px; border-top:1px solid #eee; background:#f9f9f9;"><button class="btn" style="margin:0" onclick="fecharModal('modal-event-details')">FECHAR</button></div></div></div>
+
+<div class="modal-overlay" id="modal-export-cbc">
+    <div class="modal-box">
+        <h3 style="color:#107c41"><i class="fas fa-file-excel"></i> EXCEL PARA CBC</h3>
+        <p style="font-size:12px; color:#666; margin-bottom:15px;">Selecione o evento para gerar a planilha com os resultados no formato exigido pela CBC.</p>
+        <select id="export-cbc-evt" class="input-field" style="margin-bottom:15px;"></select>
+        <button class="btn" onclick="gerarExcelCBC()" style="background:#107c41; margin-bottom:5px;">GERAR EXCEL (.XLSX)</button>
+        <button class="btn" onclick="fecharModal('modal-export-cbc')" style="background:#ccc; color:#333;">CANCELAR</button>
+    </div>
+</div>
+
+<template id="template-live-timing">
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>DH-PE | Live Timing Oficial</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap');
+        @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
+        :root{--bg-dark:#0f172a;--bg-panel:#1e293b;--text-main:#f1f5f9;--text-muted:#94a3b8;--danger:#ef4444;--warning:#f59e0b;--success:#22c55e;--accent:#3b82f6;--qualify-color:#c084fc;--oficial-color:#22c55e;--second-color:#f97316;--gold:#ffd700;--silver:#c0c0c0;--bronze:#cd7f32}*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Rajdhani',sans-serif;background:var(--bg-dark);color:var(--text-main);height:100vh;overflow:hidden;font-size:14px}.app-container{display:grid;grid-template-columns:260px 1fr 440px;height:100vh}.custom-scroll{overflow-y:auto}.custom-scroll::-webkit-scrollbar{width:4px;background:#0f172a}.custom-scroll::-webkit-scrollbar-thumb{background:#334155;border-radius:4px}.sidebar-left{background:#162032;border-right:1px solid #334155;padding:8px;display:flex;flex-direction:column;gap:10px}.logo{font-size:1.2rem;font-weight:700;color:var(--accent);margin-bottom:5px;display:flex;align-items:center;gap:8px}.ranking-header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #334155;padding-bottom:4px;margin-bottom:4px}.header-title{font-size:0.8rem;font-weight:bold;color:var(--text-muted);text-transform:uppercase;display:flex;align-items:center;gap:5px}.mini-select{background:#0f172a;color:#fff;border:1px solid #475569;border-radius:4px;font-size:0.7rem;padding:2px 4px;cursor:pointer;max-width:90px}.ranking-list{list-style:none}.ranking-list li{display:flex;justify-content:space-between;align-items:center;padding:5px 2px;border-bottom:1px solid #1e293b;font-size:0.8rem;cursor:default}.rank-pos{font-weight:bold;margin-right:5px;width:15px;text-align:center}.rank-info{flex-grow:1;overflow:hidden;line-height:1.1}.rank-name{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;color:#fff}.rank-cat{font-size:0.7em;color:#888}.rank-time-box{text-align:right}.rank-time{font-family:monospace;font-weight:bold;font-size:0.9em}.color-qualify{color:var(--qualify-color)!important}.color-oficial{color:var(--oficial-color)!important}.color-second{color:var(--second-color)!important}.ranking-list li:nth-child(1) .rank-pos{color:var(--gold)}.ranking-list li:nth-child(2) .rank-pos{color:var(--silver)}.ranking-list li:nth-child(3) .rank-pos{color:var(--bronze)}.center-stage{padding:10px;display:flex;flex-direction:column;gap:10px;background:radial-gradient(circle at center,#1e293b 0%,#0f172a 100%)}.stage-selector select{width:100%;padding:8px;background:#334155;color:white;border:1px solid #475569;border-radius:6px;font-weight:bold;text-align:center;text-transform:uppercase;cursor:pointer;font-size:1rem}.timer-section{text-align:center;padding:10px;border:1px solid #334155;border-radius:12px;background:rgba(15,23,42,0.6);display:flex;flex-direction:column;align-items:center;gap:5px;margin-top:5px;flex-shrink:0;transition:border-color 0.3s,box-shadow 0.3s}.timer-section.border-qualify{border-color:var(--qualify-color);box-shadow:0 0 15px rgba(192,132,252,0.15)}.timer-section.border-oficial{border-color:var(--oficial-color);box-shadow:0 0 15px rgba(34,197,94,0.15)}.timer-section.border-second{border-color:var(--second-color);box-shadow:0 0 15px rgba(249,115,22,0.15)}.rider-name-title{font-size:1.4rem;text-transform:uppercase;margin:0;line-height:1}.name-row{display:flex;align-items:center;gap:10px;justify-content:center}.rider-sub-info{display:flex;gap:8px;justify-content:center;margin-top:5px}.info-pill{background:#334155;padding:3px 8px;border-radius:12px;font-size:0.8rem;color:#ccc;display:flex;align-items:center;gap:4px}.city i{color:var(--warning)}.category i{color:var(--accent)}.timer-display{font-size:3.5rem;font-weight:700;line-height:1;color:#fff;text-shadow:0 0 20px rgba(59,130,246,0.3);font-variant-numeric:tabular-nums;letter-spacing:-2px;margin:5px 0}.timer-controls-row{display:flex;gap:8px;justify-content:center}.btn-large{padding:8px 20px;font-size:0.9rem;font-weight:bold;border-radius:6px;border:none;cursor:pointer;color:white;display:flex;align-items:center;gap:6px;transition:0.2s}.btn-large:active{transform:scale(0.95)}.btn-large.disabled{opacity:0.3;cursor:not-allowed;transform:none;filter:grayscale(1)}.btn-start{background:var(--success)}.btn-stop{background:var(--warning);color:#000}.btn-icon,.btn-trash-action{padding:8px 12px;border-radius:6px;cursor:pointer;border:1px solid #475569;background:transparent;color:#fff}.btn-icon:hover,.btn-trash-action:hover{background:var(--danger);border-color:var(--danger)}.center-filter-box{margin-top:auto;text-align:center}.center-filter-box span{display:block;margin-bottom:5px;color:var(--text-muted);font-size:0.75rem;text-transform:uppercase}.compact-filter{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}.filter-pill{font-size:0.75rem;padding:4px 10px;background:#334155;border:1px solid #475569;color:#ccc;border-radius:15px;cursor:pointer;transition:0.2s}.filter-pill.active{background:var(--accent);border-color:var(--accent);color:white;font-weight:bold}.sidebar-right{background:#162032;border-left:1px solid #334155;display:flex;flex-direction:column;height:100vh}.right-split-pane{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}.top-pane{border-bottom:1px solid #334155;background:rgba(15,23,42,0.3)}.bottom-pane{background:rgba(30,41,59,0.2)}.pane-header{padding:8px 12px;background:#1e293b;border-bottom:1px solid #334155;display:flex;justify-content:space-between;align-items:center}.header-left h3{font-size:0.9rem;color:#fff;text-transform:uppercase;margin:0;display:flex;align-items:center;gap:6px}.btn-print{background:#334155;color:#fff;border:1px solid #475569;padding:4px 8px;border-radius:4px;cursor:pointer}.pane-content{flex:1;overflow-y:auto}.split-table{width:100%;border-collapse:collapse}.split-table th{position:sticky;top:0;background:#1e293b;padding:5px 8px;text-align:left;font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;z-index:2}.split-table td{padding:6px 8px;border-bottom:1px solid #334155;font-size:0.85rem;vertical-align:middle}.category-separator-row td{background:#0f172a;color:var(--text-main);font-weight:bold;text-transform:uppercase;font-size:0.75rem;padding:4px 8px;border-top:1px solid #475569;display:flex;align-items:center;justify-content:space-between}.tag-qualify-badge{background:var(--qualify-color);color:#fff;font-size:0.6rem;padding:2px 5px;border-radius:3px;margin-left:10px;font-weight:bold}.tag-rerun-badge{background:var(--danger);color:#fff;font-size:0.6rem;padding:2px 5px;border-radius:3px;margin-left:8px;font-weight:bold}.queue-order{color:var(--warning);font-weight:bold;text-align:center;width:25px;font-size:0.9em}.queue-time{font-family:monospace;color:#888;text-align:right;font-size:0.8em}.btn-go-run{background:var(--accent);color:white;border:none;padding:4px 10px;border-radius:4px;font-size:0.7rem;font-weight:bold;cursor:pointer;transition:0.2s;text-transform:uppercase;display:flex;align-items:center;gap:4px;white-space:nowrap}.btn-go-run:hover{background:#2563eb;transform:scale(1.05)}.result-time{font-family:monospace;font-weight:bold;text-align:right;font-size:1rem}.btn-rerun{background:transparent;border:1px solid #475569;color:#64748b;padding:3px 6px;border-radius:4px;cursor:pointer;margin-left:4px}.btn-rerun:hover{border-color:var(--danger);color:var(--danger)}.btn-next-run{background:transparent;border:1px solid var(--second-color);color:var(--second-color);padding:3px 8px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:0.7rem;transition:0.2s;display:inline-flex;align-items:center;gap:4px}.btn-next-run:hover{background:var(--second-color);color:white}.hidden{display:none!important}.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);display:flex;justify-content:center;align-items:center;z-index:2000;backdrop-filter:blur(5px)}.modal-content{background:#1e293b;padding:20px;border-radius:12px;width:320px;text-align:center;border:1px solid #475569;box-shadow:0 10px 25px rgba(0,0,0,0.5)}.modal-header-icon{font-size:2rem;color:var(--danger);margin-bottom:10px}.modal-content h3{margin-bottom:8px;color:#fff;font-size:1.1rem}.modal-content p{color:#94a3b8;font-size:0.85rem;margin-bottom:5px}.modal-content input{width:100%;padding:8px;margin:15px 0;background:#0f172a;border:1px solid #475569;color:white;border-radius:6px;text-align:center;font-size:1.1rem;letter-spacing:5px}.modal-actions{display:flex;justify-content:center;gap:8px}.btn-confirm-modal{background:var(--accent);color:white;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;font-weight:bold}.btn-cancel{background:transparent;border:1px solid #64748b;color:#cbd5e1;padding:8px 16px;border-radius:4px;cursor:pointer}
+        @media print{@page{margin:1cm;size:portrait}body{background:white;color:black;font-size:12pt;height:auto;overflow:visible}.sidebar-left,.center-stage,.bottom-pane,.modal-overlay,.pane-header button,.no-print,.btn-go-run,.btn-rerun,.btn-next-run,.queue-time{display:none!important}.app-container{display:block;height:auto}.sidebar-right{border:none;background:white;width:100%;height:auto;overflow:visible}.right-split-pane{display:block;height:auto;overflow:visible}.pane-content{overflow:visible}.pane-header{background:white;border-bottom:2px solid black;color:black;padding:10px 0}.pane-header h3{font-size:16pt;text-align:center;width:100%;color:black;font-weight:900}.split-table{width:100%;border-collapse:collapse}.split-table th{display:none}.split-table td{border-bottom:1px solid #ccc;padding:5px 0;color:black;font-size:11pt}.category-separator-row td{background:#ddd!important;color:black!important;font-size:12pt!important;font-weight:900;border:1px solid black;text-align:center;-webkit-print-color-adjust:exact}.rider-row td{vertical-align:top}.rider-info-cell{display:block}.rider-main-name{font-weight:bold;font-size:12pt;text-transform:uppercase;float:left}.rider-plate-print{display:block!important;float:right;font-weight:900;font-size:12pt;border:2px solid black;padding:2px 8px;border-radius:4px}.rider-city-sub{clear:both;display:block;font-size:10pt;color:#333;font-style:italic}}
+    </style>
+</head>
+<body>
+<div class="app-container">
+  <aside class="sidebar-left custom-scroll">
+    <div class="logo"><i class="fas fa-mountain"></i> PE Downhill</div>
+    <div class="ranking-box">
+      <div class="ranking-header">
+        <div class="header-title"><i class="fas fa-trophy" style="color:#ffc107"></i> TOP PERNAMBUCO</div>
+        <select id="filterPE" class="mini-select" onchange="renderLeftRankings()"><option value="Todas">TODAS</option></select>
+      </div>
+      <ul id="rankingPE" class="ranking-list"></ul>
+    </div>
+    <div class="ranking-box">
+      <div class="ranking-header">
+        <div class="header-title"><i class="fas fa-globe-americas" style="color:#3b82f6"></i> TOP NORDESTE</div>
+        <select id="filterNE" class="mini-select" onchange="renderLeftRankings()"><option value="Todas">TODAS</option></select>
+      </div>
+      <ul id="rankingNE" class="ranking-list"></ul>
+    </div>
+  </aside>
+  <main class="center-stage">
+    <div class="stage-selector">
+      <select id="runType" onchange="changeRunType()">
+        <option value="qualify">🟣 QUALIFY (LILÁS)</option>
+        <option value="oficial" selected>🟢 DESCIDA OFICIAL (VERDE)</option>
+        <option value="segunda">🟠 2ª DESCIDA (LARANJA)</option>
+      </select>
+    </div>
+    
+    <div id="timers-container" style="display:flex; flex-direction:column; gap:10px;">
+        <section class="timer-section" id="timerSection_0">
+          <div class="rider-header-info">
+            <div class="name-row">
+              <h1 class="rider-name-title" id="riderName_0">AGUARDANDO...</h1>
+              <button class="btn-trash-action" onclick="clearRiderFromStart(0)" title="Limpar Tela"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="rider-sub-info" id="riderMeta_0" style="opacity: 0">
+               <span class="info-pill category"><i class="fas fa-bicycle"></i> <span id="riderCategory_0">-</span></span>
+            </div>
+          </div>
+          <div class="timer-display" id="timer_0">00:00.000</div>
+          <div id="statusMsg_0" style="min-height:15px; color:#f59e0b; font-weight:bold; font-size:0.8rem; margin-bottom:5px;"></div>
+          <div class="timer-controls-row">
+            <button id="btnStart_0" class="btn-start btn-large disabled" onclick="tryStartTimer(0)" disabled><i class="fas fa-play"></i> INICIAR</button>
+            <button id="btnStop_0" class="btn-stop btn-large disabled" onclick="stopTimer(0)" disabled><i class="fas fa-stop"></i> PARAR</button>
+            <button class="btn-danger btn-icon" style="background:#dc3545; border-color:#dc3545;" onclick="markDNF(0)" title="Não Concluiu / Desistência"><i class="fas fa-ban"></i> DNF</button>
+            <button class="btn-danger btn-icon" onclick="tryResetTimer(0)" title="Zerar Cronômetro"><i class="fas fa-undo"></i></button>
+          </div>
+        </section>
+
+        <section class="timer-section" id="timerSection_1">
+          <div class="rider-header-info">
+            <div class="name-row">
+              <h1 class="rider-name-title" id="riderName_1">AGUARDANDO...</h1>
+              <button class="btn-trash-action" onclick="clearRiderFromStart(1)" title="Limpar Tela"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="rider-sub-info" id="riderMeta_1" style="opacity: 0">
+               <span class="info-pill category"><i class="fas fa-bicycle"></i> <span id="riderCategory_1">-</span></span>
+            </div>
+          </div>
+          <div class="timer-display" id="timer_1">00:00.000</div>
+          <div id="statusMsg_1" style="min-height:15px; color:#f59e0b; font-weight:bold; font-size:0.8rem; margin-bottom:5px;"></div>
+          <div class="timer-controls-row">
+            <button id="btnStart_1" class="btn-start btn-large disabled" onclick="tryStartTimer(1)" disabled><i class="fas fa-play"></i> INICIAR</button>
+            <button id="btnStop_1" class="btn-stop btn-large disabled" onclick="stopTimer(1)" disabled><i class="fas fa-stop"></i> PARAR</button>
+            <button class="btn-danger btn-icon" style="background:#dc3545; border-color:#dc3545;" onclick="markDNF(1)" title="Não Concluiu / Desistência"><i class="fas fa-ban"></i> DNF</button>
+            <button class="btn-danger btn-icon" onclick="tryResetTimer(1)" title="Zerar Cronômetro"><i class="fas fa-undo"></i></button>
+          </div>
+        </section>
+    </div>
+
+    <div class="center-filter-box">
+      <span>Filtrar Listas (Direita):</span>
+      <div class="compact-filter" id="categoryFilterUi"></div>
+    </div>
+  </main>
+  <aside class="sidebar-right">
+    <div class="right-split-pane top-pane">
+      <div class="pane-header">
+        <div class="header-left">
+          <h3><i class="fas fa-list-ol"></i> Ordem de Largada</h3>
+        </div>
+        <button class="btn-print" onclick="printStartList()" title="Imprimir Lista de Largada"><i class="fas fa-print"></i></button>
+      </div>
+      <div class="pane-content custom-scroll">
+        <table class="split-table"><tbody id="startQueueBody"></tbody></table>
+      </div>
+    </div>
+    <div class="right-split-pane bottom-pane">
+      <div class="pane-header">
+        <h3><i class="fas fa-flag-checkered"></i> Resultados <span id="lblActiveCategory" style="color:var(--accent)"></span></h3>
+      </div>
+      <div class="pane-content custom-scroll">
+        <table class="split-table">
+          <thead><tr><th style="width:30px">#</th><th>Atleta</th><th style="text-align:right">Tempo</th><th style="width:70px; text-align:right">Ações</th></tr></thead>
+          <tbody id="rightRankingBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </aside>
+</div>
+<div id="admModal" class="modal-overlay hidden"><div class="modal-content"><div class="modal-header-icon"><i class="fas fa-lock"></i></div><h3>Área do Organizador</h3><p id="modalMsg">Insira a senha para confirmar:</p><input type="password" id="admPassword" placeholder="Senha ADM"><div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">Cancelar</button><button class="btn-confirm-modal" onclick="verifyPassword()">Confirmar</button></div></div></div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyDilUDfyFsebnbQ9pAXyL7ptbSy5CY_cmk",
+        authDomain: "fpc-per.firebaseapp.com",
+        databaseURL: "https://fpc-per-default-rtdb.firebaseio.com",
+        projectId: "fpc-per",
+        storageBucket: "fpc-per.firebasestorage.app",
+        messagingSenderId: "817616563956",
+        appId: "1:817616563956:web:21dbbbcbb69e0cae10f8a1"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const dbFirebase = firebase.database();
+
+    let athletes = []; let categories = []; let currentActiveFilter = "Todas"; let actionRiderId = null; let rerunPassword = "admin123"; let currentRunType = "oficial";
+    let activeDbKey = ""; let activeEvtId = "";
+    let slots = [ { id: 0, rider: null, isRunning: false, startTimeMs: null, clockStartStr: null, animFrame: null }, { id: 1, rider: null, isRunning: false, startTimeMs: null, clockStartStr: null, animFrame: null } ];
+    
+    window.normalizeCatName = function(catName) { if(!catName) return "GERAL"; let c = catName.toUpperCase().trim(); if(c === "OPEN") return "OPEN (EXTRA)"; if(c === "ESTREANTE") return "ESTREANTE (EXTRA)"; if(c === "RÍGIDA" || c === "RIGIDA") return "RÍGIDA (EXTRA)"; if(c === "E-BIKE") return "E-BIKE (EXTRA)"; if(c === "PCD") return "PCD (EXTRA)"; return c; };
+    function timeToMs(timeStr) { if(!timeStr || timeStr === "--:--.---") return null; let parts = timeStr.split(':'); if(parts.length < 2) return null; let m = parseInt(parts[0], 10); let secParts = parts[1].split('.'); let s = parseInt(secParts[0], 10); let msString = secParts.length > 1 ? secParts[1] : "000"; let ms = Math.round(parseFloat("0." + msString) * 1000); return (m * 60000) + (s * 1000) + ms; }
+    function msToTime(ms) { if (ms === null || isNaN(ms)) return null; let m = Math.floor(ms / 60000).toString().padStart(2, '0'); let s = Math.floor((ms % 60000) / 1000).toString().padStart(2, '0'); let mls = Math.floor(ms % 1000).toString().padStart(3, '0'); return `${m}:${s}.${mls}`; }
+
+    window.receiveData = function(data, catsArray, rPass, dbKey, evtId) {
+        athletes = data; categories = catsArray;
+        if (rPass) rerunPassword = rPass;
+        activeDbKey = dbKey; activeEvtId = evtId;
+        populateLeftFilters(); refreshListsOnly();
+        
+        if(activeDbKey && activeEvtId) {
+            dbFirebase.ref(activeDbKey + '/tempos').on('value', (snap) => {
+                let allTimes = snap.val() || [];
+                if(!Array.isArray(allTimes)) allTimes = Object.values(allTimes);
+                
+                athletes.forEach(a => {
+                    a.times = { qualify: null, oficial: null, segunda: null };
+                    a.startClocks = { qualify: null, oficial: null, segunda: null };
+                });
+                
+                allTimes.forEach(t => {
+                    if(String(t.evtId) === String(activeEvtId)) {
+                        let a = athletes.find(x => x.originalCpf === t.cpf && x.category === window.normalizeCatName(t.cat));
+                        if(a) {
+                            let key = t.runType === '1st' ? 'oficial' : (t.runType === '2nd' ? 'segunda' : 'qualify');
+                            a.times[key] = timeToMs(t.val);
+                            a.startClocks[key] = t.startClock || null;
+                        }
+                    }
+                });
+                refreshListsOnly();
+                slots.forEach(s => { if (s.rider) { let fresh = athletes.find(a => String(a.id) === String(s.rider.id)); if (fresh) s.rider = fresh; updateSlotUI(s.id); } });
+            });
+
+            dbFirebase.ref(activeDbKey + '/live_slots/' + activeEvtId).on('value', snap => {
+                let remoteSlots = snap.val() || [null, null];
+                [0, 1].forEach(i => {
+                    let rs = remoteSlots[i];
+                    let s = slots[i];
+                    
+                    if (!rs) {
+                        if (s.rider) clearRiderFromStartLocal(i);
+                    } else {
+                        if (!s.rider || s.rider.id !== rs.riderId) {
+                            let r = athletes.find(a => String(a.id) === String(rs.riderId));
+                            if (r) s.rider = r;
+                        }
+                        if (rs.isRunning && !s.isRunning) {
+                            s.isRunning = true;
+                            s.startTimeMs = rs.startTimeMs;
+                            s.clockStartStr = rs.clockStartStr;
+                            startTimerAnim(i);
+                        } else if (!rs.isRunning && s.isRunning) {
+                            s.isRunning = false;
+                            if (s.animFrame) cancelAnimationFrame(s.animFrame);
+                        }
+                        updateSlotUI(i);
+                    }
+                });
+            });
+        }
+    };
+
+    function populateLeftFilters() {
+        const selPE = document.getElementById('filterPE');
+        const selNE = document.getElementById('filterNE');
+        selPE.innerHTML = '<option value="Todas">TODAS</option>'; selNE.innerHTML = '<option value="Todas">TODAS</option>';
+        categories.forEach(cat => { let opt1 = document.createElement('option'); opt1.value = cat; opt1.text = cat; selPE.appendChild(opt1); let opt2 = document.createElement('option'); opt2.value = cat; opt2.text = cat; selNE.appendChild(opt2); });
+    }
+
+    function refreshListsOnly() { updateStylesByRunType(); renderCompactFilter(); renderStartQueue(); renderRightRanking(); renderLeftRankings(); }
+
+    function changeRunType() {
+        if (slots[0].isRunning || slots[1].isRunning) { alert("Cronômetro rodando! Pare primeiro.");
+        document.getElementById('runType').value = currentRunType; return; }
+        currentRunType = document.getElementById('runType').value; clearRiderFromStart(0); clearRiderFromStart(1); refreshListsOnly();
+    }
+
+    function updateStylesByRunType() {
+        const runType = document.getElementById('runType').value;
+        [0, 1].forEach(i => {
+            const section = document.getElementById('timerSection_'+i); section.classList.remove('border-qualify', 'border-oficial', 'border-second');
+            if(runType === 'qualify') section.classList.add('border-qualify'); if(runType === 'oficial') section.classList.add('border-oficial'); if(runType === 'segunda') section.classList.add('border-second');
+        });
+    }
+
+    function getCssColorClass(runType) { if(runType === 'qualify') return 'color-qualify'; if(runType === 'oficial') return 'color-oficial'; if(runType === 'segunda') return 'color-second'; return ''; }
+
+    function renderLeftRankings() {
+        const runType = document.getElementById('runType').value;
+        const filterPE = document.getElementById('filterPE').value; const filterNE = document.getElementById('filterNE').value;
+        let listPE = athletes.filter(a => a.region === 'PE' && a.times && a.times[runType] !== null);
+        if(filterPE !== 'Todas') listPE = listPE.filter(a => a.category === filterPE);
+        listPE.sort((a,b) => a.times[runType] - b.times[runType]); renderRankingList('rankingPE', listPE.slice(0,5), runType);
+        let listNE = athletes.filter(a => a.times && a.times[runType] !== null);
+        if(filterNE !== 'Todas') listNE = listNE.filter(a => a.category === filterNE);
+        listNE.sort((a,b) => a.times[runType] - b.times[runType]); renderRankingList('rankingNE', listNE.slice(0,5), runType);
+    }
+
+    function renderRankingList(elementId, list, runType) {
+        const ul = document.getElementById(elementId); const colorClass = getCssColorClass(runType);
+        if (list.length === 0) { ul.innerHTML = '<li style="color:#666; justify-content:center; padding:10px; font-style:italic; font-size:0.8rem">Sem tempos</li>'; return; }
+        ul.innerHTML = list.map((a, i) => `<li><span class="rank-pos">${i+1}</span><div class="rank-info"><span class="rank-name">${a.name} <span style="font-size:0.7em; color:#888;">${a.city}</span></span><span class="rank-cat">${a.category}</span></div><div class="rank-time-box"><span class="rank-time ${colorClass}">${msToTime(a.times[runType])}</span></div></li>`).join('');
+    }
+
+    function renderStartQueue() {
+        const tbody = document.getElementById('startQueueBody'); const runType = document.getElementById('runType').value;
+        let sourceTimeKey = runType === 'oficial' ? 'qualify' : (runType === 'segunda' ? 'oficial' : null);
+        tbody.innerHTML = ''; let catsToShow = currentActiveFilter === 'Todas' ? categories : [currentActiveFilter]; let hasData = false;
+        let btnText = runType === 'qualify' ? "IR QUALIFY" : (runType === 'oficial' ? "IR OFICIAL" : "IR 2ª DESC");
+        catsToShow.forEach(cat => {
+            let qualified = athletes.filter(a => a.category === cat);
+            if (runType === 'segunda') qualified = qualified.filter(a => a.times && a.times.oficial !== null);
+            if(runType === 'qualify') { qualified.sort((a,b) => String(a.id).localeCompare(String(b.id))); } 
+            else if(runType === 'oficial') { qualified.sort((a, b) => { let tA = (a.times && a.times.qualify !== null) ? a.times.qualify : 99999999; let tB = (b.times && b.times.qualify !== null) ? b.times.qualify : 99999999; return tB - tA; }); }
+
+            if (qualified.length > 0) {
+                let visibleList = qualified.filter(a => !a.times || a.times[runType] === null || a.isRerun);
+                if(visibleList.length > 0) {
+                    hasData = true; 
+                    let tagName = sourceTimeKey === 'qualify' ? 'QUALIFY' : (sourceTimeKey === 'oficial' ? 'OFICIAL' : ''); let tagColor = sourceTimeKey==='qualify'?'#c084fc':'#22c55e';
+                    let tagHtml = tagName ? `<span class="tag-qualify-badge" style="background:${tagColor}">${tagName}</span>` : '';
+                    tbody.innerHTML += `<tr class="category-separator-row"><td colspan="3"><div style="display:flex; align-items:center"><i class="fas fa-flag" style="margin-right:5px"></i> ${cat} ${tagHtml}</div></td></tr>`;
+                    visibleList.forEach((a, index) => {
+                        let extraTag = a.isRerun ? '<span class="tag-rerun-badge">RE-RUN</span>' : '';
+                        let prevTimeDisplay = (sourceTimeKey && a.times && a.times[sourceTimeKey]) ? msToTime(a.times[sourceTimeKey]) : '--:--';
+                        tbody.innerHTML += `<tr class="rider-row"><td class="queue-order">${index + 1}</td><td><div class="rider-info-cell"><div class="rider-main-name">${a.name} <span style="font-size:0.7em; color:#ccc;">${a.city}</span> ${extraTag}</div><div class="rider-plate-print" style="display:none">PLACA: ${a.number}</div><button class="btn-go-run no-print" onclick="selectRider('${a.id}')"><i class="fas fa-play-circle"></i> ${btnText}</button></div></td><td class="queue-time no-print">${prevTimeDisplay}</td></tr>`;
+                    });
+                }
+            }
+        });
+        if (!hasData) tbody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:#888">Nenhum piloto habilitado na fila de largada.</td></tr>`;
+    }
+
+    function renderRightRanking() {
+        const tbody = document.getElementById('rightRankingBody'); const runType = document.getElementById('runType').value; const colorClass = getCssColorClass(runType);
+        let list = athletes.filter(a => a.times && a.times[runType] !== null);
+        if (currentActiveFilter !== 'Todas') list = list.filter(a => a.category === currentActiveFilter);
+        list.sort((a, b) => a.times[runType] - b.times[runType]);
+        document.getElementById('lblActiveCategory').innerText = currentActiveFilter !== 'Todas' ? currentActiveFilter : "";
+        if(list.length === 0) { tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:20px; color:#555;">Aguardando resultados...</td></tr>`; return; }
+        
+        tbody.innerHTML = list.map((a, i) => {
+            let actions = '';
+            if (runType === 'oficial') actions += `<button class="btn-next-run" onclick="goToSecondRun('${a.id}')" title="2ª Descida"><i class="fas fa-arrow-right"></i> 2ª</button>`;
+            actions += `<button class="btn-rerun" onclick="requestRerun('${a.id}')" title="Refazer"><i class="fas fa-sync-alt"></i></button>`;
+            return `<tr><td style="font-weight:bold; text-align:center; color:${i<3 ? '#ffd700' : '#888'}">${i+1}</td><td><div style="font-weight:bold; color:#fff">${a.name} <span style="font-size:0.7em; color:#888;">${a.city}</span></div><div style="font-size:0.7em; color:#888">${a.category}</div></td><td class="result-time ${colorClass}">${msToTime(a.times[runType])}</td><td style="text-align:right; white-space:nowrap;">${actions}</td></tr>`
+        }).join('');
+    }
+
+    function goToSecondRun(id) {
+        if (slots[0].isRunning || slots[1].isRunning) { alert("Cronômetros rodando!"); return; }
+        document.getElementById('runType').value = 'segunda'; currentRunType = 'segunda';
+        refreshListsOnly(); selectRider(id);
+    }
+
+    function selectRider(id) {
+        let rider = athletes.find(a => String(a.id) === String(id)); if(!rider) return;
+        if ((slots[0].rider && slots[0].rider.id === id) || (slots[1].rider && slots[1].rider.id === id)) return;
+        let slotIndex = slots.findIndex(s => s.rider === null);
+        if (slotIndex === -1) { alert("Ambos os cronômetros estão ocupados!\n\nPare ou limpe um deles primeiro no botão de Lixeira (X)."); return; }
+        slots[slotIndex].rider = rider; updateSlotUI(slotIndex);
+        syncSlotToFirebase(slotIndex);
+    }
+
+    function updateSlotUI(i) {
+        let s = slots[i]; const runType = document.getElementById('runType').value;
+        let DOM = { name: document.getElementById('riderName_'+i), cat: document.getElementById('riderCategory_'+i), meta: document.getElementById('riderMeta_'+i), timer: document.getElementById('timer_'+i), msg: document.getElementById('statusMsg_'+i), btnStart: document.getElementById('btnStart_'+i), btnStop: document.getElementById('btnStop_'+i) };
+        if (!s.rider) { DOM.name.innerText = "AGUARDANDO..."; DOM.meta.style.opacity = '0'; DOM.timer.innerText = "00:00.000"; DOM.timer.style.color = '#fff'; DOM.msg.innerText = "";
+        DOM.btnStart.disabled = true; DOM.btnStart.classList.add('disabled'); DOM.btnStop.disabled = true; DOM.btnStop.classList.add('disabled'); return; }
+
+        DOM.name.innerText = `${s.rider.name}`; DOM.cat.innerHTML = s.rider.category; DOM.meta.style.opacity = '1';
+        
+        if(!s.isRunning) {
+            if (s.animFrame) cancelAnimationFrame(s.animFrame);
+            if(s.rider.times && s.rider.times[runType] !== null && !s.rider.isRerun) {
+                DOM.timer.innerText = msToTime(s.rider.times[runType]); DOM.timer.style.color = '#22c55e'; DOM.msg.innerText = "TEMPO JÁ REGISTRADO";
+                DOM.btnStart.disabled = true; DOM.btnStart.classList.add('disabled'); DOM.btnStop.disabled = true; DOM.btnStop.classList.add('disabled');
+            } else {
+                DOM.timer.innerText = "00:00.000"; DOM.timer.style.color = '#fff'; DOM.msg.innerText = "";
+                DOM.btnStart.disabled = false; DOM.btnStart.classList.remove('disabled'); DOM.btnStop.disabled = true; DOM.btnStop.classList.add('disabled');
+            }
+        } else {
+            DOM.btnStart.disabled = true; DOM.btnStart.classList.add('disabled'); DOM.btnStop.disabled = false; DOM.btnStop.classList.remove('disabled');
+            DOM.timer.style.color = '#fff'; DOM.msg.innerText = "";
+        }
+    }
+
+    function clearRiderFromStart(i) { 
+        if (slots[i].isRunning) { alert("Pare o cronômetro antes de limpar."); return; } 
+        clearRiderFromStartLocal(i);
+        syncSlotToFirebase(i);
+    }
+
+    function clearRiderFromStartLocal(i) {
+        slots[i].rider = null; updateSlotUI(i);
+    }
+
+    function tryStartTimer(i) {
+        let s = slots[i];
+        if (!s.rider || s.isRunning) return; 
+        const runType = document.getElementById('runType').value;
+        if (s.rider.times && s.rider.times[runType] !== null && !s.rider.isRerun) return;
+        
+        s.isRunning = true;
+        s.startTimeMs = Date.now();
+        s.clockStartStr = new Date().toLocaleTimeString('pt-BR', { hour12: false });
+        
+        startTimerAnim(i);
+        syncSlotToFirebase(i);
+    }
+
+    function startTimerAnim(i) {
+        let s = slots[i];
+        document.getElementById('btnStart_'+i).disabled = true; document.getElementById('btnStart_'+i).classList.add('disabled');
+        document.getElementById('btnStop_'+i).disabled = false; document.getElementById('btnStop_'+i).classList.remove('disabled');
+        document.getElementById('timer_'+i).style.color = '#fff';
+        
+        function updateTimer() { 
+            if(s.isRunning && s.startTimeMs) { 
+                document.getElementById('timer_'+i).innerText = msToTime(Date.now() - s.startTimeMs);
+                s.animFrame = requestAnimationFrame(updateTimer); 
+            } 
+        }
+        s.animFrame = requestAnimationFrame(updateTimer);
+    }
+
+    function stopTimer(i) {
+        let s = slots[i];
+        if (!s.isRunning) return; s.isRunning = false;
+        if (s.animFrame) cancelAnimationFrame(s.animFrame);
+        
+        let exactFinalMs = Date.now() - s.startTimeMs; 
+        let finalTimeString = msToTime(exactFinalMs);
+        document.getElementById('timer_'+i).innerText = finalTimeString;
+        
+        syncSlotToFirebase(i);
+
+        setTimeout(() => {
+            if (confirm(`TEMPO FINAL REGISTRADO: ${finalTimeString}\n\nConfirmar e salvar tempo de ${s.rider.name}?`)) {
+                const runType = document.getElementById('runType').value;
+                let runTypeDb = runType === 'oficial' ? '1st' : (runType === 'segunda' ? '2nd' : 'qualify');
+                
+                dbFirebase.ref(activeDbKey + '/tempos').once('value').then(snap => {
+                    let tempos = snap.val() || [];
+                    if(!Array.isArray(tempos)) tempos = Object.values(tempos);
+                    
+                    let existingIndex = tempos.findIndex(t => t && String(t.evtId) === String(activeEvtId) && t.cpf === s.rider.originalCpf && window.normalizeCatName(t.cat) === s.rider.category && t.runType === runTypeDb);
+                    if(existingIndex > -1) {
+                        tempos[existingIndex].val = finalTimeString;
+                        tempos[existingIndex].startClock = s.clockStartStr;
+                    } else {
+                        tempos.push({ evtId: activeEvtId, cpf: s.rider.originalCpf, name: s.rider.name, city: s.rider.city.split('-')[0], cat: s.rider.category, val: finalTimeString, startClock: s.clockStartStr, status: 'OK', runType: runTypeDb });
+                    }
+                    
+                    dbFirebase.ref(activeDbKey + '/tempos').set(tempos).then(() => {
+                        if (window.opener && window.opener.toast) window.opener.toast("TEMPO REGISTRADO!");
+                        s.rider = null; updateSlotUI(i); syncSlotToFirebase(i);
+                    });
+                });
+            } else { 
+                document.getElementById('btnStop_'+i).disabled = true; document.getElementById('btnStop_'+i).classList.add('disabled'); 
+            }
+        }, 50);
+    }
+
+    function tryResetTimer(i) { if (slots[i].isRunning) return; updateSlotUI(i); }
+    function markDNF(i) {
+        let s = slots[i];
+        if (!s.rider) return;
+        if (confirm(`Marcar DNF (Não Concluiu / Desistência) para ${s.rider.name}?`)) {
+            if (s.animFrame) cancelAnimationFrame(s.animFrame);
+            s.isRunning = false;
+            
+            const runType = document.getElementById('runType').value;
+            let runTypeDb = runType === 'oficial' ? '1st' : (runType === 'segunda' ? '2nd' : 'qualify');
+            
+            dbFirebase.ref(activeDbKey + '/tempos').once('value').then(snap => {
+                let tempos = snap.val() || [];
+                if(!Array.isArray(tempos)) tempos = Object.values(tempos);
+                
+                let existingIndex = tempos.findIndex(t => t && String(t.evtId) === String(activeEvtId) && t.cpf === s.rider.originalCpf && window.normalizeCatName(t.cat) === s.rider.category && t.runType === runTypeDb);
+                
+                if(existingIndex > -1) {
+                    tempos[existingIndex].val = 'DNF';
+                    tempos[existingIndex].startClock = s.clockStartStr;
+                } else {
+                    tempos.push({ evtId: activeEvtId, cpf: s.rider.originalCpf, name: s.rider.name, city: s.rider.city.split('-')[0], cat: s.rider.category, val: 'DNF', startClock: s.clockStartStr, status: 'DNF', runType: runTypeDb });
+                }
+                
+                dbFirebase.ref(activeDbKey + '/tempos').set(tempos).then(() => {
+                    if (window.opener && window.opener.toast) window.opener.toast("MARCADO COMO DNF!");
+                    s.rider = null; updateSlotUI(i); syncSlotToFirebase(i);
+                });
+            });
+        }
+    }
+
+    function requestRerun(id) {
+        actionRiderId = id;
+        let rider = athletes.find(a => String(a.id) === String(id));
+        document.getElementById('modalMsg').innerText = `Autorizar nova descida para: ${rider.name}?`;
+        document.getElementById('admModal').classList.remove('hidden'); setTimeout(() => document.getElementById('admPassword').focus(), 100);
+    }
+
+    function verifyPassword() {
+        if(document.getElementById('admPassword').value === rerunPassword) {
+            let rider = athletes.find(a => String(a.id) === String(actionRiderId));
+            const runType = document.getElementById('runType').value;
+            let runTypeDb = runType === 'oficial' ? '1st' : (runType === 'segunda' ? '2nd' : 'qualify');
+            
+            dbFirebase.ref(activeDbKey + '/tempos').once('value').then(snap => {
+                let tempos = snap.val() || [];
+                if(!Array.isArray(tempos)) tempos = Object.values(tempos);
+                
+                let existingIndex = tempos.findIndex(t => t && String(t.evtId) === String(activeEvtId) && t.cpf === rider.originalCpf && window.normalizeCatName(t.cat) === rider.category && t.runType === runTypeDb);
+                if(existingIndex > -1) { tempos.splice(existingIndex, 1); }
+                
+                dbFirebase.ref(activeDbKey + '/tempos').set(tempos).then(() => {
+                    rider.isRerun = true; closeModal(); 
+                    [0, 1].forEach(i => { if(slots[i].rider && String(slots[i].rider.id) === String(actionRiderId)) clearRiderFromStart(i); });
+                    if (window.opener && window.opener.toast) window.opener.toast("RE-RUN AUTORIZADO!");
+                });
+            });
+        } else { alert("Senha incorreta."); }
+    }
+
+    function closeModal() { document.getElementById('admModal').classList.add('hidden'); document.getElementById('admPassword').value = ''; actionRiderId = null; }
+
+    function renderCompactFilter() {
+        const container = document.getElementById('categoryFilterUi');
+        let html = `<span class="filter-pill ${currentActiveFilter === 'Todas' ? 'active' : ''}" onclick="setFilter('Todas')">TODAS</span>`;
+        categories.forEach(cat => { const active = currentActiveFilter === cat ? 'active' : ''; html += `<span class="filter-pill ${active}" onclick="setFilter('${cat}')">${cat}</span>`; });
+        container.innerHTML = html;
+    }
+    
+    function setFilter(cat) { currentActiveFilter = cat; refreshListsOnly(); }
+    
+    function printStartList() { window.print(); }
+
+    function syncSlotToFirebase(index) {
+        if(!activeDbKey || !activeEvtId) return;
+        let s = slots[index];
+        let payload = s.rider ? {
+            riderId: s.rider.id,
+            isRunning: s.isRunning,
+            startTimeMs: s.startTimeMs,
+            clockStartStr: s.clockStartStr
+        } : null;
+        dbFirebase.ref(activeDbKey + '/live_slots/' + activeEvtId + '/' + index).set(payload);
+    }
+</script>
+</body>
+</html>
+</template>
+
+<div id="pwa-install-banner" class="pwa-install-banner">
+    <div style="display:flex; align-items:center; gap:10px;">
+        <img src="logo.png" style="width:40px; height:40px; border-radius:8px;">
+        <div style="text-align:left;">
+            <b style="color:var(--pe-blue); font-size:12px; display:block;">Baixar App DH-PE</b>
+            <span style="font-size:10px; color:#666;">Mais rápido e não gasta memória!</span>
+        </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:5px;">
+        <button onclick="installApp()" style="background:var(--pe-yellow); color:black; border:none; padding:8px 12px; border-radius:6px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(255, 229, 0, 0.4);">INSTALAR</button>
+        <button onclick="closeInstallBanner()" style="background:transparent; border:none; color:#999; font-size:18px; cursor:pointer; padding:5px;"><i class="fas fa-times"></i></button>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
+
+<script src="script.js?v=146"></script>
+
+</body>
+</html>

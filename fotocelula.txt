@@ -1,0 +1,28 @@
+Geração: No seu sistema, você cria um botão "Exportar para Planilha". O seu código Javascript vai pegar todos os inscritos do evento e gerar um arquivo (ou já jogar direto para o Google Sheets via API). No código da exportação, basta uma regrinha simples: atleta.equipe ? atleta.equipe : "AVULSO".
+
+Digitação (Cronometragem): O cronometrista abre essa planilha no Google Sheets no dia do evento e começa a digitar os tempos na coluna "FINAL" ou "QUALIFY".
+
+A Mágica do Tempo Real (Apps Script): Dentro do Google Sheets, nós colocamos um pequeno código (Google Apps Script) usando um gatilho chamado onEdit. Toda vez que o cronometrista apertar "Enter" após digitar um tempo, esse script invisível manda o resultado imediatamente para o link do seu Firebase (https://fpc-per-default-rtdb.firebaseio.com/...).
+
+Atualização no App: Como o seu aplicativo já escuta o Firebase, os resultados vão pipocar na tela do aplicativo e no telão instantaneamente, sem você precisar mudar absolutamente nada no visual do seu app atual.
+
+Vantagem: O cronometrista trabalha em um ambiente que ele já conhece (planilha), é 100% em tempo real e você não muda o app atual.
+
+Desafio: Exige configurar o Google Apps Script na planilha para enviar os dados.
+
+Opção 2: Solução Nativa (Planilha dentro do próprio App)
+Se você não quiser depender do Google Sheets, a segunda melhor opção é criar uma "aba" oculta ou tela restrita para administradores dentro do próprio sistema que você já construiu.
+
+Como funcionaria na prática:
+
+Você cria uma tela no seu HTML que usa uma biblioteca de "tabela editável" (como o Handsontable ou AG Grid, que imitam o Excel perfeitamente).
+
+Essa tela puxa os inscritos (colocando "AVULSO" onde não tem equipe).
+
+O cronometrista digita os tempos diretamente nessa tela do seu sistema.
+
+Ao digitar, o próprio Javascript do seu sistema já manda o .update() para o Firebase em tempo real.
+
+Vantagem: Fica tudo dentro do seu sistema, não precisa configurar APIs do Google, e a sincronização com o Firebase é nativa.
+
+Desafio: O cronometrista terá que usar o seu sistema para digitar, e não um arquivo de planilha solto.
