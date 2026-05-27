@@ -1,11 +1,44 @@
+// ==========================================================
+// PARTE 1: FIREBASE PUSH NOTIFICATIONS
+// ==========================================================
+importScripts('https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+  apiKey: "AIzaSyDilUDfyFsebnbQ9pAXyL7ptbSy5CY_cmk",
+  authDomain: "fpc-per.firebaseapp.com",
+  databaseURL: "https://fpc-per-default-rtdb.firebaseio.com",
+  projectId: "fpc-per",
+  storageBucket: "fpc-per.firebasestorage.app",
+  messagingSenderId: "817616563956",
+  appId: "1:817616563956:web:21dbbbcbb69e0cae10f8a1"
+});
+
+const messaging = firebase.messaging();
+
+messaging.onBackgroundMessage((payload) => {
+  console.log('[sw.js] Notificação recebida em background: ', payload);
+  
+  const notificationTitle = payload.notification.title || 'DH-PE';
+  const notificationOptions = {
+    body: payload.notification.body,
+    icon: '/logo.png',
+    badge: '/logo.png',
+    vibrate: [200, 100, 200]
+  };
+
+  self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+// ==========================================================
+// PARTE 2: PWA E CACHE
+// ==========================================================
 const CACHE_NAME = 'dhpe-v8-estavel';
 
-// Instala o Service Worker imediatamente
 self.addEventListener('install', (event) => {
     self.skipWaiting(); 
 });
 
-// Ao ativar, destrói QUALQUER cache antigo que esteja causando a tela branca
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((keys) => {
@@ -15,9 +48,6 @@ self.addEventListener('activate', (event) => {
     self.clients.claim(); 
 });
 
-// Estratégia "Pass-through": Pega da internet direto.
-// Se a internet falhar na hora de abrir o app, não dá tela branca,
-// ele gera uma resposta vazia para o app não crashar.
 self.addEventListener('fetch', (event) => {
     event.respondWith(
         fetch(event.request).catch(() => {
