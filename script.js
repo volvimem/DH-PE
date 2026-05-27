@@ -2497,7 +2497,8 @@ window.solicitarPermissaoPush = async function() {
 
         // Registra o Service Worker
         console.log("4. Registrando Service Worker no GitHub Pages...");
-        const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+        // 👇 Mude o nome do arquivo aqui para ./sw.js 👇
+        const registration = await navigator.serviceWorker.register('./sw.js');
         console.log("5. SW Registrado com sucesso!");
 
         // Busca o Token
