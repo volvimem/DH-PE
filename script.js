@@ -2519,12 +2519,84 @@ window.solicitarPermissaoPush = async function() {
                     updateSessionStorage();
                     console.log("8. ✅ Token salvo no banco de dados com sucesso!");
                 }
+            window.solicitarPermissaoPush = async function() {
+    console.log("1. Iniciando setup do Push...");
+    try {
+        if (!('Notification' in window)) {
+            console.log("ERRO: Este navegador não suporta notificações.");
+            return;
+        }
+
+        if (typeof firebase === 'undefined') {
+            console.log("ERRO: Firebase não está carregado.");
+            return;
+        }
+
+        if (!firebase.messaging || typeof firebase.messaging !== 'function') {
+            console.log("ERRO: firebase.messaging não é uma função. O script compat não carregou.");
+            return;
+        }
+
+        let messaging;
+        try {
+            messaging = firebase.messaging();
+            console.log("2. Motor de Push iniciado com sucesso.");
+        } catch(e) {
+            console.log("ERRO ao inicializar firebase.messaging():", e);
+            return;
+        }
+
+        console.log("3. Pedindo permissão ao usuário...");
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            console.log("AVISO: Permissão negada pelo usuário.");
+            return;
+        }
+
+        console.log("4. Registrando Service Worker no GitHub Pages...");
+        const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+        console.log("5. SW Registrado com sucesso!");
+
+        console.log("6. Buscando Token FCM (isso pode demorar alguns segundos)...");
+        const token = await messaging.getToken({
+            vapidKey: "BOyOBCDy_sTvkuUE18CsXv7juuSuRMsC02NdKKve4KpQBSXqfQKjjyOVhSWYxeQ9KheuBahkbTOu_DfQYXH_PfE",
+            serviceWorkerRegistration: registration
+        });
+
+        if (token) {
+            console.log("7. ✅ TOKEN RECEBIDO:", token);
+            if (loggedUser && loggedUser.fcmToken !== token) {
+                const uIdx = db.users.findIndex(u => u.cpf === loggedUser.cpf);
+                if (uIdx > -1) {
+                    db.users[uIdx].fcmToken = token;
+                    loggedUser.fcmToken = token;
+                    saveDB('users');
+                    updateSessionStorage();
+                    console.log("8. ✅ Token salvo no banco de dados com sucesso!");
+                }
             } else {
                 console.log("8. Token já estava salvo corretamente no banco de dados.");
             }
         } else {
             console.log("ERRO: Nenhum token foi retornado pelo Firebase.");
         }
+
+        // ==========================================================
+        // 👇 A MÁGICA NOVA ENTRA EXATAMENTE AQUI 👇
+        // ==========================================================
+        messaging.onMessage((payload) => {
+            console.log("🔔 Push recebido com o app aberto:", payload);
+            
+            // Toca um alerta sonoro
+            try { new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play(); } catch(e){}
+
+            // Usa a sua própria função de Toast para exibir o título na tela
+            toast(`🔔 ${payload.notification.title}`);
+        });
+        // ==========================================================
+        // 👆 FIM DA PARTE NOVA 👆
+        // ==========================================================
+
     } catch (err) {
         console.log("🚨 ERRO FATAL no setup do Push:", err);
     }
