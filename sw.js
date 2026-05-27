@@ -17,17 +17,10 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  console.log('[sw.js] Notificação recebida em background: ', payload);
-  
-  const notificationTitle = payload.notification.title || 'DH-PE';
-  const notificationOptions = {
-    body: payload.notification.body,
-    icon: '/logo.png',
-    badge: '/logo.png',
-    vibrate: [200, 100, 200]
-  };
-
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  console.log('[sw.js] Notificação recebida. O navegador exibirá nativamente!', payload);
+  // 🔥 A SOLUÇÃO ESTÁ AQUI: 
+  // O Firebase já mostra a notificação nativamente porque o servidor envia o bloco "notification".
+  // Se chamássemos o comando showNotification aqui, ele mostraria duplicado.
 });
 
 // ==========================================================
