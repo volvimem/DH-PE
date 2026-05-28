@@ -1927,6 +1927,40 @@ window.addResultDNF = function() {
     });
 };
 
+window.addResultDNF = function() { 
+    const evtId = document.getElementById('adm-res-evt').value;
+    if(!canManageEvent(evtId)) return toast("VOCÊ NÃO TEM PERMISSÃO NESTE EVENTO", "error"); 
+    const cpf = document.getElementById('adm-res-id').value; 
+    const name = document.getElementById('adm-res-name-display').value;
+    const city = document.getElementById('adm-res-city-edit').value.toUpperCase(); 
+    const cat = window.normalizeCatName(document.getElementById('adm-res-cat-edit').value); 
+    const runTypeManual = document.getElementById('adm-res-runtype').value; 
+    const editIdxInput = document.getElementById('adm-res-idx-edit').value;
+    
+    if(!evtId || !name || !cpf) return toast("SELECIONE O ATLETA PRIMEIRO", "error"); 
+    
+    showConfirm("NÃO CONCLUIU?", `Deseja registrar que <b>${name}</b> não finalizou a prova nesta descida?`, '<i class="fas fa-ban" style="color:var(--pe-red)"></i>', function(res) { 
+        if(res) {
+            const newTime = { evtId: evtId, cpf: cpf, name: name.toUpperCase(), city: city, cat: cat, val: 'DNF', status: 'DNF', runType: runTypeManual };
+            const existingIndex = editIdxInput !== "" ? parseInt(editIdxInput, 10) : db.tempos.findIndex(t => t && String(t.evtId) === String(evtId) && t.cpf === cpf && t.runType === runTypeManual && t.cat === cat );
+            
+            const performSave = (idx) => { 
+                if(idx > -1) { db.tempos[idx] = newTime; } 
+                else { db.tempos.push(newTime); } 
+                saveDB('tempos');
+                toast("✅ REGISTRADO COMO NÃO FINALIZOU!"); 
+                clearResultFormUI(); renderAdmResults(); recalcRanking(); 
+                if (document.getElementById('list-tempos')) renderContent('tempos');
+            };
+            
+            if (existingIndex > -1 && editIdxInput === "") { 
+                if(!isSuperAdmin(loggedUser)) { 
+                    showPrompt("AUTORIZAÇÃO", "Atleta já tem tempo. Digite a Senha Master para substituir:", function(pwd) { if(pwd === db.config.rerunPass) performSave(existingIndex); else toast("SENHA INCORRETA", "error"); }); 
+                } else { performSave(existingIndex); } 
+            } else { performSave(existingIndex); } 
+        }
+    });
+};
 window.clearResultFormUI = function() {
     const camposParaLimpar = ['adm-res-search', 'adm-res-name-display', 'adm-res-city-edit', 'adm-res-cat-edit', 'adm-res-num', 'adm-res-val', 'adm-res-id', 'adm-res-idx-edit'];
     camposParaLimpar.forEach(id => { const el = document.getElementById(id); if(el) { el.value = ''; localStorage.removeItem('autosave_' + id); } });
@@ -2011,8 +2045,9 @@ window.renderAdmResults = function() {
         if(t.runType === 'qualify') tags = '<span style="background:#E6E6FA; color:#4B0082; font-size:10px; padding:3px 6px; border-radius:4px; margin-right:3px; font-weight:bold;">QUALIFY</span>'; else if(t.runType === '1st' || !t.runType) tags = '<span style="background:#d4edda; color:#155724; font-size:10px; padding:3px 6px; border-radius:4px; margin-right:3px; font-weight:bold;">OFICIAL</span>'; else if(t.runType === '2nd') tags = '<span style="background:#ffe5b4; color:#d65a00; font-size:10px; padding:3px 6px; border-radius:4px; margin-right:3px; font-weight:bold;">2ª DESCIDA</span>'; 
 
         let penTag = t.penaltyStr ? ` <span style="color:var(--pe-red); font-size:10px; font-weight:bold; display:block;">(${t.penaltyStr})</span>` : '';
-        let valStyle = t.val === 'DNF' ? 'color:var(--pe-red); font-weight:900;' : '';
-        return `<div class="adm-card" style="display:flex; flex-direction:column; gap:8px; border: 2px solid #cbd5e1; padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); background: #ffffff;"><div style="display:flex; justify-content:space-between; align-items:start;"><div><div style="font-weight:bold; font-size:13px; color:var(--pe-blue);">${pName} <span class="badge-city">${pCityUF}</span></div><div style="margin-top:4px;">${tags} <span class="${cClass}">${t.cat}</span></div></div><div style="text-align:right;"><b style="font-family:monospace; font-size:15px; background:#f1f5f9; padding:4px 6px; border-radius:6px; border:1px solid #e2e8f0; ${valStyle}">${t.val}</b>${penTag}</div></div><div style="display:flex; gap:5px; border-top:1px dashed #e2e8f0; padding-top:10px;"><button class="btn-mini-adm" style="background:#d65a00; color:white; flex:1; font-weight:bold;" onclick="aplicarPenalidade('${realIndex}')"><i class="fas fa-stopwatch"></i> PENALIZAR</button><button class="btn-mini-adm" style="background:var(--pe-blue); flex:1;" onclick="editRes('${realIndex}')"><i class="fas fa-pen"></i> EDITAR</button><button class="btn-mini-adm" style="background:var(--pe-red); width:40px;" onclick="deleteRes('${realIndex}')"><i class="fas fa-trash"></i></button></div></div>`; 
+        let valStyle = t.val === 'DNF' ? 'color:var(--pe-red); font-weight:900; font-size:11px;' : '';
+        let valDisplay = t.val === 'DNF' ? 'NÃO FINALIZOU' : t.val;
+        return `<div class="adm-card" style="display:flex; flex-direction:column; gap:8px; border: 2px solid #cbd5e1; padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); background: #ffffff;"><div style="display:flex; justify-content:space-between; align-items:start;"><div><div style="font-weight:bold; font-size:13px; color:var(--pe-blue);">${pName} <span class="badge-city">${pCityUF}</span></div><div style="margin-top:4px;">${tags} <span class="${cClass}">${t.cat}</span></div></div><div style="text-align:right;"><b style="font-family:monospace; font-size:15px; background:#f1f5f9; padding:4px 6px; border-radius:6px; border:1px solid #e2e8f0; ${valStyle}">${valDisplay}</b>${penTag}</div></div><div style="display:flex; gap:5px; border-top:1px dashed #e2e8f0; padding-top:10px;"><button class="btn-mini-adm" style="background:#d65a00; color:white; flex:1; font-weight:bold;" onclick="aplicarPenalidade('${realIndex}')"><i class="fas fa-stopwatch"></i> PENALIZAR</button><button class="btn-mini-adm" style="background:var(--pe-blue); flex:1;" onclick="editRes('${realIndex}')"><i class="fas fa-pen"></i> EDITAR</button><button class="btn-mini-adm" style="background:var(--pe-red); width:40px;" onclick="deleteRes('${realIndex}')"><i class="fas fa-trash"></i></button></div></div>`; 
     }).join(''); 
 };
 window.deleteRes = function(index) { 
