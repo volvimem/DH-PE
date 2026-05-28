@@ -458,9 +458,10 @@
                         <div style="margin-top:5px;"><input type="text" id="adm-res-name-display" disabled placeholder="Nome Selecionado" class="input-field" style="background:#eee; font-weight:bold"></div>
                         <div style="display:flex; gap:5px; margin-top:5px"><input id="adm-res-city-edit" placeholder="CIDADE" class="uppercase-input input-field"><input id="adm-res-cat-edit" placeholder="CATEGORIA" class="uppercase-input input-field"></div>
                         <div style="display:flex; gap:5px; margin-top:5px"><input id="adm-res-num" placeholder="Nº" type="tel" class="input-field" style="width:60px; text-align:center;"><input id="adm-res-val" placeholder="00:00.000" class="input-field" oninput="mascaraTempo(this)"></div>
-                        <div style="display:flex; gap:10px; margin-top:10px;">
-                            <button class="btn" id="btn-save-res" style="background:var(--pe-green); flex: 1; margin-top:0;" onclick="addResult()">LANÇAR / SALVAR</button>
-                            <button class="btn" id="btn-clear-res" style="background:#dc3545; flex: 1; margin-top:0;" onclick="clearResultFormUI()">LIMPAR</button>
+                        <div style="display:flex; gap:5px; margin-top:10px;">
+                            <button class="btn" id="btn-save-res" style="background:var(--pe-green); flex: 2; margin-top:0; font-size:11px;" onclick="addResult()">SALVAR</button>
+                            <button class="btn" id="btn-dnf-res" style="background:#dc3545; flex: 1; margin-top:0; font-size:11px;" onclick="addResultDNF()"><i class="fas fa-ban"></i> DNF</button>
+                            <button class="btn" id="btn-clear-res" style="background:#6c757d; flex: 1; margin-top:0; font-size:11px;" onclick="clearResultFormUI()">LIMPAR</button>
                         </div>
                         <button class="btn" id="btn-cancel-res" style="background:#999; margin-top:5px; display:none" onclick="cancelEditRes()">CANCELAR EDIÇÃO</button>
                     </div>
