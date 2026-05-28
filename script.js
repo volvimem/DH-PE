@@ -1950,11 +1950,24 @@ window.renderAdmResults = function() {
 
     const fCat = catFilter ? catFilter.value : 'ALL'; 
     const fType = document.getElementById('adm-res-filter-type') ? document.getElementById('adm-res-filter-type').value : 'ALL';
+    const searchTerm = document.getElementById('adm-res-list-search') ? document.getElementById('adm-res-list-search').value.toUpperCase() : '';
     
     if(!evtId) { listDiv.innerHTML = "Selecione um evento."; return; } 
     let results = db.tempos.filter(t => String(t.evtId) === String(evtId));
     if(fCat !== 'ALL') results = results.filter(t => window.normalizeCatName(t.cat) === window.normalizeCatName(fCat)); 
     if(fType !== 'ALL') results = results.filter(t => t.runType === fType);
+    
+    // Filtro do campo de busca (Nome, CPF ou Cidade)
+    if(searchTerm) {
+        results = results.filter(t => {
+            const u = db.users.find(user => user.cpf === t.cpf);
+            const cityUF = u ? getPilotCityUF(u.cpf, u.city) : t.city;
+            return (t.name && t.name.includes(searchTerm)) || 
+                   (t.cpf && t.cpf.includes(searchTerm)) || 
+                   (cityUF && cityUF.includes(searchTerm));
+        });
+    }
+    
     results.sort((a,b) => a.val.localeCompare(b.val));
     
     if(results.length === 0) { listDiv.innerHTML = '<div style="padding:15px; text-align:center; color:#999">Nenhum tempo encontrado.</div>'; return; } 
@@ -1964,7 +1977,7 @@ window.renderAdmResults = function() {
 
         let penTag = t.penaltyStr ? ` <span style="color:var(--pe-red); font-size:10px; font-weight:bold; display:block;">(${t.penaltyStr})</span>` : '';
         let valStyle = t.val === 'DNF' ? 'color:var(--pe-red); font-weight:900;' : '';
-        return `<div class="adm-card" style="display:flex; flex-direction:column; gap:8px;"><div style="display:flex; justify-content:space-between; align-items:start;"><div><div style="font-weight:bold; font-size:13px;">${pName} <span class="badge-city">${pCityUF}</span></div><div style="margin-top:4px;">${tags} <span class="${cClass}">${t.cat}</span></div></div><div style="text-align:right;"><b style="font-family:monospace; font-size:14px; background:#eee; padding:2px 5px; border-radius:4px; ${valStyle}">${t.val}</b>${penTag}</div></div><div style="display:flex; gap:5px; border-top:1px dashed #eee; padding-top:8px;"><button class="btn-mini-adm" style="background:#d65a00; color:white; flex:1; font-weight:bold;" onclick="aplicarPenalidade('${realIndex}')"><i class="fas fa-stopwatch"></i> PENALIZAR</button><button class="btn-mini-adm" style="background:var(--pe-blue); flex:1;" onclick="editRes('${realIndex}')"><i class="fas fa-pen"></i> EDITAR</button><button class="btn-mini-adm" style="background:var(--pe-red); width:40px;" onclick="deleteRes('${realIndex}')"><i class="fas fa-trash"></i></button></div></div>`; 
+        return `<div class="adm-card" style="display:flex; flex-direction:column; gap:8px; border: 2px solid #cbd5e1; padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); background: #ffffff;"><div style="display:flex; justify-content:space-between; align-items:start;"><div><div style="font-weight:bold; font-size:13px; color:var(--pe-blue);">${pName} <span class="badge-city">${pCityUF}</span></div><div style="margin-top:4px;">${tags} <span class="${cClass}">${t.cat}</span></div></div><div style="text-align:right;"><b style="font-family:monospace; font-size:15px; background:#f1f5f9; padding:4px 6px; border-radius:6px; border:1px solid #e2e8f0; ${valStyle}">${t.val}</b>${penTag}</div></div><div style="display:flex; gap:5px; border-top:1px dashed #e2e8f0; padding-top:10px;"><button class="btn-mini-adm" style="background:#d65a00; color:white; flex:1; font-weight:bold;" onclick="aplicarPenalidade('${realIndex}')"><i class="fas fa-stopwatch"></i> PENALIZAR</button><button class="btn-mini-adm" style="background:var(--pe-blue); flex:1;" onclick="editRes('${realIndex}')"><i class="fas fa-pen"></i> EDITAR</button><button class="btn-mini-adm" style="background:var(--pe-red); width:40px;" onclick="deleteRes('${realIndex}')"><i class="fas fa-trash"></i></button></div></div>`; 
     }).join(''); 
 };
 window.deleteRes = function(index) { 
