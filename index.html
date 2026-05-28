@@ -466,7 +466,10 @@
                     </div>
                     
                     <div style="margin-top:10px">
-                        <b style="font-size:10px">LISTA DE TEMPOS</b>
+                        <b style="font-size:10px; margin-bottom: 5px; display: block;">LISTA DE TEMPOS</b>
+                        
+                        <input type="text" id="adm-res-list-search" placeholder="🔍 Buscar por Nome, CPF ou Cidade..." class="input-field uppercase-input" style="margin-bottom:5px; padding:8px; font-size:11px;" oninput="renderAdmResults()">
+                        
                         <div style="display:flex; gap:5px; margin-bottom:5px; margin-top:5px;">
                             <select id="adm-res-filter-cat" class="input-field" style="padding:5px; font-size:10px;" onchange="renderAdmResults()">
                                 <option value="ALL">TODAS CATEGORIAS</option>
