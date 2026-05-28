@@ -1892,7 +1892,42 @@ window.addResult = function() {
     } else { performSave(existingIndex); } 
 };
 
-window.clearResultFormUI = function() { 
+window.addResultDNF = function() { 
+    const evtId = document.getElementById('adm-res-evt').value;
+    if(!canManageEvent(evtId)) return toast("VOCÊ NÃO TEM PERMISSÃO NESTE EVENTO", "error"); 
+    const cpf = document.getElementById('adm-res-id').value; 
+    const name = document.getElementById('adm-res-name-display').value;
+    const city = document.getElementById('adm-res-city-edit').value.toUpperCase(); 
+    const cat = window.normalizeCatName(document.getElementById('adm-res-cat-edit').value); 
+    const runTypeManual = document.getElementById('adm-res-runtype').value; 
+    const editIdxInput = document.getElementById('adm-res-idx-edit').value;
+    
+    if(!evtId || !name || !cpf) return toast("SELECIONE O ATLETA PRIMEIRO", "error"); 
+    
+    showConfirm("LANÇAR DNF?", `Deseja registrar DNF (Não Concluiu) para <b>${name}</b> nesta descida?`, '<i class="fas fa-ban" style="color:var(--pe-red)"></i>', function(res) { 
+        if(res) {
+            const newTime = { evtId: evtId, cpf: cpf, name: name.toUpperCase(), city: city, cat: cat, val: 'DNF', status: 'DNF', runType: runTypeManual };
+            const existingIndex = editIdxInput !== "" ? parseInt(editIdxInput, 10) : db.tempos.findIndex(t => t && String(t.evtId) === String(evtId) && t.cpf === cpf && t.runType === runTypeManual && t.cat === cat );
+            
+            const performSave = (idx) => { 
+                if(idx > -1) { db.tempos[idx] = newTime; } 
+                else { db.tempos.push(newTime); } 
+                saveDB('tempos');
+                toast("✅ DNF REGISTRADO!"); 
+                clearResultFormUI(); renderAdmResults(); recalcRanking(); 
+                if (document.getElementById('list-tempos')) renderContent('tempos');
+            };
+            
+            if (existingIndex > -1 && editIdxInput === "") { 
+                if(!isSuperAdmin(loggedUser)) { 
+                    showPrompt("AUTORIZAÇÃO NECESSÁRIA", "Atleta já tem tempo. Digite a Senha Master para substituir por DNF:", function(pwd) { if(pwd === db.config.rerunPass) performSave(existingIndex); else toast("SENHA INCORRETA", "error"); }); 
+                } else { performSave(existingIndex); } 
+            } else { performSave(existingIndex); } 
+        }
+    });
+};
+
+window.clearResultFormUI = function() {
     const camposParaLimpar = ['adm-res-search', 'adm-res-name-display', 'adm-res-city-edit', 'adm-res-cat-edit', 'adm-res-num', 'adm-res-val', 'adm-res-id', 'adm-res-idx-edit'];
     camposParaLimpar.forEach(id => { const el = document.getElementById(id); if(el) { el.value = ''; localStorage.removeItem('autosave_' + id); } });
     const searchList = document.getElementById('adm-res-list'); if (searchList) searchList.style.display = 'none';
