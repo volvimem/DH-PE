@@ -1548,6 +1548,37 @@ window.renderAdmCategories = function() {
         </div>`;
     }).join('');
 };
+window.toggleUserId = function(cpf, isReleased) {
+    // 1. Verifica se quem está clicando tem permissão de Super Admin
+    if(!isSuperAdmin(loggedUser)) return toast("APENAS O SUPER ADMIN PODE ALTERAR", "error");
+    
+    // 2. Busca o atleta no banco de dados pelo CPF
+    const idx = db.users.findIndex(u => u.cpf === cpf);
+    
+    if(idx > -1) {
+        // 3. Atualiza o status (true para liberado, false para bloqueado)
+        db.users[idx].idReleased = isReleased;
+        
+        // 4. Salva no banco de dados
+        saveDB('users');
+        
+        // 5. Registra a ação na Auditoria (Log)
+        window.logAction(`Alterou a liberação da carteirinha do atleta CPF: ${cpf} para ${isReleased ? 'LIBERADO' : 'BLOQUEADO'}`);
+        
+        // 6. Se foi liberado, envia uma notificação Push (se houver suporte)
+        if (isReleased && typeof window.dispararPushAtleta === 'function') {
+            window.dispararPushAtleta(cpf, "Carteirinha Liberada! 🪪", "Sua carteirinha digital foi liberada pela organização.");
+        }
+        
+        // 7. Atualiza a lista na tela instantaneamente para refletir a mudança de cor
+        filterPilots('cfg-search', true);
+        
+        // 8. Mostra o aviso de sucesso na tela
+        toast(isReleased ? "CARTEIRINHA LIBERADA COM SUCESSO!" : "ATLETA BLOQUEADO!");
+    } else {
+        toast("ERRO: Atleta não encontrado.", "error");
+    }
+};
 window.saveGlobalConfig = function(){ if(!isSuperAdmin(loggedUser)) return toast("APENAS ADMIN", "error"); db.config.phone = document.getElementById('adm-cfg-phone').value; db.config.rerunPass = document.getElementById('adm-cfg-rerun-pass').value || 'admin123'; db.config.allowAllIDs = document.getElementById('adm-cfg-allow-ids').checked;
 saveDB('config'); window.logAction(`Alterou Configurações Gerais do Sistema`); toast("CONFIGURAÇÕES SALVAS"); updateCardLive(); };
 // ==========================================================
