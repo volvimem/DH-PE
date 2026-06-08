@@ -1395,25 +1395,78 @@ function filterPilots(ctx, force) {
     const listDiv = document.getElementById(listDivId);
     if(term.length < 2 && !force) { if(listDiv) listDiv.style.display = 'none'; return; } 
     let found = db.users.filter(u => (u.nome && u.nome.includes(term)) || (u.cpf && u.cpf.includes(term)) || (u.city && u.city.toUpperCase().includes(term)));
+    
     if(listDiv) { 
         listDiv.style.display = 'block';
+        
         if(ctx === 'edit-user') { 
             const filterCat = document.getElementById('adm-user-filter-cat').value;
             if(filterCat !== 'ALL') found = found.filter(u => u.cat === filterCat);
             document.getElementById('adm-stat-total').innerText = "Total Geral: " + db.users.length;
             document.getElementById('adm-stat-filter').innerText = "Lista Atual: " + found.length;
+            
             listDiv.innerHTML = found.map(u => { 
-                const pName = getPilotName(u.cpf, u.nome); const pCityUF = getPilotCityUF(u.cpf, u.city); const cClass = getCatClass(u.cat); const wppBtn = u.tel ? `<i class="fab fa-whatsapp" onclick="openWhatsApp('${u.tel}', 'Olá ${u.nome}')" style="color:#25D366; cursor:pointer; font-size:16px;"></i>` : ''; const statusIcon = u.idReleased ? '<i class="fas fa-check-circle" style="color:green" title="Liberado"></i>' : '<i class="fas fa-lock" style="color:#999" title="Bloqueado"></i>'; 
+                const pName = getPilotName(u.cpf, u.nome); const pCityUF = getPilotCityUF(u.cpf, u.city); const cClass = getCatClass(u.cat);
+                const statusTag = u.idReleased ? '<span style="background:#dcfce7; color:#15803d; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:bold; margin-right:4px; border:1px solid #86efac;"><i class="fas fa-check-circle"></i> LIBERADO</span>' : '<span style="background:#fee2e2; color:#b91c1c; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:bold; margin-right:4px; border:1px solid #fca5a5;"><i class="fas fa-lock"></i> BLOQUEADO</span>';
+                const wppBtnIcon = u.tel ? `<button class="btn-mini-adm" style="background:#25D366; width:45px; margin:0;" onclick="openWhatsApp('${u.tel}', 'Olá ${u.nome}')"><i class="fab fa-whatsapp" style="font-size:14px;"></i></button>` : '';
+                
                 let filiadoHtml = '';
                 if (u.uf && u.uf !== 'PE') {
                     const isFiliado = u.filiadoPE === true; const filBg = isFiliado ? '#009b3a' : '#f1f5f9'; const filColor = isFiliado ? '#fff' : '#64748b'; const filIcon = isFiliado ? 'fa-check' : 'fa-id-card'; const filText = isFiliado ? 'FILIADO EM PE' : 'TORNAR FILIADO (PE)';
-                    filiadoHtml = `<div style="margin-top: 8px;"><button class="btn-mini-adm" style="background:${filBg}; color:${filColor}; width: 100%; border: 1px solid #cbd5e1; padding: 6px; font-weight: bold;" onclick="toggleFiliacaoPE('${u.cpf}')"><i class="fas ${filIcon}"></i> ${filText}</button></div>`;
+                    filiadoHtml = `<div style="margin-top: 8px;"><button class="btn-mini-adm" style="background:${filBg}; color:${filColor}; width: 100%; border: 1px solid #cbd5e1; padding: 6px; font-weight: bold; margin:0;" onclick="toggleFiliacaoPE('${u.cpf}')"><i class="fas ${filIcon}"></i> ${filText}</button></div>`;
                 }
-                return `<div class="adm-card" style="display: flex; flex-direction: column; gap: 8px; padding: 12px;"><div style="display: flex; justify-content: space-between; align-items: flex-start;"><div style="width: 100%;"><b style="font-size: 14px; color: var(--pe-blue); display: block; margin-bottom: 5px;">${pName}</b><div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"><span class="badge-city">${pCityUF}</span><span class="${cClass}">${u.cat}</span>${statusIcon} ${wppBtn}</div></div></div><div style="display: flex; gap: 5px; border-top: 1px dashed #cbd5e1; padding-top: 10px; margin-top: 5px;"><button class="btn-mini-adm" style="background:#3b82f6; flex: 1; margin:0; padding: 8px 0;" onclick="openEditUserModal('${u.cpf}')"><i class="fas fa-pen"></i> EDITAR</button><button class="btn-mini-adm" style="background:#6b7280; flex: 1; margin:0; padding: 8px 0;" onclick="renderPilotHistoryModal('${u.cpf}', '${u.nome}')"><i class="fas fa-history"></i> LOG</button><button class="btn-mini-adm" style="background:#ef4444; flex: 1; margin:0; padding: 8px 0;" onclick="delUser('${u.cpf}')"><i class="fas fa-trash"></i> APAGAR</button></div>${filiadoHtml}</div>`;
+                
+                return `<div class="adm-card" style="display:flex; flex-direction:column; gap:8px; border: 2px solid #cbd5e1; padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); background: #ffffff;">
+                    <div style="display:flex; justify-content:space-between; align-items:start;">
+                        <div>
+                            <div style="font-weight:900; font-size:14px; color:var(--pe-blue); text-transform:uppercase;">${pName} <span class="badge-city" style="vertical-align:middle;">${pCityUF}</span></div>
+                            <div style="margin-top:6px; display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
+                                ${statusTag}
+                                <span class="${cClass}" style="margin:0;">${u.cat}</span>
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <b style="font-family:monospace; font-size:14px; background:#f1f5f9; padding:4px 6px; border-radius:6px; border:1px solid #e2e8f0; color:#1e293b;">${u.cpf}</b>
+                        </div>
+                    </div>
+                    ${filiadoHtml}
+                    <div style="display:flex; gap:5px; border-top:1px dashed #e2e8f0; padding-top:10px; margin-top:4px;">
+                        ${wppBtnIcon}
+                        <button class="btn-mini-adm" style="background:var(--pe-blue); color:white; flex:1; font-weight:bold; padding:8px 0; margin:0;" onclick="openEditUserModal('${u.cpf}')"><i class="fas fa-pen"></i> EDITAR</button>
+                        <button class="btn-mini-adm" style="background:#64748b; color:white; flex:1; font-weight:bold; padding:8px 0; margin:0;" onclick="renderPilotHistoryModal('${u.cpf}', '${u.nome}')"><i class="fas fa-history"></i> LOG</button>
+                        <button class="btn-mini-adm" style="background:var(--pe-red); color:white; width:45px; padding:8px 0; margin:0;" onclick="delUser('${u.cpf}')"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>`;
             }).join('');
+            
         } else if(ctx === 'cfg-search') {
             if(found.length === 0) { listDiv.innerHTML = '<div style="padding:10px; text-align:center">Nenhum atleta encontrado.</div>'; return; }
-            listDiv.innerHTML = found.map(u => { const isOn = u.idReleased === true; const pName = getPilotName(u.cpf, u.nome); const pCityUF = getPilotCityUF(u.cpf, u.city); const cClass = getCatClass(u.cat); return `<div class="adm-card" style="display:block; margin-bottom:10px;"><div style="margin-bottom:5px;"><b>${pName}</b> <span class="badge-city">${pCityUF}</span><br><span class="${cClass}">${u.cat}</span><br><span style="font-size:9px; color:#666">CPF: ${u.cpf}</span></div><div class="cfg-toggle-container"><div class="cfg-toggle-btn ${isOn ? 'active-on' : ''}" onclick="toggleUserId('${u.cpf}', true)"><i class="fas fa-check"></i> LIBERADO</div><div class="cfg-toggle-btn ${!isOn ? 'active-off' : ''}" onclick="toggleUserId('${u.cpf}', false)"><i class="fas fa-ban"></i> BLOQUEADO</div></div></div>`; }).join('');
+            
+            listDiv.innerHTML = found.map(u => { 
+                const isOn = u.idReleased === true; 
+                const pName = getPilotName(u.cpf, u.nome); const pCityUF = getPilotCityUF(u.cpf, u.city); const cClass = getCatClass(u.cat); 
+                const statusTag = isOn ? '<span style="background:#dcfce7; color:#15803d; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:bold; margin-right:4px; border:1px solid #86efac;"><i class="fas fa-check-circle"></i> LIBERADO</span>' : '<span style="background:#fee2e2; color:#b91c1c; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:bold; margin-right:4px; border:1px solid #fca5a5;"><i class="fas fa-lock"></i> BLOQUEADO</span>';
+                
+                return `<div class="adm-card" style="display:flex; flex-direction:column; gap:8px; border: 2px solid #cbd5e1; padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); background: #ffffff;">
+                    <div style="display:flex; justify-content:space-between; align-items:start;">
+                        <div>
+                            <div style="font-weight:900; font-size:14px; color:var(--pe-blue); text-transform:uppercase;">${pName} <span class="badge-city" style="vertical-align:middle;">${pCityUF}</span></div>
+                            <div style="margin-top:6px; display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
+                                ${statusTag}
+                                <span class="${cClass}" style="margin:0;">${u.cat}</span>
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <b style="font-family:monospace; font-size:14px; background:#f1f5f9; padding:4px 6px; border-radius:6px; border:1px solid #e2e8f0; color:#1e293b;">${u.cpf}</b>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:5px; border-top:1px dashed #e2e8f0; padding-top:10px; margin-top:4px;">
+                        <button class="btn-mini-adm" style="flex:1; border-radius:6px; font-weight:bold; padding:8px 0; margin:0; background:${isOn ? 'var(--pe-green)' : '#f1f5f9'}; color:${isOn ? 'white' : '#64748b'}; border:1px solid ${isOn ? 'var(--pe-green)' : '#cbd5e1'};" onclick="toggleUserId('${u.cpf}', true)"><i class="fas fa-check"></i> LIBERAR</button>
+                        <button class="btn-mini-adm" style="flex:1; border-radius:6px; font-weight:bold; padding:8px 0; margin:0; background:${!isOn ? 'var(--pe-red)' : '#f1f5f9'}; color:${!isOn ? 'white' : '#64748b'}; border:1px solid ${!isOn ? 'var(--pe-red)' : '#cbd5e1'};" onclick="toggleUserId('${u.cpf}', false)"><i class="fas fa-ban"></i> BLOQUEAR</button>
+                    </div>
+                </div>`; 
+            }).join('');
+            
         } else if (ctx === 'res') {
             const evtId = document.getElementById('adm-res-evt').value;
             if(evtId) { let entries = [];
@@ -1421,31 +1474,13 @@ function filterPilots(ctx, force) {
             if(entries.length === 0) listDiv.innerHTML = '<div style="padding:10px; color:red">Nenhum piloto CONFIRMADO nesta etapa.</div>';
             else listDiv.innerHTML = entries.map(e => `<div class="smart-item" onclick="selectResPilot('${e.cpf}', '${e.name}', '${e.city}', '${e.cat}')"><b>${getPilotName(e.cpf, e.name)}</b> <span class="badge-city">${getPilotCityUF(e.cpf, e.city)}</span> <span style="font-size:10px; color:#666">(${e.cat})</span></div>`).join('');
             } else listDiv.innerHTML = 'Selecione o evento.';
+            
         } else if (ctx === 'org') {
             if(found.length === 0) { listDiv.innerHTML = '<div style="padding:10px; text-align:center">Nenhum atleta encontrado.</div>'; return; }
             listDiv.innerHTML = found.map(u => `<div class="smart-item" style="padding:10px; border-bottom:1px solid #eee; cursor:pointer;" onclick="selectOrgPilot('${u.cpf}', '${u.nome}')"><b>${getPilotName(u.cpf, u.nome)}</b> <span class="badge-city">${getPilotCityUF(u.cpf, u.city)}</span><br><span style="font-size:9px; color:#666">CPF: ${u.cpf}</span></div>`).join('');
         }
     } 
 }
-
-window.delUser = function(cpf) { 
-    if(!isSuperAdmin(loggedUser)) return toast("Apenas o Super Admin pode excluir usuários", "error");
-    showConfirm("EXCLUIR ATLETA?", "Deseja excluir este atleta permanentemente do banco de dados?", '<i class="fas fa-trash-alt" style="color:var(--pe-red)"></i>', function(res) {
-        if(res) { const idx = db.users.findIndex(u => u.cpf === cpf); if(idx > -1) { db.users.splice(idx, 1); saveDB('users'); filterPilots('edit-user', true); window.logAction(`Excluiu do sistema o atleta CPF: ${cpf}`); toast("ATLETA EXCLUÍDO"); } }
-    });
-};
-
-window.openEditUserModal = function(cpf){ 
-    if(!isSuperAdmin(loggedUser)) return toast("Apenas o Super Admin pode editar usuários", "error");
-    const u = db.users.find(x => x.cpf === cpf);
-    if(u){ 
-        document.getElementById('super-edit-old-cpf').value = u.cpf;
-        document.getElementById('super-edit-name').value = u.nome; document.getElementById('super-edit-cpf').value = u.cpf; document.getElementById('super-edit-city').value = u.city; document.getElementById('super-edit-uf').value = u.uf || "PE"; document.getElementById('super-edit-tel').value = u.tel;
-        document.getElementById('super-edit-nasc').value = u.nasc || ""; if(document.getElementById('super-edit-cbc')) document.getElementById('super-edit-cbc').value = u.cbc || ""; const newPassInput = document.getElementById('super-edit-new-pass'); if(newPassInput) newPassInput.value = "";
-        const catSelect = document.getElementById('super-edit-cat'); const allCats = db.config.categories.filter(c => c.active).sort((a,b) => a.name.localeCompare(b.name)); catSelect.innerHTML = allCats.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-        catSelect.value = u.cat; openModal('modal-super-edit'); 
-    } 
-};
 
 window.saveSuperEdit = function() { 
     if(!isSuperAdmin(loggedUser)) return;
@@ -1764,7 +1799,34 @@ window.renderOrgList = function() {
     const list = document.getElementById('adm-list-orgs'); const perms = document.getElementById('org-perms-area'); if(!list) return;
     list.style.display='block'; perms.style.display='none'; document.getElementById('icon-org-toggle').classList.remove('fa-chevron-up'); document.getElementById('icon-org-toggle').classList.add('fa-chevron-down');
     const orgs = db.users.filter(u => u.role === 'ORGANIZER' || u.role === 'ADMIN');
-    list.innerHTML = orgs.map(o => { const pName = getPilotName(o.cpf, o.nome); const pCityUF = getPilotCityUF(o.cpf, o.city); let evtsHtml = ''; if (isSuperAdmin(o) || o.role === 'ADMIN') { evtsHtml = `<span style="background:var(--pe-blue); color:white; padding:2px 6px; border-radius:4px; margin-left:5px; font-weight:bold; display:inline-block; margin-top:2px;">TODOS OS EVENTOS</span>`; } else if (o.allowedEvts && o.allowedEvts.length > 0) { const eventNames = o.allowedEvts.map(evtId => { const evt = db.events.find(e => String(e.id) === String(evtId)); return evt ? evt.t : 'Evento Removido'; }); evtsHtml = eventNames.map(name => `<span style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; padding:2px 6px; border-radius:4px; margin-left:5px; font-weight:bold; display:inline-block; margin-top:2px; font-size: 8px;">${name}</span>`).join(''); } else { evtsHtml = `<span style="background:#fee2e2; color:#b91c1c; padding:2px 6px; border-radius:4px; margin-left:5px; font-weight:bold; display:inline-block; margin-top:2px; font-size: 8px;">NENHUM EVENTO</span>`; } return `<div class="adm-card"><div><b>${pName}</b> <span class="badge-city">${pCityUF}</span><br><div style="display:flex; align-items:center; flex-wrap:wrap; margin-top:4px;"><span style="font-size:9px; font-weight:bold; color:#666;">${o.role}</span>${evtsHtml}</div></div><button class="btn-mini-adm" style="background:red" onclick="demoteOrg('${o.cpf}')">REMOVER</button></div>`; }).join('');
+    
+    list.innerHTML = orgs.map(o => { 
+        const pName = getPilotName(o.cpf, o.nome); const pCityUF = getPilotCityUF(o.cpf, o.city); 
+        let evtsHtml = ''; 
+        if (isSuperAdmin(o) || o.role === 'ADMIN') { evtsHtml = `<span style="background:var(--pe-blue); color:white; padding:3px 6px; border-radius:4px; font-weight:bold; display:inline-block; font-size:10px;">TODOS OS EVENTOS</span>`; } 
+        else if (o.allowedEvts && o.allowedEvts.length > 0) { const eventNames = o.allowedEvts.map(evtId => { const evt = db.events.find(e => String(e.id) === String(evtId)); return evt ? evt.t : 'Evento Removido'; }); evtsHtml = eventNames.map(name => `<span style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; padding:3px 6px; border-radius:4px; margin-right:4px; font-weight:bold; display:inline-block; font-size: 10px;">${name}</span>`).join(''); } 
+        else { evtsHtml = `<span style="background:#fee2e2; color:#b91c1c; padding:3px 6px; border-radius:4px; font-weight:bold; display:inline-block; font-size: 10px; border:1px solid #fca5a5;">NENHUM EVENTO</span>`; } 
+        
+        let roleBadge = o.role === 'ADMIN' ? `<span style="background:#1e293b; color:white; padding:3px 6px; border-radius:4px; font-size:10px; font-weight:bold;"><i class="fas fa-user-shield"></i> ADMIN</span>` : `<span style="background:#f1f5f9; color:#475569; padding:3px 6px; border-radius:4px; font-size:10px; font-weight:bold; border:1px solid #cbd5e1;"><i class="fas fa-user-tie"></i> ORGANIZADOR</span>`;
+        
+        return `<div class="adm-card" style="display:flex; flex-direction:column; gap:8px; border: 2px solid #cbd5e1; padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); background: #ffffff;">
+            <div style="display:flex; justify-content:space-between; align-items:start;">
+                <div style="flex:1;">
+                    <div style="font-weight:900; font-size:14px; color:var(--pe-blue); text-transform:uppercase;">${pName} <span class="badge-city" style="vertical-align:middle;">${pCityUF}</span></div>
+                    <div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
+                        ${roleBadge}
+                        ${evtsHtml}
+                    </div>
+                </div>
+                <div style="text-align:right;">
+                    <b style="font-family:monospace; font-size:14px; background:#f1f5f9; padding:4px 6px; border-radius:6px; border:1px solid #e2e8f0; color:#1e293b;">${o.cpf}</b>
+                </div>
+            </div>
+            <div style="display:flex; gap:5px; border-top:1px dashed #e2e8f0; padding-top:10px; margin-top:4px;">
+                <button class="btn-mini-adm" style="background:#d50000; color:white; flex:1; font-weight:bold; padding:8px 0; margin:0;" onclick="demoteOrg('${o.cpf}')"><i class="fas fa-user-times"></i> REMOVER DA EQUIPE</button>
+            </div>
+        </div>`; 
+    }).join('');
 };
 
 window.toggleOrgList = function() { const list = document.getElementById('adm-list-orgs'); const icon = document.getElementById('icon-org-toggle'); if(list.style.display === 'none') { list.style.display='block'; icon.classList.remove('fa-chevron-down'); icon.classList.add('fa-chevron-up'); } else { list.style.display='none'; icon.classList.remove('fa-chevron-up'); icon.classList.add('fa-chevron-down'); } };
@@ -2293,7 +2355,7 @@ window.renderInscriptions = function() {
                         inscritos.push({
                             cpf: u.cpf, nome: u.nome, city: u.city, uf: u.uf || 'PE', cat: catNome,
                             status: i.status, evtName: evtObj.t, evtIdInsc: i.id, valDisplay: valStr, 
-                            date: i.date || 0
+                            date: i.date || 0, tel: u.tel
                         });
                     }
                 }
@@ -2327,34 +2389,36 @@ window.renderInscriptions = function() {
     listContainer.innerHTML = inscritos.map(a => {
         const isPago = a.status === 'CONFIRMADO';
         const bgStatus = isPago ? '#dcfce7' : '#fff7ed';
-        const colorStatus = isPago ? '#166534' : '#c2410c';
+        const colorStatus = isPago ? '#15803d' : '#c2410c';
+        const borderStatus = isPago ? '#86efac' : '#fdba74';
         const iconStatus = isPago ? 'fa-check-circle' : 'fa-clock';
         
         const btnAcao = !isPago 
-            ? `<button class="btn-mini-adm" style="background:#009b3a; flex:1;" onclick="aprovarInscricao('${a.cpf}', '${a.evtIdInsc}', '${a.cat}')"><i class="fas fa-check"></i> APROVAR</button>` 
-            : `<button class="btn-mini-adm" style="background:#d50000; flex:1;" onclick="estornarInscricao('${a.cpf}', '${a.evtIdInsc}', '${a.cat}')"><i class="fas fa-undo"></i> ESTORNAR</button>`;
-        
+            ? `<button class="btn-mini-adm" style="background:#009b3a; flex:1; font-weight:bold; padding:8px 0; margin:0;" onclick="aprovarInscricao('${a.cpf}', '${a.evtIdInsc}', '${a.cat}')"><i class="fas fa-check"></i> APROVAR</button>` 
+            : `<button class="btn-mini-adm" style="background:#d65a00; flex:1; font-weight:bold; padding:8px 0; margin:0;" onclick="estornarInscricao('${a.cpf}', '${a.evtIdInsc}', '${a.cat}')"><i class="fas fa-undo"></i> ESTORNAR</button>`;
+            
+        const wppBtn = a.tel ? `<button class="btn-mini-adm" style="background:#25D366; width:45px; margin:0;" onclick="openWhatsApp('${a.tel}', 'Olá ${a.nome}, vimos sua inscrição na etapa...')"><i class="fab fa-whatsapp" style="font-size:14px;"></i></button>` : '';
+
         return `
-        <div style="padding:12px; border-bottom:1px solid #eee; background:${isPago ? '#f8fafc' : 'white'};">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div class="adm-card" style="display:flex; flex-direction:column; gap:8px; border: 2px solid ${isPago ? '#bbf7d0' : '#cbd5e1'}; padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); background: ${isPago ? '#f0fdf4' : '#ffffff'};">
+            <div style="display:flex; justify-content:space-between; align-items:start;">
                 <div>
-                    <b style="font-size:13px; color:var(--pe-blue);">${a.nome}</b>
-                    <div style="font-size:10px; color:#666; margin-top:2px;">
-                        <span class="badge-city">${a.city}-${a.uf}</span> | Cat: <b>${a.cat}</b>
-                        ${isGeral ? `<br><b style="color:#333;">Evento: ${a.evtName}</b>` : ''}
+                    <div style="font-weight:900; font-size:14px; color:var(--pe-blue); text-transform:uppercase;">${a.nome} <span class="badge-city" style="vertical-align:middle;">${a.city}-${a.uf}</span></div>
+                    <div style="margin-top:6px; display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
+                        <span style="background:${bgStatus}; color:${colorStatus}; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:bold; border:1px solid ${borderStatus};"><i class="fas ${iconStatus}"></i> ${isPago ? 'PAGO' : 'PENDENTE'}</span>
+                        <span class="badge-cat" style="margin:0; ${a.cat.includes('EXTRA') ? 'background:#fffbeb; color:#b45309; border-color:#fde68a;' : ''}">${a.cat}</span>
+                        ${isGeral ? `<span style="background:#e2e8f0; color:#334155; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:bold; border:1px solid #cbd5e1;"><i class="fas fa-flag-checkered"></i> ${a.evtName}</span>` : ''}
                     </div>
                 </div>
                 <div style="text-align:right;">
-                    <div style="background:${bgStatus}; color:${colorStatus}; font-size:10px; font-weight:900; padding:4px 8px; border-radius:4px; text-transform:uppercase;">
-                        <i class="fas ${iconStatus}"></i> ${isPago ? 'PAGO' : 'PENDENTE'}
-                    </div>
-                    <div style="font-size:11px; font-weight:bold; color:#333; margin-top:5px;">R$ ${a.valDisplay}</div>
+                    <b style="font-family:monospace; font-size:14px; background:#f1f5f9; padding:4px 6px; border-radius:6px; border:1px solid #e2e8f0; color:#1e293b;">R$ ${a.valDisplay}</b>
+                    <div style="font-size:10px; color:#64748b; margin-top:4px; font-weight:bold;">${new Date(a.date).toLocaleDateString('pt-BR')}</div>
                 </div>
             </div>
-            <div style="display:flex; gap:8px; margin-top:10px;">
+            <div style="display:flex; gap:5px; border-top:1px dashed #e2e8f0; padding-top:10px; margin-top:4px;">
+                ${wppBtn}
                 ${btnAcao}
-                <button class="btn-mini-adm" style="background:#64748b; width:40px;" onclick="removerInscricao('${a.cpf}', '${a.evtIdInsc}', '${a.cat}')"><i class="fas fa-trash"></i></button>
-                <button class="btn-mini-adm" style="background:#25D366; width:40px;" onclick="openWhatsApp('${loggedUser.tel}', 'Olá ${a.nome}, vimos sua inscrição...')"><i class="fab fa-whatsapp"></i></button>
+                <button class="btn-mini-adm" style="background:var(--pe-red); color:white; width:45px; margin:0;" onclick="removerInscricao('${a.cpf}', '${a.evtIdInsc}', '${a.cat}')"><i class="fas fa-trash"></i></button>
             </div>
         </div>`;
     }).join('');
