@@ -1482,6 +1482,63 @@ function filterPilots(ctx, force) {
     } 
 }
 
+// FUNÇÃO PARA APAGAR ATLETA
+window.delUser = function(cpf) { 
+    if(!isSuperAdmin(loggedUser)) return toast("Apenas o Super Admin pode excluir usuários", "error");
+    showConfirm("EXCLUIR ATLETA?", "Deseja excluir este atleta permanentemente do banco de dados?", '<i class="fas fa-trash-alt" style="color:var(--pe-red)"></i>', function(res) {
+        if(res) { const idx = db.users.findIndex(u => u.cpf === cpf); if(idx > -1) { db.users.splice(idx, 1); saveDB('users'); filterPilots('edit-user', true); window.logAction(`Excluiu do sistema o atleta CPF: ${cpf}`); toast("ATLETA EXCLUÍDO"); } }
+    });
+};
+
+// FUNÇÃO PARA ABRIR EDIÇÃO DO ATLETA
+window.openEditUserModal = function(cpf){ 
+    if(!isSuperAdmin(loggedUser)) return toast("Apenas o Super Admin pode editar usuários", "error");
+    const u = db.users.find(x => x.cpf === cpf);
+    if(u){ 
+        document.getElementById('super-edit-old-cpf').value = u.cpf;
+        document.getElementById('super-edit-name').value = u.nome; document.getElementById('super-edit-cpf').value = u.cpf; document.getElementById('super-edit-city').value = u.city; document.getElementById('super-edit-uf').value = u.uf || "PE"; document.getElementById('super-edit-tel').value = u.tel;
+        document.getElementById('super-edit-nasc').value = u.nasc || ""; if(document.getElementById('super-edit-cbc')) document.getElementById('super-edit-cbc').value = u.cbc || ""; const newPassInput = document.getElementById('super-edit-new-pass'); if(newPassInput) newPassInput.value = "";
+        const catSelect = document.getElementById('super-edit-cat'); const allCats = db.config.categories.filter(c => c.active).sort((a,b) => a.name.localeCompare(b.name)); catSelect.innerHTML = allCats.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+        catSelect.value = u.cat; openModal('modal-super-edit'); 
+    } 
+};
+
+// ==========================================
+// FUNÇÃO PARA MUDAR A TEMPORADA
+// ==========================================
+window.changeSeason = function(newSeasonKey) {
+    localStorage.setItem('dhpe_active_season', newSeasonKey);
+    toast("CARREGANDO TEMPORADA...");
+    setTimeout(() => {
+        window.location.reload(true);
+    }, 500);
+};
+
+// ==========================================
+// FUNÇÃO PARA APAGAR ATLETA
+// ==========================================
+window.delUser = function(cpf) { 
+    if(!isSuperAdmin(loggedUser)) return toast("Apenas o Super Admin pode excluir usuários", "error");
+    showConfirm("EXCLUIR ATLETA?", "Deseja excluir este atleta permanentemente do banco de dados?", '<i class="fas fa-trash-alt" style="color:var(--pe-red)"></i>', function(res) {
+        if(res) { const idx = db.users.findIndex(u => u.cpf === cpf); if(idx > -1) { db.users.splice(idx, 1); saveDB('users'); filterPilots('edit-user', true); window.logAction(`Excluiu do sistema o atleta CPF: ${cpf}`); toast("ATLETA EXCLUÍDO"); } }
+    });
+};
+
+// ==========================================
+// FUNÇÃO PARA ABRIR EDIÇÃO DO ATLETA
+// ==========================================
+window.openEditUserModal = function(cpf){ 
+    if(!isSuperAdmin(loggedUser)) return toast("Apenas o Super Admin pode editar usuários", "error");
+    const u = db.users.find(x => x.cpf === cpf);
+    if(u){ 
+        document.getElementById('super-edit-old-cpf').value = u.cpf;
+        document.getElementById('super-edit-name').value = u.nome; document.getElementById('super-edit-cpf').value = u.cpf; document.getElementById('super-edit-city').value = u.city; document.getElementById('super-edit-uf').value = u.uf || "PE"; document.getElementById('super-edit-tel').value = u.tel;
+        document.getElementById('super-edit-nasc').value = u.nasc || ""; if(document.getElementById('super-edit-cbc')) document.getElementById('super-edit-cbc').value = u.cbc || ""; const newPassInput = document.getElementById('super-edit-new-pass'); if(newPassInput) newPassInput.value = "";
+        const catSelect = document.getElementById('super-edit-cat'); const allCats = db.config.categories.filter(c => c.active).sort((a,b) => a.name.localeCompare(b.name)); catSelect.innerHTML = allCats.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+        catSelect.value = u.cat; openModal('modal-super-edit'); 
+    } 
+};
+
 window.saveSuperEdit = function() { 
     if(!isSuperAdmin(loggedUser)) return;
     const oldCpf = document.getElementById('super-edit-old-cpf').value;
