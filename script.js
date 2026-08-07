@@ -1613,9 +1613,47 @@ window.reCalcCat = function() {
 
 window.applyCatOverride = function() { window.reCalcCat(); };
 
-window.toggleCategory = function(catName) { if(!isSuperAdmin(loggedUser)) return toast("APENAS ADMIN", "error"); const idx = db.config.categories.findIndex(c => c.name === catName);
-if(idx > -1) { db.config.categories[idx].active = !db.config.categories[idx].active; saveDB('config'); window.logAction(`Alterou o status da categoria ${catName} para ${db.config.categories[idx].active ? 'ATIVO' : 'INATIVO'}`);
-renderAdmCategories(); } };
+window.toggleCategory = function(catName) { 
+    // 1. Verifica se o usuário é super admin antes de prosseguir
+    if(!isSuperAdmin(loggedUser)) return toast("APENAS ADMIN", "error"); 
+    
+    // 2. Encontra a categoria clicada no banco de dados
+    const idx = db.config.categories.findIndex(c => c.name === catName);
+    
+    if(idx > -1) { 
+        // 3. Verifica o status atual para montar a mensagem dinâmica
+        const isActive = db.config.categories[idx].active;
+        const acaoStr = isActive ? 'DESATIVAR' : 'ATIVAR';
+        
+        // 4. Define os textos e ícones da janela de confirmação do sistema
+        const titulo = `${acaoStr} CATEGORIA?`;
+        const msg = `Tem certeza que deseja <b>${acaoStr}</b> a categoria <b>${catName}</b>?`;
+        const icone = isActive 
+            ? '<i class="fas fa-times-circle" style="color:var(--pe-red)"></i>' 
+            : '<i class="fas fa-check-circle" style="color:var(--pe-green)"></i>';
+
+        // 5. Chama o modal de confirmação nativo do sistema
+        showConfirm(titulo, msg, icone, function(res) {
+            // Se o usuário clicou em OK (res = true), executa a alteração
+            if(res) {
+                // Inverte o status da categoria
+                db.config.categories[idx].active = !db.config.categories[idx].active; 
+                
+                // Salva no banco de dados
+                saveDB('config'); 
+                
+                // Registra a ação na auditoria (LOG)
+                window.logAction(`Alterou o status da categoria ${catName} para ${db.config.categories[idx].active ? 'ATIVO' : 'INATIVO'}`);
+                
+                // Atualiza a lista na tela automaticamente
+                renderAdmCategories(); 
+                
+                // Mostra um aviso (Toast) rápido de sucesso
+                toast(`CATEGORIA ${db.config.categories[idx].active ? 'ATIVADA' : 'DESATIVADA'}!`, "success");
+            }
+        });
+    } 
+};
 window.renderAdmCategories = function() {
     const list = document.getElementById('adm-cats-list');
     if (!list) return;
