@@ -186,15 +186,21 @@
                     <div><button class="btn-mini-adm btn-print-pdf" style="background:#0038a8; color:white; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer; margin:0;" onclick="compartilharResultados('ranking')"><i class="fas fa-share-alt"></i> COMPARTILHAR / PDF</button></div>
                 </div>
                 <div class="filter-row" style="margin-top:5px; display:flex; flex-direction:column; gap:5px;">
-                    <select id="filter-region-ranking" onchange="renderContent('ranking')" style="padding:10px; font-size:12px; font-weight:900; background:#fff3e0; border:2px solid #ffa000; color:#e65100; border-radius:6px;">
-                        <option value="PE">🏆 RANKING PERNAMBUCANO (OFICIAL)</option>
-                        <option value="NORDESTE">🌎 RANKING NORDESTE (OPEN)</option>
-                    </select>
-                    <div style="display:flex; gap:5px;">
-                        <select id="filter-evt-ranking" onchange="renderContent('ranking')" style="flex:1"><option value="ALL">GERAL (SOMA)</option></select>
-                        <select id="filter-cat-ranking" onchange="renderContent('ranking')" style="flex:1"><option value="ALL">CATEGORIAS</option></select>
-                    </div>
-                </div>
+    <select id="filter-region-ranking" onchange="renderContent('ranking')" style="padding:10px; font-size:12px; font-weight:900; background:#fff3e0; border:2px solid #ffa000; color:#e65100; border-radius:6px;">
+        <option value="PE">🏆 RANKING PERNAMBUCANO (OFICIAL)</option>
+        <option value="NORDESTE">🌎 RANKING NORDESTE (OPEN)</option>
+    </select>
+    <div style="display:flex; gap:5px;">
+        <!-- NOVO BOTÃO: ESCOLHE ENTRE ATLETAS OU CIDADES -->
+        <select id="filter-mode-ranking" onchange="renderContent('ranking')" style="flex:0.8; font-weight:bold; color:var(--pe-blue); background:#eef2ff; border:1px solid #c7d2fe; border-radius:4px; padding:5px; font-size:11px;">
+            <option value="ATHLETES">👤 ATLETAS</option>
+            <option value="CITIES">🏙️ CIDADES</option>
+        </select>
+        
+        <select id="filter-evt-ranking" onchange="renderContent('ranking')" style="flex:1; padding:5px; font-size:11px;"><option value="ALL">GERAL (SOMA)</option></select>
+        <select id="filter-cat-ranking" onchange="renderContent('ranking')" style="flex:1; padding:5px; font-size:11px;"><option value="ALL">CATEGORIAS</option></select>
+    </div>
+</div>
             </div>
             <div class="rank-list-container" id="list-ranking" style="background:white"></div>
         </div>
