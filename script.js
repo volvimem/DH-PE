@@ -1251,6 +1251,10 @@ function renderContent(t) {
          const fEvt = document.getElementById('filter-evt-ranking').value;
          const fCat = document.getElementById('filter-cat-'+t).value; 
          const fRegion = document.getElementById('filter-region-ranking').value;
+         
+         // Captura a escolha: Ranking de Atletas ou Cidades
+         const fModeRank = document.getElementById('filter-mode-ranking') ? document.getElementById('filter-mode-ranking').value : 'ATHLETES';
+
          recalcRanking(fEvt); 
          const list = db.ranking || []; 
          const div = document.getElementById('list-'+t);
@@ -1258,6 +1262,58 @@ function renderContent(t) {
              let filteredList = list;
              if (fCat && fCat !== 'ALL' && fCat !== 'ALL_SEP') filteredList = filteredList.filter(i => window.normalizeCatName(i.cat) === window.normalizeCatName(fCat));
              if (fRegion === 'PE') filteredList = filteredList.filter(r => { const u = db.users.find(user => user.cpf === r.cpf); return u && (u.uf === 'PE' || !u.uf || u.filiadoPE === true); });
+             
+             // ==========================================================
+             // NOVO BLOCO: LÓGICA DO RANKING POR CIDADES
+             // ==========================================================
+             if (fModeRank === 'CITIES') {
+                 let cityMap = {};
+                 
+                 // Agrupa os atletas da lista filtrada
+                 filteredList.forEach(r => {
+                     if(r.totalPts <= 0) return; // Ignora quem tem zero pontos
+                     let pCityUF = getPilotCityUF(r.cpf, r.city); // Usa função nativa para padronizar "SURUBIM-PE"
+                     
+                     if(!cityMap[pCityUF]) {
+                         cityMap[pCityUF] = { city: pCityUF, totalPts: 0, athletes: new Set() };
+                     }
+                     cityMap[pCityUF].totalPts += r.totalPts;
+                     cityMap[pCityUF].athletes.add(r.cpf); // Set não conta CPFs duplicados
+                 });
+                 
+                 let cityList = Object.values(cityMap);
+                 cityList.sort((a,b) => b.totalPts - a.totalPts); // Ordena quem tem mais pontos primeiro
+
+                 // Textos de Cabeçalho
+                 const evtObjH = db.events.find(e => String(e.id) === String(fEvt)); 
+                 const evtNameHeader = fEvt === 'ALL' ? 'GERAL DA TEMPORADA (SOMA DAS ETAPAS)' : (evtObjH ? evtObjH.t : 'ETAPA'); 
+                 const regionNameHeader = fRegion === 'PE' ? 'RANKING PERNAMBUCO' : 'RANKING NORDESTE (OPEN)';
+                 const catNameHeader = fCat === 'ALL' ? 'SOMA DE TODAS AS CATEGORIAS' : fCat;
+
+                 // Renderiza a faixa visual superior 
+                 const headerTag = `<div class="print-header" style="background: linear-gradient(135deg, #0038a8, #1e3a8a); color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center;"><h2 style="margin: 0; font-size: 18px; font-weight: 900; text-transform: uppercase;">RANKING POR CIDADES</h2><div style="font-size: 11px; margin-top: 5px; opacity: 0.9; font-weight: bold;"><i class="fas fa-map-marker-alt"></i> ${regionNameHeader} &nbsp;|&nbsp; <i class="fas fa-bicycle"></i> ${catNameHeader}</div><div style="font-size: 12px; margin-top: 5px; color: #ffe500; font-weight: bold;">${evtNameHeader}</div></div>`;
+
+                 if(cityList.length === 0) {
+                     div.innerHTML = headerTag + '<div style="padding:20px; text-align:center; color:#999; font-size:11px">Nenhum ponto registrado para cidades com os filtros atuais.</div>';
+                 } else {
+                     // Renderiza as posições (Destaque pro Top 3)
+                     const listHtml = cityList.map((c, i) => {
+                         let posDisplay = (i + 1) + 'º';
+                         let medal = ''; let bgCard = '#fff'; let borderCard = '#e2e8f0'; let posBg = '#333'; let posColor = '#fff';
+                         
+                         // Estilização das 3 Melhores Cidades
+                         if(i === 0) { medal = '🥇 '; bgCard = '#fffbeb'; borderCard = '#fde047'; posBg = 'var(--pe-yellow)'; posColor = '#000'; }
+                         else if (i === 1) { medal = '🥈 '; bgCard = '#f8fafc'; posBg = '#94a3b8'; }
+                         else if (i === 2) { medal = '🥉 '; bgCard = '#fff7ed'; posBg = '#d65a00'; }
+
+                         return `<div class="rank-row" style="flex-direction:column; align-items:flex-start; gap:0; padding:0; margin-bottom:10px; border:2px solid ${borderCard}; border-radius:8px; overflow:hidden; background:white; box-shadow:0 2px 4px rgba(0,0,0,0.05);"><div style="display:flex; justify-content:space-between; width:100%; align-items:center; padding:15px; background:${bgCard};"><div style="display:flex; align-items:center; gap:12px;"><div class="rank-pos" style="background:${posBg}; color:${posColor}; width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:50%; font-size:14px; font-weight:900;">${posDisplay}</div><div><div style="font-weight:900; font-size:15px; color:#0f172a; text-transform:uppercase;">${medal}${c.city}</div><div style="font-size:10px; color:#64748b; font-weight:bold; margin-top:4px;"><i class="fas fa-users"></i> ${c.athletes.size} Atleta(s) Pontuando</div></div></div><div style="text-align:right"><div style="font-size:24px; font-weight:900; color:var(--pe-blue); line-height:1">${c.totalPts}</div><div style="font-size:9px; color:#666; font-weight:bold; margin-top:2px;">PONTOS</div></div></div></div>`;
+                     }).join('');
+                     div.innerHTML = headerTag + listHtml;
+                 }
+                 return; // Aborta aqui. Evita que o código abaixo crie a lista de atletas soltos
+             }
+             // ==========================================================
+             
              filteredList.sort((a,b) => {
                  if (fCat === 'ALL_SEP' && a.cat !== b.cat) return a.cat.localeCompare(b.cat);
                  return b.totalPts - a.totalPts;
