@@ -1246,7 +1246,8 @@ function renderContent(t) {
                  listDiv.innerHTML = finalHtml;
              }
          }
-    } else if (t === 'ranking') {
+
+} else if (t === 'ranking') {
          populatePublicFilters(t);
          const fEvt = document.getElementById('filter-evt-ranking').value;
          const fCat = document.getElementById('filter-cat-'+t).value; 
@@ -1292,7 +1293,7 @@ function renderContent(t) {
                  const regionNameHeader = fRegion === 'PE' ? 'RANKING PERNAMBUCO' : 'RANKING NORDESTE (OPEN)';
                  const catNameHeader = fCat === 'ALL' ? 'SOMA DE TODAS AS CATEGORIAS' : fCat;
 
-                 const headerTag = `<div class="print-header" style="background: linear-gradient(135deg, #0038a8, #1e3a8a); color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center;"><h2 style="margin: 0; font-size: 18px; font-weight: 900; text-transform: uppercase;">RANKING POR CIDADES</h2><div style="font-size: 11px; margin-top: 5px; opacity: 0.9; font-weight: bold;"><i class="fas fa-map-marker-alt"></i> ${regionNameHeader} &nbsp;|&nbsp; <i class="fas fa-bicycle"></i> ${catNameHeader}</div><div style="font-size: 12px; margin-top: 5px; color: #ffe500; font-weight: bold;">${evtNameHeader}</div></div>`;
+                 const headerTag = `<div class="print-header" style="background: linear-gradient(135deg, #d50000, #990000); color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center;"><h2 style="margin: 0; font-size: 18px; font-weight: 900; text-transform: uppercase;">RANKING POR CIDADES</h2><div style="font-size: 11px; margin-top: 5px; opacity: 0.9; font-weight: bold;"><i class="fas fa-map-marker-alt"></i> ${regionNameHeader} &nbsp;|&nbsp; <i class="fas fa-bicycle"></i> ${catNameHeader}</div><div style="font-size: 12px; margin-top: 5px; color: #ffe500; font-weight: bold;">${evtNameHeader}</div></div>`;
 
                  if(cityList.length === 0) {
                      div.innerHTML = headerTag + '<div style="padding:20px; text-align:center; color:#999; font-size:11px">Nenhum ponto registrado para cidades com os filtros atuais.</div>';
@@ -1317,7 +1318,6 @@ function renderContent(t) {
                          let listId = `city-ath-list-${i}`;
 
                          return `<div class="rank-row" style="flex-direction:column; align-items:flex-start; gap:0; padding:0; margin-bottom:10px; border:2px solid ${borderCard}; border-radius:8px; overflow:hidden; background:white; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-                            
                             <div style="display:flex; justify-content:space-between; width:100%; align-items:center; padding:15px; background:${bgCard}; cursor:pointer;" onclick="document.getElementById('${listId}').style.display = document.getElementById('${listId}').style.display === 'none' ? 'block' : 'none'">
                                 <div style="display:flex; align-items:center; gap:12px;">
                                     <div class="rank-pos" style="background:${posBg}; color:${posColor}; width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:50%; font-size:14px; font-weight:900;">${posDisplay}</div>
@@ -1331,19 +1331,16 @@ function renderContent(t) {
                                     <div style="font-size:9px; color:#666; font-weight:bold; margin-top:2px;">PONTOS</div>
                                 </div>
                             </div>
-                            
                             <div id="${listId}" style="display:none; padding:10px 15px; background:#f8fafc; border-top:1px dashed ${borderCard}; width:100%;">
                                 <b style="font-size:10px; color:#64748b; display:block; margin-bottom:5px;">ATLETAS PONTUADORES:</b>
                                 ${athletesHtml}
                             </div>
-                            
                          </div>`;
                      }).join('');
                      div.innerHTML = headerTag + listHtml;
                  }
                  return; 
              }
-             // ==========================================================
              
              // ==========================================================
              // LÓGICA ORIGINAL DO RANKING POR ATLETAS
@@ -1386,7 +1383,7 @@ function renderContent(t) {
          }
     }
 }
-
+        
 // ==========================================================
 // 10. PAINEL DE ADMINISTRAÇÃO E PERMISSÕES
 // ==========================================================
