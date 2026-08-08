@@ -685,7 +685,6 @@ document.addEventListener("DOMContentLoaded", function() {
         const selectUf = document.getElementById(idSelectUf);
         
         if (inputCity && selectUf) {
-            // Cria a lista invisível nativa do HTML
             let datalist = document.getElementById(datalistId);
             if (!datalist) {
                 datalist = document.createElement('datalist');
@@ -693,39 +692,32 @@ document.addEventListener("DOMContentLoaded", function() {
                 inputCity.parentNode.appendChild(datalist);
             }
             
-            // Conecta o input de texto à lista
             inputCity.setAttribute('list', datalistId);
             inputCity.setAttribute('autocomplete', 'off');
 
-            // Função que busca as cidades no IBGE
             const loadCities = (uf) => {
                 if (!uf || uf === 'OUTRO') { datalist.innerHTML = ''; return; }
                 
                 fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`)
                     .then(res => res.json())
                     .then(cidades => {
-                        // Preenche as opções em caixa alta
                         datalist.innerHTML = cidades.map(c => `<option value="${c.nome.toUpperCase()}">`).join('');
                     }).catch(e => console.log("Erro ao carregar IBGE:", e));
             };
 
-            // Carrega as cidades logo que a página abre
             loadCities(selectUf.value);
 
-            // Se o usuário trocar o Estado, busca as cidades do novo estado
             selectUf.addEventListener('change', function() {
                 loadCities(this.value);
-                if(idInputCity === 'cad-city') inputCity.value = ''; // Limpa a cidade no cadastro ao trocar UF
+                if(idInputCity === 'cad-city') inputCity.value = ''; 
             });
         }
     }
 
-    // Aplica a automação nas 3 áreas do sistema!
     configurarAutocompleteCidades('cad-city', 'cad-uf', 'lista-cidades-cad');
     configurarAutocompleteCidades('prof-edit-city', 'prof-edit-uf', 'lista-cidades-prof');
     configurarAutocompleteCidades('super-edit-city', 'super-edit-uf', 'lista-cidades-adm');
     // ==========================================================
-
 });
 function trocarTela(id) { document.querySelectorAll('.screen').forEach(e => e.classList.remove('active')); const tela = document.getElementById('screen-' + id); if(tela) tela.classList.add('active'); const nav = document.getElementById('main-nav-bar');
 const head = document.getElementById('main-app-header'); if(id === 'app') { if(nav) nav.style.display='flex'; if(head) head.style.display='flex'; } else { if(nav) nav.style.display='none'; if(head) head.style.display='none'; } }
@@ -1323,17 +1315,17 @@ function renderContent(t) {
                  filteredList.forEach(r => {
                      if(r.totalPts <= 0) return; 
                      
-                     // 1. Pega a cidade original e remove espaços extras ao redor do hífen
+                     // Pega a cidade original e remove espaços extras ao redor do hífen
                      let rawCityUF = getPilotCityUF(r.cpf, r.city); 
                      let displayCityUF = rawCityUF.trim().replace(/\s*-\s*/g, '-').toUpperCase();
                      
-                     // 2. Cria uma "chave limpa" removendo todos os acentos (SÃO CAETANO vira SAO CAETANO)
+                     // Cria uma "chave limpa" removendo todos os acentos para o agrupamento
                      let cityKey = displayCityUF.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                      
                      if(!cityMap[cityKey]) {
                          cityMap[cityKey] = { city: displayCityUF, totalPts: 0, athletesList: [] };
                      } else {
-                         // 3. Atualiza o nome de exibição para a versão com acento (se houver)
+                         // Atualiza o nome de exibição para a versão com acento
                          if (displayCityUF !== cityKey && cityMap[cityKey].city === cityKey) {
                              cityMap[cityKey].city = displayCityUF;
                          }
@@ -1343,10 +1335,6 @@ function renderContent(t) {
                      
                      let pName = getPilotName(r.cpf, r.name);
                      cityMap[cityKey].athletesList.push({ name: pName, pts: r.totalPts });
-                 });
-                 
-                 let cityList = Object.values(cityMap);
-                 cityList.sort((a,b) => b.totalPts - a.totalPts);
                  });
                  
                  let cityList = Object.values(cityMap);
@@ -1525,17 +1513,6 @@ if(loggedUser && inputPass === (loggedUser.pass || "admin123") && (loggedUser.ro
 applyAdminPermissions(); backToAdmMenu(); document.getElementById('adm-pass-check').value = ''; } else { toast("SENHA INCORRETA OU ACESSO NEGADO", "error"); } };
 window.backToAdmMenu = function() { openAdmSection('menu'); };
 
-window.filtrarAtletasStatus = function() {
-    let input = document.getElementById("inputBuscaAtleta");
-    if(!input) return;
-    let termoDigitado = input.value.toLowerCase();
-    let listaDeAtletas = document.querySelectorAll("#fin-list-container > div");
-    listaDeAtletas.forEach(function(el) {
-        if (el.innerText.toLowerCase().includes(termoDigitado)) { el.style.display = "flex"; } 
-        else { el.style.display = "none"; }
-    });
-};
-
 function filterPilots(ctx, force) { 
     let inputId = 'adm-edit-user-search'; if(ctx === 'res') inputId = 'adm-res-search';
     if(ctx === 'cfg-search') inputId = 'adm-cfg-search'; if(ctx === 'org') inputId = 'adm-org-search';
@@ -1633,40 +1610,17 @@ function filterPilots(ctx, force) {
     } 
 }
 
-// FUNÇÃO PARA APAGAR ATLETA
-window.delUser = function(cpf) { 
-    if(!isSuperAdmin(loggedUser)) return toast("Apenas o Super Admin pode excluir usuários", "error");
-    showConfirm("EXCLUIR ATLETA?", "Deseja excluir este atleta permanentemente do banco de dados?", '<i class="fas fa-trash-alt" style="color:var(--pe-red)"></i>', function(res) {
-        if(res) { const idx = db.users.findIndex(u => u.cpf === cpf); if(idx > -1) { db.users.splice(idx, 1); saveDB('users'); filterPilots('edit-user', true); window.logAction(`Excluiu do sistema o atleta CPF: ${cpf}`); toast("ATLETA EXCLUÍDO"); } }
-    });
-};
-
-// FUNÇÃO PARA ABRIR EDIÇÃO DO ATLETA
-window.openEditUserModal = function(cpf){ 
-    if(!isSuperAdmin(loggedUser)) return toast("Apenas o Super Admin pode editar usuários", "error");
-    const u = db.users.find(x => x.cpf === cpf);
-    if(u){ 
-        document.getElementById('super-edit-old-cpf').value = u.cpf;
-        document.getElementById('super-edit-name').value = u.nome; document.getElementById('super-edit-cpf').value = u.cpf; document.getElementById('super-edit-city').value = u.city; document.getElementById('super-edit-uf').value = u.uf || "PE"; document.getElementById('super-edit-tel').value = u.tel;
-        document.getElementById('super-edit-nasc').value = u.nasc || ""; if(document.getElementById('super-edit-cbc')) document.getElementById('super-edit-cbc').value = u.cbc || ""; const newPassInput = document.getElementById('super-edit-new-pass'); if(newPassInput) newPassInput.value = "";
-        const catSelect = document.getElementById('super-edit-cat'); const allCats = db.config.categories.filter(c => c.active).sort((a,b) => a.name.localeCompare(b.name)); catSelect.innerHTML = allCats.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-        catSelect.value = u.cat; openModal('modal-super-edit'); 
-    } 
-};
-
 // ==========================================
 // FUNÇÃO PARA MUDAR A TEMPORADA
 // ==========================================
 window.changeSeason = function(newSeasonKey) {
     localStorage.setItem('dhpe_active_season', newSeasonKey);
     toast("CARREGANDO TEMPORADA...");
-    setTimeout(() => {
-        window.location.reload(true);
-    }, 500);
+    setTimeout(() => { window.location.reload(true); }, 500);
 };
 
 // ==========================================
-// FUNÇÃO PARA APAGAR ATLETA
+// FUNÇÕES DE EDIÇÃO DE ATLETAS (SUPER ADMIN)
 // ==========================================
 window.delUser = function(cpf) { 
     if(!isSuperAdmin(loggedUser)) return toast("Apenas o Super Admin pode excluir usuários", "error");
@@ -1675,9 +1629,6 @@ window.delUser = function(cpf) {
     });
 };
 
-// ==========================================
-// FUNÇÃO PARA ABRIR EDIÇÃO DO ATLETA
-// ==========================================
 window.openEditUserModal = function(cpf){ 
     if(!isSuperAdmin(loggedUser)) return toast("Apenas o Super Admin pode editar usuários", "error");
     const u = db.users.find(x => x.cpf === cpf);
@@ -1711,6 +1662,7 @@ window.saveSuperEdit = function() {
         toast("ALTERADO!"); fecharModal('modal-super-edit'); filterPilots('edit-user', true);
     } 
 };
+
 window.gerarSenhaTemporaria = function() {
     if(!isSuperAdmin(loggedUser)) return; const oldCpf = document.getElementById('super-edit-old-cpf').value;
     const idx = db.users.findIndex(x => x.cpf === oldCpf);
@@ -1718,6 +1670,7 @@ window.gerarSenhaTemporaria = function() {
     db.users[idx].tempPass = pin; db.users[idx].tempPassExp = Date.now() + (5 * 60 * 1000); saveDB('users'); const tempDisplay = document.getElementById('super-edit-temp-pass-display');
     if(tempDisplay) tempDisplay.innerText = `SENHA: ${pin}`; toast("SENHA TEMPORÁRIA GERADA!"); } else { toast("Usuário não encontrado.", "error"); }
 };
+
 window.toggleFiliacaoPE = function(cpf) {
     if(!isSuperAdmin(loggedUser)) return toast("APENAS O SUPER ADMIN PODE ALTERAR", "error");
     const idx = db.users.findIndex(u => u.cpf === cpf);
@@ -1735,6 +1688,20 @@ window.toggleFiliacaoPE = function(cpf) {
     }
 };
 
+window.toggleUserId = function(cpf, isReleased) {
+    if(!isSuperAdmin(loggedUser)) return toast("APENAS O SUPER ADMIN PODE ALTERAR", "error");
+    const idx = db.users.findIndex(u => u.cpf === cpf);
+    if(idx > -1) {
+        db.users[idx].idReleased = isReleased; saveDB('users');
+        window.logAction(`Alterou a liberação da carteirinha do atleta CPF: ${cpf} para ${isReleased ? 'LIBERADO' : 'BLOQUEADO'}`);
+        if (isReleased && typeof window.dispararPushAtleta === 'function') { window.dispararPushAtleta(cpf, "Carteirinha Liberada! 🪪", "Sua carteirinha digital foi liberada pela organização."); }
+        filterPilots('cfg-search', true); toast(isReleased ? "CARTEIRINHA LIBERADA COM SUCESSO!" : "ATLETA BLOQUEADO!");
+    } else { toast("ERRO: Atleta não encontrado.", "error"); }
+};
+
+// ==========================================
+// FUNÇÕES DE CATEGORIAS E CONFIG GERAIS
+// ==========================================
 window.reCalcCat = function() { 
     const gender = document.getElementById('cad-gender').value; const birthDate = document.getElementById('cad-nasc').value;
     const catInput = document.getElementById('cad-cat-age'); const overrideSel = document.getElementById('cad-cat-override'); const finalInput = document.getElementById('cad-cat-final');
@@ -1765,103 +1732,40 @@ window.reCalcCat = function() {
 window.applyCatOverride = function() { window.reCalcCat(); };
 
 window.toggleCategory = function(catName) { 
-    // 1. Verifica se o usuário é super admin antes de prosseguir
     if(!isSuperAdmin(loggedUser)) return toast("APENAS ADMIN", "error"); 
-    
-    // 2. Encontra a categoria clicada no banco de dados
     const idx = db.config.categories.findIndex(c => c.name === catName);
-    
     if(idx > -1) { 
-        // 3. Verifica o status atual para montar a mensagem dinâmica
         const isActive = db.config.categories[idx].active;
         const acaoStr = isActive ? 'DESATIVAR' : 'ATIVAR';
-        
-        // 4. Define os textos e ícones da janela de confirmação do sistema
         const titulo = `${acaoStr} CATEGORIA?`;
         const msg = `Tem certeza que deseja <b>${acaoStr}</b> a categoria <b>${catName}</b>?`;
-        const icone = isActive 
-            ? '<i class="fas fa-times-circle" style="color:var(--pe-red)"></i>' 
-            : '<i class="fas fa-check-circle" style="color:var(--pe-green)"></i>';
-
-        // 5. Chama o modal de confirmação nativo do sistema
+        const icone = isActive ? '<i class="fas fa-times-circle" style="color:var(--pe-red)"></i>' : '<i class="fas fa-check-circle" style="color:var(--pe-green)"></i>';
         showConfirm(titulo, msg, icone, function(res) {
-            // Se o usuário clicou em OK (res = true), executa a alteração
             if(res) {
-                // Inverte o status da categoria
                 db.config.categories[idx].active = !db.config.categories[idx].active; 
-                
-                // Salva no banco de dados
                 saveDB('config'); 
-                
-                // Registra a ação na auditoria (LOG)
                 window.logAction(`Alterou o status da categoria ${catName} para ${db.config.categories[idx].active ? 'ATIVO' : 'INATIVO'}`);
-                
-                // Atualiza a lista na tela automaticamente
                 renderAdmCategories(); 
-                
-                // Mostra um aviso (Toast) rápido de sucesso
                 toast(`CATEGORIA ${db.config.categories[idx].active ? 'ATIVADA' : 'DESATIVADA'}!`, "success");
             }
         });
     } 
 };
+
 window.renderAdmCategories = function() {
     const list = document.getElementById('adm-cats-list');
     if (!list) return;
-    
-    if (!db.config.categories || db.config.categories.length === 0) {
-        list.innerHTML = '<div style="padding:10px; color:#666; text-align:center;">Nenhuma categoria encontrada.</div>';
-        return;
-    }
-    
+    if (!db.config.categories || db.config.categories.length === 0) { list.innerHTML = '<div style="padding:10px; color:#666; text-align:center;">Nenhuma categoria encontrada.</div>'; return; }
     const sortedCats = [...db.config.categories].sort((a,b) => a.name.localeCompare(b.name));
     list.innerHTML = sortedCats.map(c => {
-        const isActive = c.active;
-        const bg = isActive ? 'var(--pe-green)' : '#94a3b8';
-        const icon = isActive ? 'fa-check' : 'fa-times';
-        
-        return `
-        <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid #cbd5e1; padding:10px; border-radius:6px;">
-            <b style="font-size:12px; color:#334155;">${c.name}</b>
-            <button class="btn-mini-adm" style="background:${bg}; margin:0; width:80px; text-align:center;" onclick="toggleCategory('${c.name}')">
-                <i class="fas ${icon}"></i> ${isActive ? 'ATIVA' : 'INATIVA'}
-            </button>
-        </div>`;
+        const isActive = c.active; const bg = isActive ? 'var(--pe-green)' : '#94a3b8'; const icon = isActive ? 'fa-check' : 'fa-times';
+        return `<div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid #cbd5e1; padding:10px; border-radius:6px;"><b style="font-size:12px; color:#334155;">${c.name}</b><button class="btn-mini-adm" style="background:${bg}; margin:0; width:80px; text-align:center;" onclick="toggleCategory('${c.name}')"><i class="fas ${icon}"></i> ${isActive ? 'ATIVA' : 'INATIVA'}</button></div>`;
     }).join('');
 };
-window.toggleUserId = function(cpf, isReleased) {
-    // 1. Verifica se quem está clicando tem permissão de Super Admin
-    if(!isSuperAdmin(loggedUser)) return toast("APENAS O SUPER ADMIN PODE ALTERAR", "error");
-    
-    // 2. Busca o atleta no banco de dados pelo CPF
-    const idx = db.users.findIndex(u => u.cpf === cpf);
-    
-    if(idx > -1) {
-        // 3. Atualiza o status (true para liberado, false para bloqueado)
-        db.users[idx].idReleased = isReleased;
-        
-        // 4. Salva no banco de dados
-        saveDB('users');
-        
-        // 5. Registra a ação na Auditoria (Log)
-        window.logAction(`Alterou a liberação da carteirinha do atleta CPF: ${cpf} para ${isReleased ? 'LIBERADO' : 'BLOQUEADO'}`);
-        
-        // 6. Se foi liberado, envia uma notificação Push (se houver suporte)
-        if (isReleased && typeof window.dispararPushAtleta === 'function') {
-            window.dispararPushAtleta(cpf, "Carteirinha Liberada! 🪪", "Sua carteirinha digital foi liberada pela organização.");
-        }
-        
-        // 7. Atualiza a lista na tela instantaneamente para refletir a mudança de cor
-        filterPilots('cfg-search', true);
-        
-        // 8. Mostra o aviso de sucesso na tela
-        toast(isReleased ? "CARTEIRINHA LIBERADA COM SUCESSO!" : "ATLETA BLOQUEADO!");
-    } else {
-        toast("ERRO: Atleta não encontrado.", "error");
-    }
-};
+
 window.saveGlobalConfig = function(){ if(!isSuperAdmin(loggedUser)) return toast("APENAS ADMIN", "error"); db.config.phone = document.getElementById('adm-cfg-phone').value; db.config.rerunPass = document.getElementById('adm-cfg-rerun-pass').value || 'admin123'; db.config.allowAllIDs = document.getElementById('adm-cfg-allow-ids').checked;
 saveDB('config'); window.logAction(`Alterou Configurações Gerais do Sistema`); toast("CONFIGURAÇÕES SALVAS"); updateCardLive(); };
+
 // ==========================================================
 // 11. GERENCIAMENTO DE EVENTOS (CRIAR/EDITAR/EXCLUIR)
 // ==========================================================
@@ -2266,40 +2170,6 @@ window.addResultDNF = function() {
     });
 };
 
-window.addResultDNF = function() { 
-    const evtId = document.getElementById('adm-res-evt').value;
-    if(!canManageEvent(evtId)) return toast("VOCÊ NÃO TEM PERMISSÃO NESTE EVENTO", "error"); 
-    const cpf = document.getElementById('adm-res-id').value; 
-    const name = document.getElementById('adm-res-name-display').value;
-    const city = document.getElementById('adm-res-city-edit').value.toUpperCase(); 
-    const cat = window.normalizeCatName(document.getElementById('adm-res-cat-edit').value); 
-    const runTypeManual = document.getElementById('adm-res-runtype').value; 
-    const editIdxInput = document.getElementById('adm-res-idx-edit').value;
-    
-    if(!evtId || !name || !cpf) return toast("SELECIONE O ATLETA PRIMEIRO", "error"); 
-    
-    showConfirm("NÃO CONCLUIU?", `Deseja registrar que <b>${name}</b> não finalizou a prova nesta descida?`, '<i class="fas fa-ban" style="color:var(--pe-red)"></i>', function(res) { 
-        if(res) {
-            const newTime = { evtId: evtId, cpf: cpf, name: name.toUpperCase(), city: city, cat: cat, val: 'DNF', status: 'DNF', runType: runTypeManual };
-            const existingIndex = editIdxInput !== "" ? parseInt(editIdxInput, 10) : db.tempos.findIndex(t => t && String(t.evtId) === String(evtId) && t.cpf === cpf && t.runType === runTypeManual && t.cat === cat );
-            
-            const performSave = (idx) => { 
-                if(idx > -1) { db.tempos[idx] = newTime; } 
-                else { db.tempos.push(newTime); } 
-                saveDB('tempos');
-                toast("✅ REGISTRADO COMO NÃO FINALIZOU!"); 
-                clearResultFormUI(); renderAdmResults(); recalcRanking(); 
-                if (document.getElementById('list-tempos')) renderContent('tempos');
-            };
-            
-            if (existingIndex > -1 && editIdxInput === "") { 
-                if(!isSuperAdmin(loggedUser)) { 
-                    showPrompt("AUTORIZAÇÃO", "Atleta já tem tempo. Digite a Senha Master para substituir:", function(pwd) { if(pwd === db.config.rerunPass) performSave(existingIndex); else toast("SENHA INCORRETA", "error"); }); 
-                } else { performSave(existingIndex); } 
-            } else { performSave(existingIndex); } 
-        }
-    });
-};
 window.clearResultFormUI = function() {
     const camposParaLimpar = ['adm-res-search', 'adm-res-name-display', 'adm-res-city-edit', 'adm-res-cat-edit', 'adm-res-num', 'adm-res-val', 'adm-res-id', 'adm-res-idx-edit'];
     camposParaLimpar.forEach(id => { const el = document.getElementById(id); if(el) { el.value = ''; localStorage.removeItem('autosave_' + id); } });
