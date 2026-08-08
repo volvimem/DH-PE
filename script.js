@@ -1265,7 +1265,7 @@ function renderContent(t) {
              if (fRegion === 'PE') filteredList = filteredList.filter(r => { const u = db.users.find(user => user.cpf === r.cpf); return u && (u.uf === 'PE' || !u.uf || u.filiadoPE === true); });
              
              // ==========================================================
-             // LÓGICA DO RANKING POR CIDADES (UNIFICADO E EXPANSÍVEL)
+             // LÓGICA DO RANKING POR CIDADES (INTELIGENTE: IGNORA ACENTOS)
              // ==========================================================
              if (fModeRank === 'CITIES') {
                  let cityMap = {};
@@ -1273,17 +1273,28 @@ function renderContent(t) {
                  filteredList.forEach(r => {
                      if(r.totalPts <= 0) return; 
                      
-                     // Padronização e remoção de espaços extras ao redor do hífen
+                     // 1. Pega a cidade original e remove espaços extras
                      let rawCityUF = getPilotCityUF(r.cpf, r.city); 
-                     let pCityUF = rawCityUF.trim().replace(/\s*-\s*/g, '-');
+                     let displayCityUF = rawCityUF.trim().replace(/\s*-\s*/g, '-').toUpperCase();
                      
-                     if(!cityMap[pCityUF]) {
-                         cityMap[pCityUF] = { city: pCityUF, totalPts: 0, athletesList: [] };
+                     // 2. Cria uma "chave limpa" removendo todos os acentos (SÃO CAETANO vira SAO CAETANO)
+                     // Isso garante que o sistema agrupe as duas digitações na mesma caixa
+                     let cityKey = displayCityUF.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                     
+                     if(!cityMap[cityKey]) {
+                         cityMap[cityKey] = { city: displayCityUF, totalPts: 0, athletesList: [] };
+                     } else {
+                         // 3. Truque inteligente: Se a versão já salva estiver sem acento e a atual tiver acento, 
+                         // o sistema atualiza o nome de exibição para a versão mais bonita (correta).
+                         if (displayCityUF !== cityKey && cityMap[cityKey].city === cityKey) {
+                             cityMap[cityKey].city = displayCityUF;
+                         }
                      }
-                     cityMap[pCityUF].totalPts += r.totalPts;
+                     
+                     cityMap[cityKey].totalPts += r.totalPts;
                      
                      let pName = getPilotName(r.cpf, r.name);
-                     cityMap[pCityUF].athletesList.push({ name: pName, pts: r.totalPts });
+                     cityMap[cityKey].athletesList.push({ name: pName, pts: r.totalPts });
                  });
                  
                  let cityList = Object.values(cityMap);
