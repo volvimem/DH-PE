@@ -1341,8 +1341,31 @@ function renderContent(t) {
                      let msAtleta = tempoParaMilissegundos(tA);
                      let catKey = fCat === 'ALL_SEP' ? r.cat : 'GERAL';
                      
+                     // 1. GAP PARA O LÍDER (VERMELHO)
                      let gapStr = (msAtleta !== Infinity && msAtleta > temposLideres[catKey]) ? formatarDiferenca(msAtleta - temposLideres[catKey]) : '';
-                     let gapHtml = gapStr ? `<div style="font-size:10px; color:#e11d48; font-weight:bold; margin-top:2px; text-align:center;">${gapStr}</div>` : '';
+                     
+                     // 2. GAP PARA O ATLETA ANTERIOR (ROXO)
+                     let gapPrevStr = '';
+                     if (i > 0 && msAtleta !== Infinity) {
+                         let prevR = sortedList[i-1];
+                         // Se o filtro for "TODAS SEPARADAS", só mede com o anterior se for da mesma categoria
+                         if (fCat !== 'ALL_SEP' || prevR.cat === r.cat) {
+                             let tPrev = (fType === 'qualify') ? prevR.q : (fType === '1st' ? prevR.o : (fType === '2nd' ? prevR.s : (prevR.o !== '--:--.---' ? prevR.o : (prevR.q !== '--:--.---' ? prevR.q : prevR.s))));
+                             let msPrev = tempoParaMilissegundos(tPrev);
+                             if (msPrev !== Infinity && msAtleta > msPrev) {
+                                 gapPrevStr = formatarDiferenca(msAtleta - msPrev);
+                             }
+                         }
+                     }
+
+                     // 3. MONTA O HTML FINAL DOS GAPS
+                     let gapHtml = '';
+                     if (gapStr || gapPrevStr) {
+                         gapHtml = `<div style="margin-top:3px; display:flex; flex-direction:column; gap:1px;">`;
+                         if (gapStr) gapHtml += `<div style="font-size:10px; color:#e11d48; font-weight:bold; text-align:center;" title="Diferença para o Líder">${gapStr}</div>`;
+                         if (gapPrevStr) gapHtml += `<div style="font-size:9px; color:#9333ea; font-weight:bold; text-align:center;" title="Diferença para o Piloto Anterior"><i class="fas fa-caret-up"></i> ${gapPrevStr}</div>`;
+                         gapHtml += `</div>`;
+                     }
 
                      const getTpl = (val, pen) => { let vHTML = val === 'DNF' ? '<span style="color:red">DNF</span>' : val; let pHTML = pen ? `<span style="color:red; font-size:8px; display:block;">(${pen})</span>` : ''; return `${vHTML}${pHTML}`; };
                      if(fType === 'ALL') { 
