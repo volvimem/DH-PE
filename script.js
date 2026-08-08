@@ -1264,6 +1264,103 @@ function renderContent(t) {
              if (fRegion === 'PE') filteredList = filteredList.filter(r => { const u = db.users.find(user => user.cpf === r.cpf); return u && (u.uf === 'PE' || !u.uf || u.filiadoPE === true); });
              
              // ==========================================================
+             // NOVO BLOCO: LÓGICA DO RANKING POR CIDADES (CORRIGIDO E EXPANSÍVEL)
+             // ==========================================================
+             if (fModeRank === 'CITIES') {
+                 let cityMap = {};
+                 
+                 // Agrupa os atletas da lista filtrada
+                 filteredList.forEach(r => {
+                     if(r.totalPts <= 0) return; // Ignora quem tem zero pontos
+                     
+                     // Correção do Bug de Repetição: Padroniza o texto, removendo espaços antes ou depois do hífen
+                     let rawCityUF = getPilotCityUF(r.cpf, r.city); 
+                     let pCityUF = rawCityUF.trim().replace(/\s*-\s*/g, '-');
+                     
+                     if(!cityMap[pCityUF]) {
+                         cityMap[pCityUF] = { city: pCityUF, totalPts: 0, athletesList: [] };
+                     }
+                     cityMap[pCityUF].totalPts += r.totalPts;
+                     
+                     // Adiciona o atleta na lista da cidade
+                     let pName = getPilotName(r.cpf, r.name);
+                     cityMap[pCityUF].athletesList.push({ name: pName, pts: r.totalPts });
+                 });
+                 
+                 let cityList = Object.values(cityMap);
+                 cityList.sort((a,b) => b.totalPts - a.totalPts); // Ordena quem tem mais pontos primeiro
+
+                 // Textos de Cabeçalho
+                 const evtObjH = db.events.find(e => String(e.id) === String(fEvt)); 
+                 const evtNameHeader = fEvt === 'ALL' ? 'GERAL DA TEMPORADA (SOMA DAS ETAPAS)' : (evtObjH ? evtObjH.t : 'ETAPA'); 
+                 const regionNameHeader = fRegion === 'PE' ? 'RANKING PERNAMBUCO' : 'RANKING NORDESTE (OPEN)';
+                 const catNameHeader = fCat === 'ALL' ? 'SOMA DE TODAS AS CATEGORIAS' : fCat;
+
+                 // Renderiza a faixa visual superior mantendo a cor vermelha oficial do seu ranking
+                 const headerTag = `<div class="print-header" style="background: linear-gradient(135deg, #d50000, #990000); color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center;"><h2 style="margin: 0; font-size: 18px; font-weight: 900; text-transform: uppercase;">RANKING POR CIDADES</h2><div style="font-size: 11px; margin-top: 5px; opacity: 0.9; font-weight: bold;"><i class="fas fa-map-marker-alt"></i> ${regionNameHeader} &nbsp;|&nbsp; <i class="fas fa-bicycle"></i> ${catNameHeader}</div><div style="font-size: 12px; margin-top: 5px; color: #ffe500; font-weight: bold;">${evtNameHeader}</div></div>`;
+
+                 if(cityList.length === 0) {
+                     div.innerHTML = headerTag + '<div style="padding:20px; text-align:center; color:#999; font-size:11px">Nenhum ponto registrado para cidades com os filtros atuais.</div>';
+                 } else {
+                     // Renderiza as posições (Destaque pro Top 3)
+                     const listHtml = cityList.map((c, i) => {
+                         let posDisplay = (i + 1) + 'º';
+                         let medal = ''; let bgCard = '#fff'; let borderCard = '#e2e8f0'; let posBg = '#333'; let posColor = '#fff';
+                         
+                         // Estilização das 3 Melhores Cidades
+                         if(i === 0) { medal = '🥇 '; bgCard = '#fffbeb'; borderCard = '#fde047'; posBg = 'var(--pe-yellow)'; posColor = '#000'; }
+                         else if (i === 1) { medal = '🥈 '; bgCard = '#f8fafc'; posBg = '#94a3b8'; }
+                         else if (i === 2) { medal = '🥉 '; bgCard = '#fff7ed'; posBg = '#d65a00'; }
+
+                         // Ordena os atletas dentro da cidade do maior pontuador para o menor
+                         c.athletesList.sort((a, b) => b.pts - a.pts);
+                         
+                         // Monta o HTML da lista de atletas (Expansível)
+                         let athletesHtml = c.athletesList.map((ath, idx) => {
+                             return `<div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #e2e8f0; font-size:11px; color:#334155; align-items:center;">
+                                 <div><b style="color:#94a3b8; margin-right:5px; font-size:10px;">${idx+1}º</b> <b style="text-transform:uppercase;">${ath.name}</b></div>
+                                 <div style="font-weight:900; color:var(--pe-blue); background:#e0e7ff; padding:2px 6px; border-radius:4px;">${ath.pts} pts</div>
+                             </div>`;
+                         }).join('');
+
+                         // ID único para cada container de lista
+                         let listId = `city-ath-list-${i}`;
+
+                         // Estrutura Final do Card com a função "onClick" para abrir/fechar
+                         return `<div class="rank-row" style="flex-direction:column; align-items:flex-start; gap:0; padding:0; margin-bottom:10px; border:2px solid ${borderCard}; border-radius:8px; overflow:hidden; background:white; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+                            
+                            <!-- CABEÇALHO CLICÁVEL -->
+                            <div style="display:flex; justify-content:space-between; width:100%; align-items:center; padding:15px; background:${bgCard}; cursor:pointer;" onclick="document.getElementById('${listId}').style.display = document.getElementById('${listId}').style.display === 'none' ? 'block' : 'none'">
+                                <div style="display:flex; align-items:center; gap:12px;">
+                                    <div class="rank-pos" style="background:${posBg}; color:${posColor}; width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:50%; font-size:14px; font-weight:900;">${posDisplay}</div>
+                                    <div>
+                                        <div style="font-weight:900; font-size:15px; color:#0f172a; text-transform:uppercase;">${medal}${c.city}</div>
+                                        <div style="font-size:10px; color:#64748b; font-weight:bold; margin-top:4px;"><i class="fas fa-users"></i> ${c.athletesList.length} Atleta(s) <i class="fas fa-chevron-down" style="margin-left:5px; opacity:0.6;"></i></div>
+                                    </div>
+                                </div>
+                                <div style="text-align:right">
+                                    <div style="font-size:24px; font-weight:900; color:var(--pe-blue); line-height:1">${c.totalPts}</div>
+                                    <div style="font-size:9px; color:#666; font-weight:bold; margin-top:2px;">PONTOS</div>
+                                </div>
+                            </div>
+                            
+                            <!-- LISTA OCULTA DE ATLETAS (Abre ao clicar no card) -->
+                            <div id="${listId}" style="display:none; padding:10px 15px; background:#f8fafc; border-top:1px dashed ${borderCard}; width:100%;">
+                                <b style="font-size:10px; color:#64748b; display:block; margin-bottom:5px;">ATLETAS PONTUADORES:</b>
+                                ${athletesHtml}
+                            </div>
+                            
+                         </div>`;
+                     }).join('');
+                     div.innerHTML = headerTag + listHtml;
+                 }
+                 return; // Impede o código original de rodar e duplicar listas
+             }
+             // ==========================================================
+             
+             filteredList.sort((a,b) => {
+             
+             // ==========================================================
              // NOVO BLOCO: LÓGICA DO RANKING POR CIDADES
              // ==========================================================
              if (fModeRank === 'CITIES') {
