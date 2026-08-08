@@ -676,6 +676,56 @@ document.addEventListener("DOMContentLoaded", function() {
     if(inputEvtCity) inputEvtCity.addEventListener('input', function() { localStorage.setItem('draft_evt_c', this.value); });
     
     if ('serviceWorker' in navigator) { navigator.serviceWorker.ready.then((reg) => { reg.update(); }); }
+
+    // ==========================================================
+    // NOVO: AUTOCOMPLETE DE CIDADES VIA API OFICIAL DO IBGE
+    // ==========================================================
+    function configurarAutocompleteCidades(idInputCity, idSelectUf, datalistId) {
+        const inputCity = document.getElementById(idInputCity);
+        const selectUf = document.getElementById(idSelectUf);
+        
+        if (inputCity && selectUf) {
+            // Cria a lista invisível nativa do HTML
+            let datalist = document.getElementById(datalistId);
+            if (!datalist) {
+                datalist = document.createElement('datalist');
+                datalist.id = datalistId;
+                inputCity.parentNode.appendChild(datalist);
+            }
+            
+            // Conecta o input de texto à lista
+            inputCity.setAttribute('list', datalistId);
+            inputCity.setAttribute('autocomplete', 'off');
+
+            // Função que busca as cidades no IBGE
+            const loadCities = (uf) => {
+                if (!uf || uf === 'OUTRO') { datalist.innerHTML = ''; return; }
+                
+                fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`)
+                    .then(res => res.json())
+                    .then(cidades => {
+                        // Preenche as opções em caixa alta
+                        datalist.innerHTML = cidades.map(c => `<option value="${c.nome.toUpperCase()}">`).join('');
+                    }).catch(e => console.log("Erro ao carregar IBGE:", e));
+            };
+
+            // Carrega as cidades logo que a página abre
+            loadCities(selectUf.value);
+
+            // Se o usuário trocar o Estado, busca as cidades do novo estado
+            selectUf.addEventListener('change', function() {
+                loadCities(this.value);
+                if(idInputCity === 'cad-city') inputCity.value = ''; // Limpa a cidade no cadastro ao trocar UF
+            });
+        }
+    }
+
+    // Aplica a automação nas 3 áreas do sistema!
+    configurarAutocompleteCidades('cad-city', 'cad-uf', 'lista-cidades-cad');
+    configurarAutocompleteCidades('prof-edit-city', 'prof-edit-uf', 'lista-cidades-prof');
+    configurarAutocompleteCidades('super-edit-city', 'super-edit-uf', 'lista-cidades-adm');
+    // ==========================================================
+
 });
 function trocarTela(id) { document.querySelectorAll('.screen').forEach(e => e.classList.remove('active')); const tela = document.getElementById('screen-' + id); if(tela) tela.classList.add('active'); const nav = document.getElementById('main-nav-bar');
 const head = document.getElementById('main-app-header'); if(id === 'app') { if(nav) nav.style.display='flex'; if(head) head.style.display='flex'; } else { if(nav) nav.style.display='none'; if(head) head.style.display='none'; } }
@@ -1273,19 +1323,17 @@ function renderContent(t) {
                  filteredList.forEach(r => {
                      if(r.totalPts <= 0) return; 
                      
-                     // 1. Pega a cidade original e remove espaços extras
+                     // 1. Pega a cidade original e remove espaços extras ao redor do hífen
                      let rawCityUF = getPilotCityUF(r.cpf, r.city); 
                      let displayCityUF = rawCityUF.trim().replace(/\s*-\s*/g, '-').toUpperCase();
                      
                      // 2. Cria uma "chave limpa" removendo todos os acentos (SÃO CAETANO vira SAO CAETANO)
-                     // Isso garante que o sistema agrupe as duas digitações na mesma caixa
                      let cityKey = displayCityUF.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                      
                      if(!cityMap[cityKey]) {
                          cityMap[cityKey] = { city: displayCityUF, totalPts: 0, athletesList: [] };
                      } else {
-                         // 3. Truque inteligente: Se a versão já salva estiver sem acento e a atual tiver acento, 
-                         // o sistema atualiza o nome de exibição para a versão mais bonita (correta).
+                         // 3. Atualiza o nome de exibição para a versão com acento (se houver)
                          if (displayCityUF !== cityKey && cityMap[cityKey].city === cityKey) {
                              cityMap[cityKey].city = displayCityUF;
                          }
@@ -1295,6 +1343,10 @@ function renderContent(t) {
                      
                      let pName = getPilotName(r.cpf, r.name);
                      cityMap[cityKey].athletesList.push({ name: pName, pts: r.totalPts });
+                 });
+                 
+                 let cityList = Object.values(cityMap);
+                 cityList.sort((a,b) => b.totalPts - a.totalPts);
                  });
                  
                  let cityList = Object.values(cityMap);
