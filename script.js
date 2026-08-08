@@ -678,38 +678,114 @@ document.addEventListener("DOMContentLoaded", function() {
     if ('serviceWorker' in navigator) { navigator.serviceWorker.ready.then((reg) => { reg.update(); }); }
 
     // ==========================================================
-    // NOVO: AUTOCOMPLETE DE CIDADES VIA API OFICIAL DO IBGE
+    // NOVO: AUTOCOMPLETE DE CIDADES VIA API OFICIAL DO IBGE (CUSTOMIZADO)
     // ==========================================================
     function configurarAutocompleteCidades(idInputCity, idSelectUf, datalistId) {
         const inputCity = document.getElementById(idInputCity);
         const selectUf = document.getElementById(idSelectUf);
         
         if (inputCity && selectUf) {
-            let datalist = document.getElementById(datalistId);
-            if (!datalist) {
-                datalist = document.createElement('datalist');
-                datalist.id = datalistId;
-                inputCity.parentNode.appendChild(datalist);
-            }
-            
-            inputCity.setAttribute('list', datalistId);
+            // Remove o comportamento padrão do navegador
             inputCity.setAttribute('autocomplete', 'off');
+            inputCity.removeAttribute('list');
+            
+            // Cria a caixa flutuante do dropdown se ela não existir
+            let dropdownList = document.getElementById(idInputCity + '-dropdown');
+            if (!dropdownList) {
+                dropdownList = document.createElement('div');
+                dropdownList.id = idInputCity + '-dropdown';
+                
+                // Estilo da caixa para ficar bonita tanto no PC quanto no celular
+                dropdownList.style.cssText = 'position: absolute; width: 100%; max-height: 220px; overflow-y: auto; background: white; border: 1px solid #cbd5e1; border-radius: 6px; z-index: 10000; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-top: 2px;';
+                
+                // Garante que a lista flutue exatamente abaixo do input
+                if (window.getComputedStyle(inputCity.parentNode).position === 'static') {
+                    inputCity.parentNode.style.position = 'relative';
+                }
+                inputCity.parentNode.appendChild(dropdownList);
+            }
+
+            let cidadesAtuais = [];
 
             const loadCities = (uf) => {
-                if (!uf || uf === 'OUTRO') { datalist.innerHTML = ''; return; }
+                cidadesAtuais = []; 
+                dropdownList.style.display = 'none';
+                if (!uf || uf === 'OUTRO') return;
                 
                 fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`)
                     .then(res => res.json())
                     .then(cidades => {
-                        datalist.innerHTML = cidades.map(c => `<option value="${c.nome.toUpperCase()}">`).join('');
+                        cidadesAtuais = cidades.map(c => c.nome.toUpperCase());
                     }).catch(e => console.log("Erro ao carregar IBGE:", e));
             };
 
+            // Carrega inicialmente
             loadCities(selectUf.value);
 
+            // Quando mudar o estado (UF)
             selectUf.addEventListener('change', function() {
                 loadCities(this.value);
                 if(idInputCity === 'cad-city') inputCity.value = ''; 
+                dropdownList.style.display = 'none';
+            });
+
+            // Lógica principal: quando o atleta digitar no campo
+            inputCity.addEventListener('input', function() {
+                const termo = this.value.toUpperCase();
+                dropdownList.innerHTML = ''; 
+                
+                if (!termo) {
+                    dropdownList.style.display = 'none';
+                    return;
+                }
+
+                // Filtra cidades que começam ou contêm o texto digitado
+                const filtradas = cidadesAtuais.filter(cidade => cidade.includes(termo));
+
+                if (filtradas.length > 0) {
+                    dropdownList.style.display = 'block';
+                    filtradas.forEach(cidade => {
+                        const item = document.createElement('div');
+                        item.style.cssText = 'padding: 12px 10px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; transition: background 0.2s;';
+                        
+                        // Destaca em negrito/azul a exata parte que o usuário digitou
+                        const matchIndex = cidade.indexOf(termo);
+                        const before = cidade.substring(0, matchIndex);
+                        const match = cidade.substring(matchIndex, matchIndex + termo.length);
+                        const after = cidade.substring(matchIndex + termo.length);
+                        
+                        item.innerHTML = `${before}<strong style="color:var(--pe-blue); font-weight:900;">${match}</strong>${after}`;
+                        
+                        item.addEventListener('mouseenter', () => item.style.background = '#f8fafc');
+                        item.addEventListener('mouseleave', () => item.style.background = 'white');
+                        
+                        // Ao clicar na sugestão da cidade
+                        item.addEventListener('click', function() {
+                            inputCity.value = cidade;
+                            dropdownList.style.display = 'none';
+                            // Dispara evento para o auto-save do formulário registrar a escolha
+                            inputCity.dispatchEvent(new Event('input')); 
+                        });
+                        
+                        dropdownList.appendChild(item);
+                    });
+                } else {
+                    dropdownList.style.display = 'none';
+                }
+            });
+
+            // Fecha a lista se clicar em qualquer outro lugar da tela
+            document.addEventListener('click', function(e) {
+                if (e.target !== inputCity && e.target !== dropdownList) {
+                    dropdownList.style.display = 'none';
+                }
+            });
+            
+            // Mostra a lista novamente se voltar a clicar no campo
+            inputCity.addEventListener('focus', function() {
+                if (this.value && dropdownList.innerHTML !== '') {
+                    dropdownList.style.display = 'block';
+                }
             });
         }
     }
