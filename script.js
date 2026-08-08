@@ -170,20 +170,17 @@ window.baixarImagem = function(elementId, fileName) {
 
             if (isIOS) {
                 const iosImg = document.getElementById('ios-print-img');
-                
                 if(iosImg) {
                     iosImg.src = imgData;
                     openModal('modal-ios-print');
                     toast("PRONTO! SEGURE A IMAGEM PARA SALVAR.");
                 }
             } else {
-  
                 const link = document.createElement('a');
                 link.download = `${fileName}_${new Date().getTime()}.png`;
                 link.href = imgData;
                 document.body.appendChild(link);
                 link.click();
-              
                 document.body.removeChild(link);
                 toast("DOWNLOAD CONCLUÍDO!");
             }
@@ -311,11 +308,13 @@ function checkDbIntegrity() {
     if(!db.ranking || !Array.isArray(db.ranking)) db.ranking = db.ranking ? Object.values(db.ranking) : [];
     if(!db.notifications || !Array.isArray(db.notifications)) db.notifications = db.notifications ? Object.values(db.notifications) : [];
     if(!db.auditLog || !Array.isArray(db.auditLog)) db.auditLog = db.auditLog ? Object.values(db.auditLog) : [];
+    
     // PROTEÇÃO 2: Limpa novamente sempre que o Firebase enviar atualização
     db.users = db.users.filter(x => x !== null && x !== undefined);
     db.events = db.events.filter(x => x !== null && x !== undefined);
     db.tempos = db.tempos.filter(x => x !== null && x !== undefined);
     db.notifications = db.notifications.filter(x => x !== null && x !== undefined);
+    
     const monthMap = { "JAN":1, "FEV":2, "MAR":3, "ABR":4, "MAI":5, "JUN":6, "JUL":7, "AGO":8, "SET":9, "OUT":10, "NOV":11, "DEZ":12 };
     db.events.sort((a, b) => {
         if(!a || !b || !a.t || !b.t) return 0;
@@ -329,6 +328,7 @@ function checkDbIntegrity() {
         const dayB = parseInt((b.d || "0").split('/')[0], 10) || 0;
         return dayB - dayA; 
     });
+    
     const todayStr = new Date().toISOString().slice(0, 10);
     db.events.forEach(e => { if (e && e.status === 'OPEN' && e.closeDate && e.closeDate < todayStr) { e.status = 'CLOSED'; } });
     if(!db.config) db.config = { phone: '', rerunPass: 'admin123', allowAllIDs: false, categories: DEFAULT_CATS };
@@ -348,9 +348,7 @@ window.saveDB = function(moduleName = null) {
     try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch (e) { console.warn("Aviso: Limite do LocalStorage atingido."); }
     if(!database) return;
     if (moduleName) { if (Array.isArray(moduleName)) moduleName.forEach(m => pendingSaves.add(m)); else pendingSaves.add(moduleName);
-    } 
-    else { ['users', 'events', 'tempos', 'config', 'notifications', 'auditLog'].forEach(m => pendingSaves.add(m));
-    }
+    } else { ['users', 'events', 'tempos', 'config', 'notifications', 'auditLog'].forEach(m => pendingSaves.add(m)); }
     if(saveTimeout) clearTimeout(saveTimeout);
     saveTimeout = setTimeout(() => { let updates = {}; pendingSaves.forEach(m => { if(db[m] !== undefined) updates['/' + DB_KEY + '/' + m] = db[m]; });
         if(Object.keys(updates).length > 0) database.ref().update(updates).catch(err => { console.error("Erro Firebase"); });
@@ -407,8 +405,6 @@ function ensureAuditUI() {
     if(menu && !document.getElementById('btn-adm-audit')) {
         menu.insertAdjacentHTML('beforeend', `<div class="adm-dash-btn" id="btn-adm-audit" onclick="openAdmSection('audit')" style="border-color:#8b5cf6;"><i class="fas fa-clipboard-list" style="color:#8b5cf6"></i><span>AUDITORIA (LOG)</span></div>`);
     }
-    
-    // 👇 O TRATOR: Remove o HTML velho em cache para dar lugar ao novo botão 👇
     const oldPanel = document.getElementById('adm-sec-audit');
     if(oldPanel) oldPanel.remove();
 
@@ -454,7 +450,6 @@ window.confirmarDeletarNotificacao = function(notifId) {
     if(!loggedUser) return;
     
     if (isSuperAdmin(loggedUser)) {
-        // Remove modal antigo se houver para não duplicar
         let oldModal = document.getElementById('modal-notif-delete-choice');
         if (oldModal) oldModal.remove();
 
@@ -480,7 +475,6 @@ window.confirmarDeletarNotificacao = function(notifId) {
         </div>`;
         document.body.insertAdjacentHTML('beforeend', modalHtml);
     } else {
-        // Para atletas e organizadores comuns, apenas confirma exclusão pessoal
         showConfirm("APAGAR NOTIFICAÇÃO?", "Deseja remover esta notificação da sua lista?", '<i class="fas fa-trash-alt" style="color:var(--pe-red)"></i>', function(res) { 
             if(res) window.deletarNotificacao(notifId, 'MIM'); 
         });
@@ -493,11 +487,9 @@ window.deletarNotificacao = function(notifId, modo = 'MIM') {
     
     if(idx > -1) { 
         if (modo === 'TODOS' && isSuperAdmin(loggedUser)) {
-            // Remove do banco de dados globalmente
             db.notifications.splice(idx, 1);
             toast("NOTIFICAÇÃO APAGADA PARA TODOS!");
         } else {
-            // Oculta apenas para o usuário atual
             if(!db.notifications[idx].deletedBy) db.notifications[idx].deletedBy = []; 
             if(!db.notifications[idx].deletedBy.includes(loggedUser.cpf)) { 
                 db.notifications[idx].deletedBy.push(loggedUser.cpf); 
@@ -522,13 +514,11 @@ function injectNotificationUI() {
         headerRight.insertBefore(notifBtn, headerRight.firstChild); 
     }
     
-    // O trator agora é inteligente: só destrói o modal se faltar o botão "P/ TODOS" (se for o velho)
     const oldModal = document.getElementById('modal-notifications');
     if(oldModal && !document.getElementById('btn-del-notif-all')) {
         oldModal.remove();
     }
 
-    // Só cria de novo se não existir (impede o erro de apagar e fechar sozinho)
     if(!document.getElementById('modal-notifications')) {
         const modalHtml = `<div class="modal-overlay" id="modal-notifications" style="z-index:300000; padding:20px;"><div class="modal-box" style="text-align:left; max-height:85vh; display:flex; flex-direction:column; padding:15px; width:100%; max-width:400px; border-top: 5px solid var(--pe-blue); overflow:hidden; border-radius:12px;"><h3 style="color:var(--pe-blue); border-bottom:1px solid #eee; padding-bottom:10px; display:flex; justify-content:space-between; align-items:center; margin:0; flex-shrink:0; font-size:16px;">NOTIFICAÇÕES <i class="fas fa-times" style="cursor:pointer; color:#999; font-size:18px;" onclick="fecharModal('modal-notifications')"></i></h3><div style="display:flex; gap:5px; margin-top:10px; width:100%;"><button onclick="window.limparNotificacoesPremium('MIM')" style="background:#f87171; color:white; border:none; padding:8px; border-radius:4px; font-size:10px; font-weight:bold; cursor:pointer; flex:1; box-shadow:0 2px 4px rgba(0,0,0,0.1);"><i class="fas fa-user-slash"></i> APAGAR P/ MIM</button><button onclick="window.limparNotificacoesPremium('TODOS')" id="btn-del-notif-all" style="background:#d50000; color:white; border:none; padding:8px; border-radius:4px; font-size:10px; font-weight:bold; cursor:pointer; flex:1; box-shadow:0 2px 4px rgba(0,0,0,0.1); display:none;"><i class="fas fa-globe"></i> P/ TODOS</button></div><select id="notif-filter-evt" onchange="window.abrirNotificacoes()" class="input-field" style="margin-top:10px; padding:8px; font-size:11px; font-weight:bold;"><option value="ALL">TODOS OS EVENTOS (GERAL)</option></select><div id="notif-list-content" style="flex:1; overflow-y:auto; margin-top:10px; font-size:12px; padding-right:5px; -webkit-overflow-scrolling:touch;"></div></div></div>`;
         document.body.insertAdjacentHTML('beforeend', modalHtml); 
@@ -556,7 +546,6 @@ window.atualizarBadgeNotificacoes = function() {
         } 
     }
 
-    // NOVA LÓGICA: Atualiza o selo numérico no ícone do celular (PWA)
     if ('setAppBadge' in navigator) {
         if (unreadCount > 0) {
             navigator.setAppBadge(unreadCount).catch(err => console.log("Erro no badge:", err));
@@ -567,7 +556,6 @@ window.atualizarBadgeNotificacoes = function() {
 };
 
 window.abrirNotificacoes = function() {
-    // Garante que o painel exista no HTML antes de manipular
     injectNotificationUI();
 
     const listDiv = document.getElementById('notif-list-content');
@@ -606,7 +594,6 @@ window.abrirNotificacoes = function() {
         }).join(''); 
     }
     
-    // 👇 O COMANDO CRUCIAL QUE HAVIA SUMIDO ESTÁ DE VOLTA AQUI 👇
     openModal('modal-notifications'); 
     
     const btnAll = document.getElementById('btn-del-notif-all');
@@ -648,7 +635,6 @@ document.addEventListener("DOMContentLoaded", function() {
     if(savedSession) { 
         try { 
             const u = JSON.parse(savedSession);
-            // Garante que a configuração base exista antes de montar a tela
             if(!db.config) db.config = { phone: '', rerunPass: 'admin123', allowAllIDs: false, categories: DEFAULT_CATS };
             if(db.users && !Array.isArray(db.users)) db.users = Object.values(db.users);
             if(db.users) db.users = db.users.filter(x => x !== null && x !== undefined);
@@ -661,7 +647,6 @@ document.addEventListener("DOMContentLoaded", function() {
             if(localStorage.getItem('draft_evt_c')) document.getElementById('adm-evt-c').value = localStorage.getItem('draft_evt_c');
         } catch(e) { 
             console.error("Erro ignorado. Mantendo o usuário logado:", e);
-            // Se der erro menor, não derruba o usuário. Força a tela do App.
             if(loggedUser) trocarTela('app'); else mostrarLoginInicial();
         } 
     } else { 
@@ -784,7 +769,7 @@ compressImage(input.files[0], 400, (base64) => { if(!base64) return toast("ERRO 
 } };
 
 function updateCardLive() { if(!loggedUser) return; const setText = (id, val) => { const el = document.getElementById(id);
-if(el) el.innerText = val; }; setText('card-name', loggedUser.nome); setText('card-cat', loggedUser.cat); setText('card-city', `${loggedUser.city} - ${loggedUser.uf || 'PE'}`); setText('card-cpf', loggedUser.cpf);
+if(el) el.innerText = val; }; setText('card-name', loggedUser.nome); setText('card-cat', loggedUser.cat); setText('card-city', `${loggedUser.city} -${loggedUser.uf || 'PE'}`); setText('card-cpf', loggedUser.cpf);
 setText('card-team', loggedUser.team || "INDEPENDENTE"); setText('card-cbc', loggedUser.cbc || "NÃO INFORMADA"); const img = document.getElementById('card-img-display'); if(img) { img.crossOrigin = "anonymous";
 let picUrl = loggedUser.selfie || "https://via.placeholder.com/80"; img.src = picUrl; } const yearEl = document.getElementById('card-year-display'); if(yearEl) yearEl.innerText = SYSTEM_YEAR;
 const isGlobalReleased = db.config.allowAllIDs === true; const isUserReleased = loggedUser.idReleased === true; const layer = document.getElementById('id-locked-layer'); const btn = document.getElementById('btn-dl-card');
@@ -850,7 +835,7 @@ window.iniciarInscricao = function(evtId, mode = 'MAIN') {
                 
                 const statusHtml = s.status === 'PENDENTE' ? `<button class="btn-mini-adm btn-jump" style="background:orange; color:white; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.2); margin-left:10px; cursor:pointer;" onclick="fecharModal('modal-extra-sub'); iniciarInscricao(${evtId}, '${s.extraCat ? s.extraCat : 'MAIN'}')"><i class="fas fa-qrcode"></i> PAGAR INSCRIÇÃO</button>` : `<i class="fas fa-check-circle" style="color:green; margin-left:10px;"></i>`; 
                 
-                return `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding-bottom:5px;"><span class="${cClass}">${display}</span> ${statusHtml}</div>`; 
+                return `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding-bottom:5px;"><span class="${cClass}">${display}</span>${statusHtml}</div>`; 
             }).join('');
         } else { 
             container.style.display = 'none'; 
@@ -957,13 +942,13 @@ window.enviarComprovanteWhatsApp = function(){
     }
     const evt = db.events.find(e => e.id == currentPayId.id); 
     const phone = (evt && evt.wpp) ? evt.wpp : db.config.phone; 
-    const msg = `Olá!\nRealizei o pagamento da inscrição.\n\n*Atleta:* ${loggedUser.nome}\n*Evento:* ${currentPayId.name}\n\nSegue o comprovante:`; 
+    const msg = `Olá!\nRealizei o pagamento da inscrição.\n\n*Atleta:* ${loggedUser.nome}\n*Evento:*${currentPayId.name}\n\nSegue o comprovante:`; 
     openWhatsApp(phone, msg); 
     fecharModal('modal-pix'); 
 };
 window.verDetalhesEvento = function(id) { 
     const e = db.events.find(x => String(x.id) === String(id)); if(!e) return;
-    document.getElementById('det-evt-title').innerText = e.t; document.getElementById('det-evt-info').innerText = `${e.d} | ${e.city}`; document.getElementById('det-evt-img').src = e.img || ""; const ptsDiv = document.getElementById('det-evt-points');
+    document.getElementById('det-evt-title').innerText = e.t; document.getElementById('det-evt-info').innerText = `${e.d} \vert{}${e.city}`; document.getElementById('det-evt-img').src = e.img || ""; const ptsDiv = document.getElementById('det-evt-points');
     if(ptsDiv) { let html = ""; if(e.points) { html += `<div style="grid-column:span 5; font-size:10px; font-weight:bold; margin-bottom:5px; color:#15803d; border-bottom:1px solid #ddd;">PONTUAÇÃO CORRIDA</div>`;
     html += e.points.map((p, i) => `<div style="background:#f0fdf4; padding:5px; text-align:center; font-size:10px; border-radius:4px; border:1px solid #bbf7d0;"><b>${i+1}º</b><br>${p}</div>`).join('');
     } if(e.hasQualify && e.qPoints) { html += `<div style="grid-column:span 5; font-size:10px; font-weight:bold; margin-top:10px; margin-bottom:5px; color:#d65a00; border-bottom:1px solid #ddd;">PONTUAÇÃO QUALIFY</div>`;
@@ -977,11 +962,11 @@ window.verGaleriaEvento = function(id) { const e = db.events.find(x => String(x.
 let fotos = []; if(e.img) fotos.push(e.img); if(e.gallery && e.gallery.length > 0) fotos = fotos.concat(e.gallery);
 if(fotos.length === 0) return toast("Nenhuma foto disponível para este evento.", "error"); currentGalleryList = fotos; openGalleryViewer(0); };
 window.openGalleryViewer = function(index) { currentGalleryIndex = index; const img = document.getElementById('gallery-main-img'); const counter = document.getElementById('gallery-counter'); if(img) img.src = currentGalleryList[index];
-if(counter) counter.innerText = `${index + 1} / ${currentGalleryList.length}`; openModal('modal-gallery-view'); };
+if(counter) counter.innerText = `${index + 1} /${currentGalleryList.length}`; openModal('modal-gallery-view'); };
 window.navGallery = function(direction) { let newIndex = currentGalleryIndex + direction;
 if(newIndex < 0) newIndex = currentGalleryList.length - 1; if(newIndex >= currentGalleryList.length) newIndex = 0; openGalleryViewer(newIndex); };
 window.abrirTicket = function(evtId) { const e = db.events.find(x => String(x.id) === String(evtId)); if(!e || !loggedUser) return; document.getElementById('share-event-name').innerText = e.t;
-document.getElementById('share-event-details').innerText = `${e.d} | ${e.city}`; document.getElementById('share-piloto-name').innerText = loggedUser.nome; document.getElementById('share-piloto-details').innerText = `${loggedUser.cat} • ${loggedUser.city}`; document.getElementById('ticket-year-display').innerText = SYSTEM_YEAR; openModal('modal-share'); };
+document.getElementById('share-event-details').innerText = `${e.d} \vert{}${e.city}`; document.getElementById('share-piloto-name').innerText = loggedUser.nome; document.getElementById('share-piloto-details').innerText = `${loggedUser.cat} •${loggedUser.city}`; document.getElementById('ticket-year-display').innerText = SYSTEM_YEAR; openModal('modal-share'); };
 window.verOrdemLargada = function() {
     if (!loggedUser) return toast("Faça login", "error"); const listDiv = document.getElementById('ordem-largada-list'); if (!listDiv) return;
     listDiv.innerHTML = '';
@@ -1052,7 +1037,6 @@ window.populatePublicFilters = function(tab) {
     const selCat = document.getElementById('filter-cat-' + tab);
     if (selCat) {
         const currentCat = selCat.value;
-        // ---> TEXTO ALTERADO AQUI <---
         let catHtml = '<option value="ALL">GERAL / MELHOR TEMPO DA PISTA</option>';
         catHtml += '<option value="ALL_SEP">TODAS (SEPARADAS POR CAT)</option>';
         
@@ -1246,8 +1230,7 @@ function renderContent(t) {
                  listDiv.innerHTML = finalHtml;
              }
          }
-
-} else if (t === 'ranking') {
+    } else if (t === 'ranking') {
          populatePublicFilters(t);
          const fEvt = document.getElementById('filter-evt-ranking').value;
          const fCat = document.getElementById('filter-cat-'+t).value; 
@@ -1383,7 +1366,7 @@ function renderContent(t) {
          }
     }
 }
-        
+
 // ==========================================================
 // 10. PAINEL DE ADMINISTRAÇÃO E PERMISSÕES
 // ==========================================================
@@ -1599,31 +1582,6 @@ window.changeSeason = function(newSeasonKey) {
     setTimeout(() => {
         window.location.reload(true);
     }, 500);
-};
-
-// ==========================================
-// FUNÇÃO PARA APAGAR ATLETA
-// ==========================================
-window.delUser = function(cpf) { 
-    if(!isSuperAdmin(loggedUser)) return toast("Apenas o Super Admin pode excluir usuários", "error");
-    showConfirm("EXCLUIR ATLETA?", "Deseja excluir este atleta permanentemente do banco de dados?", '<i class="fas fa-trash-alt" style="color:var(--pe-red)"></i>', function(res) {
-        if(res) { const idx = db.users.findIndex(u => u.cpf === cpf); if(idx > -1) { db.users.splice(idx, 1); saveDB('users'); filterPilots('edit-user', true); window.logAction(`Excluiu do sistema o atleta CPF: ${cpf}`); toast("ATLETA EXCLUÍDO"); } }
-    });
-};
-
-// ==========================================
-// FUNÇÃO PARA ABRIR EDIÇÃO DO ATLETA
-// ==========================================
-window.openEditUserModal = function(cpf){ 
-    if(!isSuperAdmin(loggedUser)) return toast("Apenas o Super Admin pode editar usuários", "error");
-    const u = db.users.find(x => x.cpf === cpf);
-    if(u){ 
-        document.getElementById('super-edit-old-cpf').value = u.cpf;
-        document.getElementById('super-edit-name').value = u.nome; document.getElementById('super-edit-cpf').value = u.cpf; document.getElementById('super-edit-city').value = u.city; document.getElementById('super-edit-uf').value = u.uf || "PE"; document.getElementById('super-edit-tel').value = u.tel;
-        document.getElementById('super-edit-nasc').value = u.nasc || ""; if(document.getElementById('super-edit-cbc')) document.getElementById('super-edit-cbc').value = u.cbc || ""; const newPassInput = document.getElementById('super-edit-new-pass'); if(newPassInput) newPassInput.value = "";
-        const catSelect = document.getElementById('super-edit-cat'); const allCats = db.config.categories.filter(c => c.active).sort((a,b) => a.name.localeCompare(b.name)); catSelect.innerHTML = allCats.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-        catSelect.value = u.cat; openModal('modal-super-edit'); 
-    } 
 };
 
 window.saveSuperEdit = function() { 
@@ -2005,1025 +1963,4 @@ window.renderOrgList = function() {
                 </div>
             </div>
             <div style="display:flex; gap:5px; border-top:1px dashed #e2e8f0; padding-top:10px; margin-top:4px;">
-                <button class="btn-mini-adm" style="background:#d50000; color:white; flex:1; font-weight:bold; padding:8px 0; margin:0;" onclick="demoteOrg('${o.cpf}')"><i class="fas fa-user-times"></i> REMOVER DA EQUIPE</button>
-            </div>
-        </div>`; 
-    }).join('');
-};
-
-window.toggleOrgList = function() { const list = document.getElementById('adm-list-orgs'); const icon = document.getElementById('icon-org-toggle'); if(list.style.display === 'none') { list.style.display='block'; icon.classList.remove('fa-chevron-down'); icon.classList.add('fa-chevron-up'); } else { list.style.display='none'; icon.classList.remove('fa-chevron-up'); icon.classList.add('fa-chevron-down'); } };
-window.promoteToOrganizer = function() { if(!isSuperAdmin(loggedUser)) return toast("Apenas Super Admin pode promover", "error"); const cpf = document.getElementById('adm-org-selected-cpf').value; const idx = db.users.findIndex(u => u.cpf === cpf); if(idx > -1) { const checkboxes = document.querySelectorAll('.org-evt-cb:checked'); const allowed = Array.from(checkboxes).map(c => c.value); db.users[idx].role = 'ORGANIZER';
-db.users[idx].allowedEvts = allowed; saveDB('users'); window.logAction(`Promoveu a Organizador o atleta CPF: ${cpf}`); toast("PROMOVIDO E PERMISSÕES SALVAS!"); renderOrgList(); document.getElementById('adm-org-search').value=''; document.getElementById('org-perms-area').style.display='none'; } };
-window.selectOrgPilot = function(cpf, name) { document.getElementById('adm-org-selected-cpf').value = cpf; document.getElementById('adm-org-search').value = name; document.getElementById('adm-org-list-search').style.display = 'none'; document.getElementById('org-perms-area').style.display = 'block'; };
-window.compartilListaInscritos = function() {
-    const evtId = document.getElementById('fin-evt-select').value;
-    if (!evtId || evtId === 'ALL') return toast("SELECIONE UM EVENTO ESPECÍFICO NA LISTA PRIMEIRO!", "error");
-    const evt = db.events.find(e => String(e.id) === String(evtId)); if (!evt) return;
-    let inscritos = []; let contagemPorCategoria = {};
-    let totalInscritos = 0; let totalArrecadado = 0;
-    db.users.forEach(u => {
-        if (u.inscricoes) {
-            u.inscricoes.forEach(i => {
-                if (String(i.id) === String(evtId)) {
-                    let cat = window.normalizeCatName(i.extraCat || u.cat);
-                    let valStr = evt.val || "0"; 
-                    if (evt.type === 'NON_OFFICIAL') {
-                         let cleanCat = cat.replace(" (EXTRA)", "");
-                         if (evt.extraVals && evt.extraVals[cat] && evt.extraVals[cat].trim() !== "") {
-                             valStr = evt.extraVals[cat];
-                         } else if (evt.extraVals && evt.extraVals[cleanCat] && evt.extraVals[cleanCat].trim() !== "") {
-                             valStr = evt.extraVals[cleanCat];
-                         }
-                         cat = cleanCat; 
-                    } else {
-                         if (i.extraCat && evt.extraVals && evt.extraVals[cat] && evt.extraVals[cat].trim() !== "") valStr = evt.extraVals[cat];
-                    }
-                    let val = parseFloat(valStr.replace(',', '.')) || 0;
-                    if (i.status === 'CONFIRMADO') { totalArrecadado += val; }
-                    inscritos.push({ nome: u.nome, city: u.city, uf: u.uf || 'PE', cat: cat, status: i.status });
-                    if (!contagemPorCategoria[cat]) contagemPorCategoria[cat] = 0; contagemPorCategoria[cat]++; totalInscritos++;
-                }
-            });
-        }
-    });
-    if (totalInscritos === 0) return toast("NENHUM ATLETA INSCRITO NESTE EVENTO", "error");
-    let printWin = window.open('', '_blank');
-    let html = `<html><head><title>Lista de Inscritos - ${evt.t}</title><style>body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333; } h1 { text-align: center; color: #0038a8; margin-bottom: 5px; text-transform: uppercase; font-size: 22px; } h2 { text-align: center; color: #666; margin-top: 0; margin-bottom: 20px; font-size: 14px; text-transform: uppercase; } .resumo-box { border: 2px solid #0038a8; padding: 15px; border-radius: 8px; margin-bottom: 20px; background: #f8fafc; } .resumo-title { font-weight: bold; color: #0038a8; font-size: 16px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px; } table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; } th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; font-size: 12px; text-transform: uppercase; } th { background-color: #f0f0f0; color: #333; font-weight: bold; } .status-CONFIRMADO { color: #15803d; font-weight: bold; } .status-PENDENTE { color: #d65a00; font-weight: bold; } .pos { width: 30px; text-align: center; font-weight: bold; color: #666; } .cat-title { background: #0038a8; color: white; padding: 8px; font-weight: bold; font-size: 14px; border-radius: 4px 4px 0 0; margin-bottom: 0; margin-top: 20px; } .footer { text-align: center; margin-top: 30px; font-size: 10px; color: #999; } @media print { @page { margin: 1cm; size: A4 portrait; } button { display: none !important; } body { padding: 0; } .cat-title { background-color: #0038a8 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .resumo-box { background-color: #f8fafc !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }</style></head><body><div style="text-align:center; margin-bottom: 20px; display: flex; justify-content: center; gap: 15px;"><button onclick="window.print()" style="padding:12px 24px; font-size:14px; font-weight:bold; background:#009b3a; color:white; border:none; border-radius:6px; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🖨️ SALVAR COMO PDF / IMPRIMIR</button><button onclick="window.close()" style="padding:12px 24px; font-size:14px; font-weight:bold; background:#d50000; color:white; border:none; border-radius:6px; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">❌ FECHAR</button></div><h1>${evt.t}</h1><h2>RELAÇÃO OFICIAL DE INSCRITOS</h2><div class="resumo-box"><div class="resumo-title">RESUMO DO EVENTO</div><p style="margin: 5px 0;"><b>TOTAL GERAL DE INSCRITOS:</b> ${totalInscritos} atleta(s)</p><p style="margin: 5px 0;"><b>VALOR ARRECADADO (APENAS PAGOS):</b> R$ ${totalArrecadado.toFixed(2).replace('.', ',')}</p><div style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;"><b style="font-size: 12px; color: #666; display: block; margin-bottom: 8px;">INSCRITOS POR CATEGORIA:</b><div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px;">`;
-    let catKeys = Object.keys(contagemPorCategoria).sort();
-    catKeys.forEach(cat => { html += `<div style="font-size: 11px; background: white; padding: 5px 8px; border: 1px solid #ddd; border-radius: 4px;"><b>${cat}:</b> ${contagemPorCategoria[cat]}</div>`; });
-    html += `</div></div></div>`; 
-    catKeys.forEach(cat => {
-        let atletasCat = inscritos.filter(a => a.cat === cat).sort((a,b) => a.nome.localeCompare(b.nome));
-        html += `<div class="cat-title">${cat} <span style="float: right; font-size: 11px; margin-top: 2px;">(${atletasCat.length} atletas)</span></div><table><thead><tr><th class="pos">#</th><th>NOME DO ATLETA</th><th>CIDADE/UF</th><th style="width: 100px;">STATUS</th></tr></thead><tbody>`;
-        atletasCat.forEach((a, idx) => { html += `<tr><td class="pos">${idx + 1}</td><td style="font-weight:bold;">${a.nome}</td><td>${a.city}-${a.uf}</td><td class="status-${a.status}">${a.status}</td></tr>`; });
-        html += `</tbody></table>`;
-    });
-    html += `<div class="footer">Documento gerado oficialmente pelo Sistema FPC/PE em ${new Date().toLocaleString('pt-BR')}</div></body></html>`;
-    printWin.document.write(html); printWin.document.close(); setTimeout(() => { printWin.focus(); }, 250);
-};
-
-window.abrirModalExportCBC = function() {
-    const sel = document.getElementById('export-cbc-evt'); let html = '<option value="">SELECIONE O EVENTO...</option>';
-    db.events.forEach(e => { html += `<option value="${e.id}">${e.t}</option>`; }); sel.innerHTML = html; openModal('modal-export-cbc');
-};
-window.gerarExcelCBC = function() {
-    const evtId = document.getElementById('export-cbc-evt').value;
-    if(!evtId) return toast("Selecione um evento!", "error");
-    const evt = db.events.find(e => String(e.id) === String(evtId));
-    if(!evt) return toast("Evento não encontrado", "error");
-
-    const btnClicado = document.activeElement;
-    const textoOriginal = btnClicado ? btnClicado.innerHTML : ""; 
-    if(btnClicado && btnClicado.tagName === 'BUTTON') { btnClicado.disabled = true;
-    btnClicado.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GERANDO...'; } 
-    toast("PROCESSANDO PLANILHA...", "info");
-    setTimeout(() => {
-        try {
-            let temposEvt = db.tempos.filter(t => String(t.evtId) === String(evtId));
-            let pilotResults = {};
-            temposEvt.forEach(t => {
-                let key = t.cpf + '_' + t.cat;
-                if(!pilotResults[key]) {
-                    let u = db.users.find(x => x.cpf === t.cpf) || {};
-                    pilotResults[key] = { cpf: t.cpf, nome: t.name, cbc: u.cbc || "", equipe: u.team || "", cidade: t.city, estado: u.uf || "PE", cat: t.cat, qualify: "", final: "", num: u.numero || u.numPlaca || u.placa || "" };
-                }
-                if(t.runType === 'qualify') pilotResults[key].qualify = t.val;
-                if(t.runType === '1st' || !t.runType) pilotResults[key].final = t.val;
-            });
-
-            let listArray = Object.values(pilotResults);
-            let cats = [...new Set(listArray.map(item => item.cat))].sort();
-
-            let ws_data = []; let merges = []; let rowIndex = 0;
-
-            cats.forEach(cat => {
-                let catRow = [ {v: cat, t: 's', s: { font: { bold: true, sz: 12 }, fill: { fgColor: { rgb: "FFFFFF00" } }, alignment: { horizontal: "center", vertical: "center" } } }, "", "", "", "", "", "", "" ];
-                ws_data.push(catRow); merges.push({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex, c: 2 } }); rowIndex++;
-                let thStyle = { font: { bold: true }, alignment: { horizontal: "center", vertical: "center" }, border: { top: {style:"thin"}, bottom: {style:"thin"}, left: {style:"thin"}, right: {style:"thin"} } };
-                let headerRow = [ {v: "Nº", t: 's', s: thStyle}, {v: "NOME", t: 's', s: thStyle}, {v: "LIC CBC", t: 's', s: thStyle}, {v: "EQUIPE/CLUBE/PATROCINADOR", t: 's', s: thStyle}, {v: "CIDADE", t: 's', s: thStyle}, {v: "ESTADO", t: 's', s: thStyle}, {v: "QUALIFY", t: 's', s: thStyle}, {v: "FINAL", t: 's', s: thStyle} ];
-                ws_data.push(headerRow); rowIndex++;
-                
-                let pilotosDaCat = listArray.filter(p => p.cat === cat);
-                pilotosDaCat.sort((a,b) => { let tA = a.final !== "" ? a.final : "99:99.999"; let tB = b.final !== "" ? b.final : "99:99.999"; return tA.localeCompare(tB); });
-                let borderStyle = { top: {style:"thin"}, bottom: {style:"thin"}, left: {style:"thin"}, right: {style:"thin"} };
-                pilotosDaCat.forEach((p, index) => {
-                    ws_data.push([ {v: p.num || (index+1), t: 'n', s: { border: borderStyle, alignment: { horizontal: "center" } }}, {v: p.nome, t: 's', s: { border: borderStyle }}, {v: p.cbc, t: 's', s: { border: borderStyle, alignment: { horizontal: "center" } }}, {v: p.equipe, t: 's', s: { border: borderStyle }}, {v: p.cidade, t: 's', s: { border: borderStyle }}, {v: p.estado, t: 's', s: { border: borderStyle, alignment: { horizontal: "center" } }}, {v: p.qualify === "--:--.---" ? "" : p.qualify, t: 's', s: { border: borderStyle, alignment: { horizontal: "center" } }}, {v: p.final === "--:--.---" ? "" : p.final, t: 's', s: { border: borderStyle, alignment: { horizontal: "center", font: {bold: true} } }} ]);
-                    rowIndex++;
-                });
-                ws_data.push(["", "", "", "", "", "", "", ""]); rowIndex++;
-            });
-
-            let ws = XLSX.utils.aoa_to_sheet(ws_data);
-            ws['!merges'] = merges;
-            ws['!cols'] = [ {wch: 5}, {wch: 40}, {wch: 15}, {wch: 35}, {wch: 25}, {wch: 8}, {wch: 12}, {wch: 12} ];
-            let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Resultados");
-
-            let safeTitle = evt.t.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            let fileName = `Resultados_CBC_${safeTitle}.xlsx`;
-            XLSX.writeFile(wb, fileName);
-            toast("EXCEL GERADO COM SUCESSO!", "success"); fecharModal('modal-export-cbc');
-        } catch (err) { console.error(err); toast("ERRO AO GERAR EXCEL", "error");
-        }
-        if(btnClicado && btnClicado.tagName === 'BUTTON') { btnClicado.innerHTML = textoOriginal; btnClicado.disabled = false;
-        } 
-    }, 500);
-};
-
-// ==========================================================
-// 13. RESULTADOS (LANÇAR, EDITAR, PENALIZAR E RANKING)
-// ==========================================================
-window.addResult = function() { 
-    const evtId = document.getElementById('adm-res-evt').value;
-    if(!canManageEvent(evtId)) return toast("VOCÊ NÃO TEM PERMISSÃO NESTE EVENTO", "error"); 
-    const cpf = document.getElementById('adm-res-id').value; 
-    const name = document.getElementById('adm-res-name-display').value;
-    const city = document.getElementById('adm-res-city-edit').value.toUpperCase(); 
-    const cat = window.normalizeCatName(document.getElementById('adm-res-cat-edit').value); 
-    const val = document.getElementById('adm-res-val').value; 
-    const runTypeManual = document.getElementById('adm-res-runtype').value; 
-    const editIdxInput = document.getElementById('adm-res-idx-edit').value;
-    if(!evtId || !name || !val || !cpf) return toast("PREENCHA TUDO", "error"); 
-    if(val.length < 4) return toast("FORMATO DE TEMPO INVÁLIDO", "error");
-    const newTime = { evtId: evtId, cpf: cpf, name: name.toUpperCase(), city: city, cat: cat, val: val, status: 'OK', runType: runTypeManual };
-    const existingIndex = editIdxInput !== "" ? parseInt(editIdxInput, 10) : db.tempos.findIndex(t => t && String(t.evtId) === String(evtId) && t.cpf === cpf && t.runType === runTypeManual && t.cat === cat );
-    const performSave = (idx) => { 
-        if(idx > -1) { db.tempos[idx] = newTime;
-        } else { db.tempos.push(newTime); } 
-        saveDB('tempos');
-        dispararPushAtleta(cpf, "Tempo Registrado! ⏱️", `Seu tempo de ${val} acabou de entrar no sistema. Confira sua posição!`); 
-        toast("✅ TEMPO ATUALIZADO NO SISTEMA!"); 
-        clearResultFormUI(); renderAdmResults(); recalcRanking(); 
-        if (document.getElementById('list-tempos')) renderContent('tempos');
-    }; 
-    
-    if (existingIndex > -1 && editIdxInput === "") { 
-        showConfirm("SUBSTITUIR TEMPO?", "ATENÇÃO: Este atleta já possui um tempo lançado nesta descida. Deseja SUBSTITUIR pelo novo tempo?", '<i class="fas fa-history" style="color:var(--pe-blue)"></i>', function(res) { 
-            if(res) { 
-                if(!isSuperAdmin(loggedUser)) { 
-                    showPrompt("AUTORIZAÇÃO NECESSÁRIA", "Digite a Senha Master para substituir este tempo:", function(pwd) { if(pwd === db.config.rerunPass) performSave(existingIndex); else toast("SENHA INCORRETA", "error"); }); 
-                } else { performSave(existingIndex); } 
-            } 
-        });
-    } else { performSave(existingIndex); } 
-};
-
-window.addResultDNF = function() { 
-    const evtId = document.getElementById('adm-res-evt').value;
-    if(!canManageEvent(evtId)) return toast("VOCÊ NÃO TEM PERMISSÃO NESTE EVENTO", "error"); 
-    const cpf = document.getElementById('adm-res-id').value; 
-    const name = document.getElementById('adm-res-name-display').value;
-    const city = document.getElementById('adm-res-city-edit').value.toUpperCase(); 
-    const cat = window.normalizeCatName(document.getElementById('adm-res-cat-edit').value); 
-    const runTypeManual = document.getElementById('adm-res-runtype').value; 
-    const editIdxInput = document.getElementById('adm-res-idx-edit').value;
-    
-    if(!evtId || !name || !cpf) return toast("SELECIONE O ATLETA PRIMEIRO", "error"); 
-    
-    showConfirm("LANÇAR DNF?", `Deseja registrar DNF (Não Concluiu) para <b>${name}</b> nesta descida?`, '<i class="fas fa-ban" style="color:var(--pe-red)"></i>', function(res) { 
-        if(res) {
-            const newTime = { evtId: evtId, cpf: cpf, name: name.toUpperCase(), city: city, cat: cat, val: 'DNF', status: 'DNF', runType: runTypeManual };
-            const existingIndex = editIdxInput !== "" ? parseInt(editIdxInput, 10) : db.tempos.findIndex(t => t && String(t.evtId) === String(evtId) && t.cpf === cpf && t.runType === runTypeManual && t.cat === cat );
-            
-            const performSave = (idx) => { 
-                if(idx > -1) { db.tempos[idx] = newTime; } 
-                else { db.tempos.push(newTime); } 
-                saveDB('tempos');
-                toast("✅ DNF REGISTRADO!"); 
-                clearResultFormUI(); renderAdmResults(); recalcRanking(); 
-                if (document.getElementById('list-tempos')) renderContent('tempos');
-            };
-            
-            if (existingIndex > -1 && editIdxInput === "") { 
-                if(!isSuperAdmin(loggedUser)) { 
-                    showPrompt("AUTORIZAÇÃO NECESSÁRIA", "Atleta já tem tempo. Digite a Senha Master para substituir por DNF:", function(pwd) { if(pwd === db.config.rerunPass) performSave(existingIndex); else toast("SENHA INCORRETA", "error"); }); 
-                } else { performSave(existingIndex); } 
-            } else { performSave(existingIndex); } 
-        }
-    });
-};
-
-window.addResultDNF = function() { 
-    const evtId = document.getElementById('adm-res-evt').value;
-    if(!canManageEvent(evtId)) return toast("VOCÊ NÃO TEM PERMISSÃO NESTE EVENTO", "error"); 
-    const cpf = document.getElementById('adm-res-id').value; 
-    const name = document.getElementById('adm-res-name-display').value;
-    const city = document.getElementById('adm-res-city-edit').value.toUpperCase(); 
-    const cat = window.normalizeCatName(document.getElementById('adm-res-cat-edit').value); 
-    const runTypeManual = document.getElementById('adm-res-runtype').value; 
-    const editIdxInput = document.getElementById('adm-res-idx-edit').value;
-    
-    if(!evtId || !name || !cpf) return toast("SELECIONE O ATLETA PRIMEIRO", "error"); 
-    
-    showConfirm("NÃO CONCLUIU?", `Deseja registrar que <b>${name}</b> não finalizou a prova nesta descida?`, '<i class="fas fa-ban" style="color:var(--pe-red)"></i>', function(res) { 
-        if(res) {
-            const newTime = { evtId: evtId, cpf: cpf, name: name.toUpperCase(), city: city, cat: cat, val: 'DNF', status: 'DNF', runType: runTypeManual };
-            const existingIndex = editIdxInput !== "" ? parseInt(editIdxInput, 10) : db.tempos.findIndex(t => t && String(t.evtId) === String(evtId) && t.cpf === cpf && t.runType === runTypeManual && t.cat === cat );
-            
-            const performSave = (idx) => { 
-                if(idx > -1) { db.tempos[idx] = newTime; } 
-                else { db.tempos.push(newTime); } 
-                saveDB('tempos');
-                toast("✅ REGISTRADO COMO NÃO FINALIZOU!"); 
-                clearResultFormUI(); renderAdmResults(); recalcRanking(); 
-                if (document.getElementById('list-tempos')) renderContent('tempos');
-            };
-            
-            if (existingIndex > -1 && editIdxInput === "") { 
-                if(!isSuperAdmin(loggedUser)) { 
-                    showPrompt("AUTORIZAÇÃO", "Atleta já tem tempo. Digite a Senha Master para substituir:", function(pwd) { if(pwd === db.config.rerunPass) performSave(existingIndex); else toast("SENHA INCORRETA", "error"); }); 
-                } else { performSave(existingIndex); } 
-            } else { performSave(existingIndex); } 
-        }
-    });
-};
-window.clearResultFormUI = function() {
-    const camposParaLimpar = ['adm-res-search', 'adm-res-name-display', 'adm-res-city-edit', 'adm-res-cat-edit', 'adm-res-num', 'adm-res-val', 'adm-res-id', 'adm-res-idx-edit'];
-    camposParaLimpar.forEach(id => { const el = document.getElementById(id); if(el) { el.value = ''; localStorage.removeItem('autosave_' + id); } });
-    const searchList = document.getElementById('adm-res-list'); if (searchList) searchList.style.display = 'none';
-    document.getElementById('btn-save-res').innerText = "LANÇAR / SALVAR"; const btnCancel = document.getElementById('btn-cancel-res');
-    if (btnCancel) btnCancel.style.display = 'none'; 
-};
-window.clearResultForm = window.clearResultFormUI;
-
-window.selectResPilot = function(cpf, name, city, cat) { const setAndSave = (elId, val) => { const el = document.getElementById(elId);
-if(el) { el.value = val; localStorage.setItem('autosave_' + elId, val); } }; setAndSave('adm-res-id', cpf); setAndSave('adm-res-name-display', name); setAndSave('adm-res-city-edit', city); setAndSave('adm-res-cat-edit', cat);
-setAndSave('adm-res-search', ''); document.getElementById('adm-res-list').style.display = 'none'; };
-
-window.editRes = function(index) { 
-    const execEdit = () => { const t = db.tempos[index];
-    if(!t) return; const setAndSave = (elId, val) => { const el = document.getElementById(elId); if(el) { el.value = val;
-    localStorage.setItem('autosave_' + elId, val); } }; setAndSave('adm-res-evt', t.evtId); setAndSave('adm-res-id', t.cpf || ""); setAndSave('adm-res-name-display', t.name); setAndSave('adm-res-city-edit', t.city); setAndSave('adm-res-cat-edit', t.cat); setAndSave('adm-res-val', t.val);
-    setAndSave('adm-res-idx-edit', index); document.getElementById('btn-save-res').innerText = "SALVAR ALTERAÇÃO"; document.getElementById('btn-cancel-res').style.display = 'block'; };
-    if(!isSuperAdmin(loggedUser)) { showPrompt("AUTORIZAÇÃO NECESSÁRIA", "Digite a Senha Master para editar este tempo:", function(pwd) { if(pwd === db.config.rerunPass) execEdit(); else toast("SENHA INCORRETA", "error"); });
-    } else { execEdit(); }
-};
-
-window.cancelEditRes = function() { ['adm-res-idx-edit', 'adm-res-name-display', 'adm-res-val', 'adm-res-id'].forEach(id => { const el = document.getElementById(id); if(el) { el.value = ''; localStorage.removeItem('autosave_' + id); } });
-document.getElementById('btn-save-res').innerText = "LANÇAR / SALVAR"; document.getElementById('btn-cancel-res').style.display = 'none'; };
-
-window.renderAdmResults = function() { 
-    const evtId = document.getElementById('adm-res-evt').value;
-    const listDiv = document.getElementById('adm-list-results'); 
-
-    // --- ATUALIZA O DROPDOWN DE CATEGORIAS DINAMICAMENTE ---
-    const catFilter = document.getElementById('adm-res-filter-cat');
-    if (catFilter) {
-        const currentSelCat = catFilter.value;
-        let catHtml = '<option value="ALL">TODAS CATEGORIAS</option>';
-        let catsToShow = [];
-        
-        if (evtId) {
-            const evtObj = db.events.find(e => String(e.id) === String(evtId));
-            if (evtObj && evtObj.type === 'NON_OFFICIAL' && evtObj.extraVals) {
-                catsToShow = Object.keys(evtObj.extraVals).filter(k => evtObj.extraVals[k] && String(evtObj.extraVals[k]).trim() !== "");
-                catsToShow.sort((a,b) => a.localeCompare(b));
-            }
-        }
-        
-        if (catsToShow.length === 0 && db.config && db.config.categories) {
-            catsToShow = db.config.categories.filter(c => c.active).map(c => c.name).sort((a,b) => a.localeCompare(b));
-        }
-        
-        catsToShow.forEach(c => { catHtml += `<option value="${c}">${c}</option>`; });
-        catFilter.innerHTML = catHtml;
-        if (currentSelCat && catFilter.querySelector(`option[value="${currentSelCat}"]`)) {
-            catFilter.value = currentSelCat;
-        }
-    }
-    // --------------------------------------------------------
-
-    const fCat = catFilter ? catFilter.value : 'ALL'; 
-    const fType = document.getElementById('adm-res-filter-type') ? document.getElementById('adm-res-filter-type').value : 'ALL';
-    const searchTerm = document.getElementById('adm-res-list-search') ? document.getElementById('adm-res-list-search').value.toUpperCase() : '';
-    
-    if(!evtId) { listDiv.innerHTML = "Selecione um evento."; return; } 
-    let results = db.tempos.filter(t => String(t.evtId) === String(evtId));
-    if(fCat !== 'ALL') results = results.filter(t => window.normalizeCatName(t.cat) === window.normalizeCatName(fCat)); 
-    if(fType !== 'ALL') results = results.filter(t => t.runType === fType);
-    
-    // Filtro do campo de busca (Nome, CPF ou Cidade)
-    if(searchTerm) {
-        results = results.filter(t => {
-            const u = db.users.find(user => user.cpf === t.cpf);
-            const cityUF = u ? getPilotCityUF(u.cpf, u.city) : t.city;
-            return (t.name && t.name.includes(searchTerm)) || 
-                   (t.cpf && t.cpf.includes(searchTerm)) || 
-                   (cityUF && cityUF.includes(searchTerm));
-        });
-    }
-    
-    results.sort((a,b) => a.val.localeCompare(b.val));
-    
-    if(results.length === 0) { listDiv.innerHTML = '<div style="padding:15px; text-align:center; color:#999">Nenhum tempo encontrado.</div>'; return; } 
-    listDiv.innerHTML = results.map((t, i) => { 
-        const realIndex = db.tempos.findIndex(x => x === t); const pName = getPilotName(t.cpf, t.name); const pCityUF = getPilotCityUF(t.cpf, t.city); const cClass = getCatClass(t.cat); let tags = ""; 
-        if(t.runType === 'qualify') tags = '<span style="background:#E6E6FA; color:#4B0082; font-size:10px; padding:3px 6px; border-radius:4px; margin-right:3px; font-weight:bold;">QUALIFY</span>'; else if(t.runType === '1st' || !t.runType) tags = '<span style="background:#d4edda; color:#155724; font-size:10px; padding:3px 6px; border-radius:4px; margin-right:3px; font-weight:bold;">OFICIAL</span>'; else if(t.runType === '2nd') tags = '<span style="background:#ffe5b4; color:#d65a00; font-size:10px; padding:3px 6px; border-radius:4px; margin-right:3px; font-weight:bold;">2ª DESCIDA</span>'; 
-
-        let penTag = t.penaltyStr ? ` <span style="color:var(--pe-red); font-size:10px; font-weight:bold; display:block;">(${t.penaltyStr})</span>` : '';
-        let valStyle = t.val === 'DNF' ? 'color:var(--pe-red); font-weight:900; font-size:11px;' : '';
-        let valDisplay = t.val === 'DNF' ? 'NÃO FINALIZOU' : t.val;
-        return `<div class="adm-card" style="display:flex; flex-direction:column; gap:8px; border: 2px solid #cbd5e1; padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); background: #ffffff;"><div style="display:flex; justify-content:space-between; align-items:start;"><div><div style="font-weight:bold; font-size:13px; color:var(--pe-blue);">${pName} <span class="badge-city">${pCityUF}</span></div><div style="margin-top:4px;">${tags} <span class="${cClass}">${t.cat}</span></div></div><div style="text-align:right;"><b style="font-family:monospace; font-size:15px; background:#f1f5f9; padding:4px 6px; border-radius:6px; border:1px solid #e2e8f0; ${valStyle}">${valDisplay}</b>${penTag}</div></div><div style="display:flex; gap:5px; border-top:1px dashed #e2e8f0; padding-top:10px;"><button class="btn-mini-adm" style="background:#d65a00; color:white; flex:1; font-weight:bold;" onclick="aplicarPenalidade('${realIndex}')"><i class="fas fa-stopwatch"></i> PENALIZAR</button><button class="btn-mini-adm" style="background:var(--pe-blue); flex:1;" onclick="editRes('${realIndex}')"><i class="fas fa-pen"></i> EDITAR</button><button class="btn-mini-adm" style="background:var(--pe-red); width:40px;" onclick="deleteRes('${realIndex}')"><i class="fas fa-trash"></i></button></div></div>`; 
-    }).join(''); 
-};
-window.deleteRes = function(index) { 
-    const execDelete = () => { showConfirm("EXCLUIR TEMPO?", "Deseja realmente excluir este tempo do sistema?", '<i class="fas fa-trash-alt" style="color:var(--pe-red)"></i>', function(res) { if(res) { database.ref(DB_KEY + '/tempos').once('value').then(snap => { let temposRemotos = snap.val() || []; if(!Array.isArray(temposRemotos)) temposRemotos = Object.values(temposRemotos); const tInfo = temposRemotos[index]; if(tInfo) { window.logAction(`Excluiu tempo do CPF ${tInfo.cpf} na Etapa ID: ${tInfo.evtId}`); } temposRemotos.splice(index, 1); database.ref(DB_KEY + '/tempos').set(temposRemotos).then(() => { toast("ATUALIZADO!"); renderAdmResults(); recalcRanking(); refreshCurrentView(); }); }); } });
-    };
-    if(!isSuperAdmin(loggedUser)) { showPrompt("AUTORIZAÇÃO NECESSÁRIA", "Digite a Senha Master para excluir este tempo:", function(pwd) { if(pwd === db.config.rerunPass) execDelete(); else toast("SENHA INCORRETA", "error"); });
-    } else { execDelete(); }
-};
-
-window.aplicarPenalidade = function(index) {
-    if(!isSuperAdmin(loggedUser)) return toast("APENAS ADMIN PODE PENALIZAR", "error");
-    const tInfo = db.tempos[index]; if(!tInfo || tInfo.val === 'DNF' || tInfo.val === '--:--.---') return toast("TEMPO INVÁLIDO PARA PENALIDADE", "error");
-    showPrompt("APLICAR PENALIDADE", `Quantos segundos de penalidade para ${tInfo.name}? (Apenas números)`, function(segundosInput) {
-        let sec = parseInt(segundosInput, 10); if(isNaN(sec) || sec <= 0) return toast("VALOR INVÁLIDO", "error");
-        let ms = tempoParaMilissegundos(tInfo.val); if(ms === Infinity) return toast("ERRO NO TEMPO", "error");
-        ms += sec * 1000; let newMin = Math.floor(ms / 60000); let newSec = Math.floor((ms % 60000) / 1000); let newMs = ms % 1000; let newVal = `${newMin.toString().padStart(2,'0')}:${newSec.toString().padStart(2,'0')}.${newMs.toString().padStart(3,'0')}`;
-        db.tempos[index].val = newVal; db.tempos[index].penaltyStr = tInfo.penaltyStr ? `${tInfo.penaltyStr}, +${sec}s` : `+${sec}s`;
-        saveDB('tempos'); window.logAction(`Aplicou penalidade de +${sec}s para ${tInfo.name} (Cat: ${tInfo.cat})`); toast(`PENALIDADE DE +${sec}s APLICADA!`, "success"); renderAdmResults(); recalcRanking(); refreshCurrentView();
-    });
-};
-
-function recalcRanking(filterEvtId = 'ALL') { let pointsMap = {}; if(!db.events || !db.tempos) { db.ranking = []; return;
-} db.events.forEach(evt => { if(filterEvtId !== 'ALL' && String(evt.id) !== String(filterEvtId)) return; if(evt.status === 'CANCELLED') return; let timesByCat = {}; let qTimesByCat = {}; const evtTimes = db.tempos.filter(t => String(t.evtId) === String(evt.id)); evtTimes.forEach(t => { if(!timesByCat[t.cat]) timesByCat[t.cat] = []; if(!qTimesByCat[t.cat]) qTimesByCat[t.cat] = []; if(t.runType === '1st' || !t.runType) timesByCat[t.cat].push(t); if(t.runType === 'qualify') qTimesByCat[t.cat].push(t); }); const sortLogic = (a, b) => { if(a.val === 'DNF' && b.val !== 'DNF') return 1; if(b.val === 'DNF' && a.val !== 'DNF') return -1; return a.val.localeCompare(b.val); }; Object.keys(timesByCat).forEach(cat => { timesByCat[cat].sort(sortLogic); const uniquePilots = {}; timesByCat[cat].forEach(t => { if(!uniquePilots[t.cpf] || (t.val !== 'DNF' && uniquePilots[t.cpf].val === 'DNF') || (t.val !== 'DNF' && t.val < uniquePilots[t.cpf].val)) uniquePilots[t.cpf] = t; }); const sortedUnique = Object.values(uniquePilots).sort(sortLogic);
-    sortedUnique.forEach((t, index) => { let pts = 0; if(t.val !== 'DNF' && evt.points && index < evt.points.length && evt.points[index] !== "") pts = parseInt(evt.points[index], 10); addPointsToMap(pointsMap, t, pts, false, evt.t); });
-}); Object.keys(qTimesByCat).forEach(cat => { qTimesByCat[cat].sort(sortLogic); const uniquePilots = {}; qTimesByCat[cat].forEach(t => { if(!uniquePilots[t.cpf] || (t.val !== 'DNF' && uniquePilots[t.cpf].val === 'DNF') || (t.val !== 'DNF' && t.val < uniquePilots[t.cpf].val)) uniquePilots[t.cpf] = t; }); const sortedUnique = Object.values(uniquePilots).sort(sortLogic); sortedUnique.forEach((t, index) => { let pts = 0; if(t.val !== 'DNF' && evt.qPoints && index < evt.qPoints.length && evt.qPoints[index] !== "") pts = parseInt(evt.qPoints[index], 10); addPointsToMap(pointsMap, t, pts, true, evt.t); }); });
-}); let newRanking = Object.values(pointsMap); newRanking.sort((a,b) => b.totalPts - a.totalPts); db.ranking = newRanking;
-}
-
-function addPointsToMap(map, t, pts, isQualify, evtName) { if(pts === 0) return; const key = t.cpf + '_' + t.cat;
-if(!map[key]) map[key] = { name: t.name, city: t.city, cat: t.cat, cpf: t.cpf, totalPts: 0, qPts: 0, oPts: 0, evts: [] };
-map[key].totalPts += pts; if(isQualify) map[key].qPts += pts; else map[key].oPts += pts; if(evtName && !map[key].evts.includes(evtName)) map[key].evts.push(evtName);
-}
-
-window.compartilharResultados = function(tipo) {
-    const listDiv = document.getElementById('list-' + tipo);
-    if (!listDiv || listDiv.innerHTML.trim() === '') return toast("Nenhum dado para compartilhar", "error");
-    let printWin = window.open('', '_blank');
-    let title = tipo === 'tempos' ? 'Resultados Oficiais' : 'Ranking Geral Oficial';
-    let html = `<html><head><title>${title}</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"><style>:root { --pe-blue: #0038a8; --pe-red: #d50000; --pe-green: #009b3a; --pe-yellow: #ffe500; } * { box-sizing: border-box !important; } body { font-family: Arial, sans-serif; padding: 20px; color: #333; background: #fff; margin:0; } .print-container { max-width: 800px; margin: 0 auto; background: #fff; padding: 10px; width: 100%; overflow: hidden; } .print-header { padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; color: white; background: var(--pe-blue); -webkit-print-color-adjust: exact; print-color-adjust: exact; } .rank-row { border: 1px solid #ddd; margin-bottom: 5px; padding: 8px; border-radius: 6px; width: 100%; } .badge-city { background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; color: #475569; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .badge-cat, .badge-cat-extra { background: #e0e7ff; color: #3730a3; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .cat-print-page { margin-bottom: 10px; border: 2px solid #0038a8; border-radius: 8px; overflow: hidden; width: 100%; } .cat-title-box { background: #0038a8 !important; color: white !important; padding: 10px; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 16px; -webkit-print-color-adjust: exact; print-color-adjust: exact; } @media print { @page { margin: 1cm; size: A4 portrait; } body { padding: 0; } .print-container { max-width: 100%; width: 100%; padding:0; overflow: hidden; } .cat-print-page { page-break-after: auto !important; page-break-inside: auto !important; break-inside: auto !important; margin-bottom: 15px !important; } .rank-row { page-break-inside: avoid !important; break-inside: avoid !important; width: 100%; } .no-print { display: none !important; } * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }</style></head><body><div style="text-align:center; margin-bottom:20px;" class="no-print"><button onclick="window.print()" style="padding:12px 24px; background:#009b3a; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🖨️ IMPRIMIR / SALVAR PDF</button><button onclick="window.close()" style="padding:12px 24px; background:#d50000; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; margin-left:10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">❌ FECHAR ABA</button></div><div class="print-container">${listDiv.innerHTML}</div></body></html>`;
-    printWin.document.write(html); printWin.document.close(); setTimeout(() => { printWin.focus(); }, 250);
-};
-
-// ==========================================================
-// 14. LIVE TIMING, SERVICE WORKER E PWA
-// ==========================================================
-window.syncLiveTimes = function(liveData) {
-    try {
-        let evtId = document.getElementById('adm-res-evt').value;
-        if(!evtId) return; let hasChanges = false;
-        liveData.forEach(liveAthlete => {
-            let cpf = liveAthlete.originalCpf; let cat = liveAthlete.category; let times = liveAthlete.times;
-            const updateOrAddTime = (runTypeKey, runTypeDb) => {
-                let msVal = times[runTypeKey]; let clockVal = liveAthlete.startClocks ? liveAthlete.startClocks[runTypeKey] : null;
-                if (msVal !== null) {
-                    let strVal = msToTime(msVal); let existingIndex = db.tempos.findIndex(t => t && String(t.evtId) === String(evtId) && t.cpf === cpf && t.cat === cat && t.runType === runTypeDb);
-                    if (existingIndex > -1) { if(db.tempos[existingIndex].val !== strVal) { db.tempos[existingIndex].val = strVal; db.tempos[existingIndex].startClock = clockVal; hasChanges = true; } } else { db.tempos.push({ evtId: evtId, cpf: cpf, name: liveAthlete.name, city: liveAthlete.city, cat: cat, val: strVal, startClock: clockVal, status: 'OK', runType: runTypeDb }); hasChanges = true; }
-                }
-            };
-            updateOrAddTime('qualify', 'qualify'); updateOrAddTime('oficial', '1st'); updateOrAddTime('segunda', '2nd');
-        });
-        if(hasChanges) { saveDB('tempos'); toast("DADOS DO LIVE SINCRONIZADOS!"); renderAdmResults(); }
-    } catch(e) { console.error("Falha ao salvar de volta:", e); }
-};
-
-function gatherAndPushData(win) {
-    let evtId = document.getElementById('adm-res-evt').value;
-    const evtObj = db.events.find(e => String(e.id) === String(evtId));
-    let activeCategories = []; 
-    if (evtObj && evtObj.type === 'NON_OFFICIAL' && evtObj.extraVals) {
-        activeCategories = Object.keys(evtObj.extraVals).filter(k => evtObj.extraVals[k] && String(evtObj.extraVals[k]).trim() !== "").sort((a,b) => a.localeCompare(b));
-    } else if (db.config && db.config.categories) {
-        activeCategories = db.config.categories.filter(c => c.active).map(c => c.name).sort((a,b) => a.localeCompare(b));
-    }
-    if (activeCategories.length === 0) activeCategories = ["ELITE", "OPEN (EXTRA)", "RÍGIDA (EXTRA)"];
-    
-    let liveDataArray = [];
-    if (typeof db !== 'undefined' && db.users) { 
-        db.users.forEach(u => { 
-            let nome = (u.nome || u.name || "").toString().trim().toUpperCase(); 
-            let city = (u.cidade || u.city || "-").toString().trim().toUpperCase(); 
-            let uf = (u.uf || u.estado || "PE").toString().trim().toUpperCase(); 
-            let cityUF = `${city}-${uf}`; 
-            
-            if(nome && u.inscricoes) { 
-                u.inscricoes.forEach(insc => { 
-                    if(String(insc.id) === String(evtId) && insc.status === 'CONFIRMADO') { 
-                        let cat = window.normalizeCatName ? window.normalizeCatName(insc.extraCat ? insc.extraCat : (u.cat || "GERAL")) : (insc.extraCat || u.cat).toUpperCase(); 
-                        
-                        if (evtObj && evtObj.type === 'NON_OFFICIAL') {
-                            cat = cat.replace(" (EXTRA)", "");
-                        }
-
-                        let times = {qualify: null, oficial: null, segunda: null};
-                        let startClocks = {qualify: null, oficial: null, segunda: null}; 
-                        
-                        if (db.tempos) { 
-                            db.tempos.forEach(t => { 
-                                let timeCat = t.cat;
-                                if (evtObj && evtObj.type === 'NON_OFFICIAL') timeCat = timeCat.replace(" (EXTRA)", "");
-
-                                if (String(t.evtId) === String(evtId) && t.cpf === u.cpf && timeCat === cat) { 
-                                    let key = t.runType === '1st' ? 'oficial' : (t.runType === '2nd' ? 'segunda' : 'qualify'); 
-                                    times[key] = timeToMs(t.val); 
-                                    startClocks[key] = t.startClock || null; 
-                                } 
-                            }); 
-                        } 
-                        liveDataArray.push({ id: u.cpf + '||' + cat, originalCpf: u.cpf, name: nome, city: cityUF, region: uf, number: u.numero || u.numPlaca || u.placa || "S/N", category: cat, status: 'CONFIRMADO', times: times, startClocks: startClocks, isRerun: false });
-                    } 
-                });
-            } 
-        });
-    }
-    
-    if (win && win.receiveData) { win.receiveData(liveDataArray, activeCategories, db.config.rerunPass || "admin123", DB_KEY, evtId);
-    }
-}
-
-window.forcePushData = function(win) { gatherAndPushData(win); };
-window.liveTimingWindow = null;
-
-function launchUnifiedLiveTiming() {
-    const btn = document.querySelector('.btn-live-launch');
-    const evtId = document.getElementById('adm-res-evt').value; if(!evtId) return toast("SELECIONE UM EVENTO PRIMEIRO", "error");
-    const origHtml = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ABRINDO...'; const width = 1280, height = 720;
-    const left = (screen.width / 2) - (width / 2); const top = (screen.height / 2) - (height / 2);
-    const win = window.open('', 'DHPE_Unified_Live', `width=${width},height=${height},top=${top},left=${left},resizable=yes,scrollbars=yes,toolbar=no,menubar=no,location=no,directories=no,status=no`);
-    if (win) { window.liveTimingWindow = win; const template = document.getElementById('template-live-timing'); win.document.open(); win.document.write(template.innerHTML); win.document.close();
-    setTimeout(() => { gatherAndPushData(win); btn.innerHTML = origHtml; }, 600); } else { alert("O navegador bloqueou o pop-up. Permita e tente novamente.");
-    btn.innerHTML = origHtml; }
-}
-
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; setTimeout(() => { const banner = document.getElementById('pwa-install-banner'); if(banner) banner.style.display = 'flex'; }, 2000); });
-window.installApp = async () => { if (deferredPrompt) { deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice;
-if (outcome === 'accepted') { const banner = document.getElementById('pwa-install-banner'); if(banner) banner.style.display = 'none'; } deferredPrompt = null; } };
-window.closeInstallBanner = () => { const banner = document.getElementById('pwa-install-banner'); if(banner) banner.style.display = 'none'; };
-if ('serviceWorker' in navigator) { 
-    window.addEventListener('load', () => { 
-        navigator.serviceWorker.register('./sw.js').then((reg) => { 
-            console.log('[SW] Registrado com Sucesso:', reg.scope); 
-            reg.update();
-        }).catch((err) => { 
-            console.error('[SW] Erro no registro:', err); 
-        }); 
-    });
-}
-
-// ==========================================================
-// 15. BACKUPS
-// ==========================================================
-window.downloadBackup = function() { if(!isSuperAdmin(loggedUser) && (!loggedUser || loggedUser.role !== 'ORGANIZER')) return toast("Sem permissão", "error");
-if(!db) return toast("Sem dados para salvar", "error"); const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db)); const downloadAnchorNode = document.createElement('a'); downloadAnchorNode.setAttribute("href", dataStr);
-downloadAnchorNode.setAttribute("download", "backup_dhpe_" + new Date().toISOString().slice(0,10) + ".json"); document.body.appendChild(downloadAnchorNode); downloadAnchorNode.click(); downloadAnchorNode.remove(); toast("BACKUP BAIXADO!"); };
-window.restoreBackup = function() { if(!isSuperAdmin(loggedUser) && (!loggedUser || loggedUser.role !== 'ORGANIZER')) return toast("Sem permissão", "error"); const input = document.getElementById('backup-input-file');
-if(input) input.click(); };
-window.processRestoreFile = function(input) { const file = input.files[0]; if(!file) return; const reader = new FileReader();
-reader.onload = function(e) { try { const restoredDb = JSON.parse(e.target.result);
-if(restoredDb && Array.isArray(restoredDb.users)) { showConfirm("RESTAURAR DADOS?", "Isso substituirá TODOS os dados atuais pelos do backup. Continuar?", '<i class="fas fa-exclamation-triangle" style="color:var(--pe-red)"></i>', function(res) { if(res) { db = restoredDb; saveDB(); toast("DADOS RESTAURADOS!"); setTimeout(() => window.location.reload(), 1500); } });
-} else { toast("ARQUIVO INVÁLIDO", "error"); } } catch(err) { console.error(err); toast("ERRO AO LER ARQUIVO", "error"); } }; reader.readAsText(file); };
-
-// ==========================================================
-// FUNÇÕES DE GERENCIAMENTO DE INSCRIÇÕES E STATUS
-// ==========================================================
-window.renderInscriptions = function() {
-    const evtId = document.getElementById('fin-evt-select').value;
-    const listContainer = document.getElementById('fin-list-container');
-    if (!listContainer) return;
-    
-    if (!evtId || evtId === "") {
-        listContainer.innerHTML = '<div style="padding:15px; text-align:center; color:#999;">Selecione um evento acima.</div>';
-        document.getElementById('fin-total-val').innerText = 'Total: 0';
-        document.getElementById('fin-paid-val').innerText = 'Pagos: 0';
-        return;
-    }
-
-    let inscritos = [];
-    let totalArrecadado = 0;
-    let totalPagos = 0;
-    const isGeral = (evtId === 'ALL');
-    db.users.forEach(u => {
-        if (u.inscricoes && u.inscricoes.length > 0) {
-            u.inscricoes.forEach(i => {
-                if (isGeral || String(i.id) === String(evtId)) {
-                    let evtObj = db.events.find(e => String(e.id) === String(i.id));
-                    if(evtObj) {
-                        let catNome = window.normalizeCatName(i.extraCat || u.cat);
-                        let valStr = evtObj.val || "0";
-                        
-                        if (evtObj.type === 'NON_OFFICIAL') {
-                            let cleanCat = catNome.replace(" (EXTRA)", "");
-                            if (evtObj.extraVals && evtObj.extraVals[catNome] && evtObj.extraVals[catNome].trim() !== "") {
-                                valStr = evtObj.extraVals[catNome];
-                            } else if (evtObj.extraVals && evtObj.extraVals[cleanCat] && evtObj.extraVals[cleanCat].trim() !== "") {
-                                valStr = evtObj.extraVals[cleanCat];
-                            }
-                            catNome = cleanCat;
-                        } else {
-                            if (i.extraCat && evtObj.extraVals && evtObj.extraVals[catNome] && evtObj.extraVals[catNome].trim() !== "") {
-                                valStr = evtObj.extraVals[catNome];
-                            }
-                        }
-                        
-                        let valNum = parseFloat(valStr.replace(',', '.')) || 0;
-                        
-                        if (i.status === 'CONFIRMADO') {
-                            totalArrecadado += valNum;
-                            totalPagos++;
-                        }
-
-                        inscritos.push({
-                            cpf: u.cpf, nome: u.nome, city: u.city, uf: u.uf || 'PE', cat: catNome,
-                            status: i.status, evtName: evtObj.t, evtIdInsc: i.id, valDisplay: valStr, 
-                            date: i.date || 0, tel: u.tel
-                        });
-                    }
-                }
-            });
-        }
-    });
-
-    document.getElementById('fin-total-val').innerText = `Total: ${inscritos.length}`;
-    document.getElementById('fin-paid-val').innerHTML = `Pagos: ${totalPagos} <span style="font-size:9px; margin-left:5px; opacity:0.8;">(R$ ${totalArrecadado.toFixed(2).replace('.', ',')})</span>`;
-    if (currentFilterStatus !== 'ALL') {
-        inscritos = inscritos.filter(a => a.status === currentFilterStatus);
-    }
-
-    const buscaInput = document.getElementById('inputBuscaAtleta');
-    const termo = buscaInput ? buscaInput.value.toLowerCase() : "";
-    if (termo) {
-        inscritos = inscritos.filter(a => 
-            a.nome.toLowerCase().includes(termo) || 
-            a.cpf.includes(termo) || 
-            a.city.toLowerCase().includes(termo)
-        );
-    }
-
-    inscritos.sort((a, b) => a.nome.localeCompare(b.nome));
-
-    if (inscritos.length === 0) {
-        listContainer.innerHTML = '<div style="padding:15px; text-align:center; color:#999;">Nenhuma inscrição encontrada para este filtro.</div>';
-        return;
-    }
-
-    listContainer.innerHTML = inscritos.map(a => {
-        const isPago = a.status === 'CONFIRMADO';
-        const bgStatus = isPago ? '#dcfce7' : '#fff7ed';
-        const colorStatus = isPago ? '#15803d' : '#c2410c';
-        const borderStatus = isPago ? '#86efac' : '#fdba74';
-        const iconStatus = isPago ? 'fa-check-circle' : 'fa-clock';
-        
-        const btnAcao = !isPago 
-            ? `<button class="btn-mini-adm" style="background:#009b3a; flex:1; font-weight:bold; padding:8px 0; margin:0;" onclick="aprovarInscricao('${a.cpf}', '${a.evtIdInsc}', '${a.cat}')"><i class="fas fa-check"></i> APROVAR</button>` 
-            : `<button class="btn-mini-adm" style="background:#d65a00; flex:1; font-weight:bold; padding:8px 0; margin:0;" onclick="estornarInscricao('${a.cpf}', '${a.evtIdInsc}', '${a.cat}')"><i class="fas fa-undo"></i> ESTORNAR</button>`;
-            
-        const wppBtn = a.tel ? `<button class="btn-mini-adm" style="background:#25D366; width:45px; margin:0;" onclick="openWhatsApp('${a.tel}', 'Olá ${a.nome}, vimos sua inscrição na etapa...')"><i class="fab fa-whatsapp" style="font-size:14px;"></i></button>` : '';
-
-        return `
-        <div class="adm-card" style="display:flex; flex-direction:column; gap:8px; border: 2px solid ${isPago ? '#bbf7d0' : '#cbd5e1'}; padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); background: ${isPago ? '#f0fdf4' : '#ffffff'};">
-            <div style="display:flex; justify-content:space-between; align-items:start;">
-                <div>
-                    <div style="font-weight:900; font-size:14px; color:var(--pe-blue); text-transform:uppercase;">${a.nome} <span class="badge-city" style="vertical-align:middle;">${a.city}-${a.uf}</span></div>
-                    <div style="margin-top:6px; display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
-                        <span style="background:${bgStatus}; color:${colorStatus}; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:bold; border:1px solid ${borderStatus};"><i class="fas ${iconStatus}"></i> ${isPago ? 'PAGO' : 'PENDENTE'}</span>
-                        <span class="badge-cat" style="margin:0; ${a.cat.includes('EXTRA') ? 'background:#fffbeb; color:#b45309; border-color:#fde68a;' : ''}">${a.cat}</span>
-                        ${isGeral ? `<span style="background:#e2e8f0; color:#334155; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:bold; border:1px solid #cbd5e1;"><i class="fas fa-flag-checkered"></i> ${a.evtName}</span>` : ''}
-                    </div>
-                </div>
-                <div style="text-align:right;">
-                    <b style="font-family:monospace; font-size:14px; background:#f1f5f9; padding:4px 6px; border-radius:6px; border:1px solid #e2e8f0; color:#1e293b;">R$ ${a.valDisplay}</b>
-                    <div style="font-size:10px; color:#64748b; margin-top:4px; font-weight:bold;">${new Date(a.date).toLocaleDateString('pt-BR')}</div>
-                </div>
-            </div>
-            <div style="display:flex; gap:5px; border-top:1px dashed #e2e8f0; padding-top:10px; margin-top:4px;">
-                ${wppBtn}
-                ${btnAcao}
-                <button class="btn-mini-adm" style="background:var(--pe-red); color:white; width:45px; margin:0;" onclick="removerInscricao('${a.cpf}', '${a.evtIdInsc}', '${a.cat}')"><i class="fas fa-trash"></i></button>
-            </div>
-        </div>`;
-    }).join('');
-};
-
-window.filterFinList = function(status) {
-    currentFilterStatus = status;
-    localStorage.setItem('ui_fin-status', status);
-    renderInscriptions();
-};
-
-window.filtrarAtletasStatus = function() {
-    renderInscriptions(); 
-};
-
-// FIX APLICADO NO APROVARINSCRIÇÃO: Agora ele faz o .replace(" (EXTRA)", "") nos dois lados da verificação
-window.aprovarInscricao = function(cpf, evtId, cat) {
-    if(!isSuperAdmin(loggedUser) && loggedUser.role !== 'ORGANIZER') return toast("SEM PERMISSÃO", "error");
-    showConfirm("APROVAR INSCRIÇÃO?", "Confirmar o recebimento do pagamento e liberar o atleta?", '<i class="fas fa-check-circle" style="color:#009b3a"></i>', function(res) {
-        if(res) {
-            const uIdx = db.users.findIndex(u => u.cpf === cpf);
-            if(uIdx > -1 && db.users[uIdx].inscricoes) {
-                const iIdx = db.users[uIdx].inscricoes.findIndex(i => String(i.id) === String(evtId) && window.normalizeCatName(i.extraCat || db.users[uIdx].cat).replace(" (EXTRA)", "") === cat.replace(" (EXTRA)", ""));
-                
-                if(iIdx > -1) {
-                    db.users[uIdx].inscricoes[iIdx].status = 'CONFIRMADO';
-                    saveDB('users');
-                    const author = loggedUser.nome;
-                    window.logAction(`Aprovou a inscrição de ${db.users[uIdx].nome} (Cat: ${cat}) no evento ID: ${evtId}`);
-                    window.enviarNotificacao(`✅ Seu pagamento foi aprovado! Inscrição confirmada na categoria ${cat}.`, 'USER', cpf, evtId);
-                    window.enviarNotificacao(`✅ O(a) org. ${author} APROVOU a inscrição de ${db.users[uIdx].nome} (${cat}).`, 'ADMIN', null, evtId);
-                    
-                    try {
-                        if (database && db.users[uIdx].fcmToken) {
-                            database.ref('push_queue').push({
-                                token: db.users[uIdx].fcmToken,
-                                title: "Inscrição Aprovada! 🚵‍♂️",
-                                body: `Sua inscrição na categoria ${cat} foi confirmada pela organização.`,
-                                status: "pending",
-                                timestamp: Date.now()
-                            });
-                        }
-                    } catch (pushError) {
-                        console.log("Notificação Push em background ignorada para não travar a aprovação:", pushError);
-                    }
-                    
-                    toast("INSCRIÇÃO APROVADA!", "success");
-                    renderInscriptions();
-                } else {
-                    toast("ERRO: Inscrição não encontrada no banco.", "error");
-                }
-            }
-        }
-    });
-};
-
-window.estornarInscricao = function(cpf, evtId, cat) {
-    if(!isSuperAdmin(loggedUser) && loggedUser.role !== 'ORGANIZER') return toast("SEM PERMISSÃO", "error");
-    showConfirm("VOLTAR PARA PENDENTE?", "Deseja remover a confirmação de pagamento deste atleta?", '<i class="fas fa-undo" style="color:#d50000"></i>', function(res) {
-        if(res) {
-            const uIdx = db.users.findIndex(u => u.cpf === cpf);
-            if(uIdx > -1 && db.users[uIdx].inscricoes) {
-                const iIdx = db.users[uIdx].inscricoes.findIndex(i => String(i.id) === String(evtId) && window.normalizeCatName(i.extraCat || db.users[uIdx].cat).replace(" (EXTRA)", "") === cat.replace(" (EXTRA)", ""));
-                
-                if(iIdx > -1) {
-                    db.users[uIdx].inscricoes[iIdx].status = 'PENDENTE';
-                    saveDB('users');
-                    const author = loggedUser.nome;
-                    window.logAction(`Estornou a inscrição de ${db.users[uIdx].nome} (Cat: ${cat}) no evento ID: ${evtId} para PENDENTE`);
-                    dispararPushAtleta(cpf, "Inscrição Pendente ⚠️", "Sua inscrição voltou para o status pendente (Estorno).");
-                    
-                    toast("INSCRIÇÃO ESTORNADA!");
-                    renderInscriptions();
-                } else {
-                    toast("ERRO: Inscrição não encontrada no banco.", "error");
-                }
-            }
-        }
-    });
-};
-
-window.removerInscricao = function(cpf, evtId, cat) {
-    if(!isSuperAdmin(loggedUser) && loggedUser.role !== 'ORGANIZER') return toast("SEM PERMISSÃO", "error");
-    showConfirm("APAGAR INSCRIÇÃO?", "Esta ação removerá completamente a inscrição do atleta neste evento.", '<i class="fas fa-trash" style="color:#d50000"></i>', function(res) {
-        if(res) {
-            const uIdx = db.users.findIndex(u => u.cpf === cpf);
-            if(uIdx > -1 && db.users[uIdx].inscricoes) {
-                const iIdx = db.users[uIdx].inscricoes.findIndex(i => String(i.id) === String(evtId) && window.normalizeCatName(i.extraCat || db.users[uIdx].cat).replace(" (EXTRA)", "") === cat.replace(" (EXTRA)", ""));
-                
-                if(iIdx > -1) {
-                    db.users[uIdx].inscricoes.splice(iIdx, 1);
-                    saveDB('users');
-                    const author = loggedUser.nome;
-                    window.logAction(`Apagou a inscrição de ${db.users[uIdx].nome} (Cat: ${cat}) no evento ID: ${evtId}`);
-                    dispararPushAtleta(cpf, "Inscrição Excluída ❌", "Sua inscrição na etapa foi removida pela organização.");
-                    
-                    toast("INSCRIÇÃO APAGADA!");
-                    renderInscriptions();
-                } else {
-                    toast("ERRO: Inscrição não encontrada no banco.", "error");
-                }
-            }
-        }
-    });
-};
-
-// ==========================================================
-// FUNÇÃO PARA IMPRIMIR ORDEM DE LARGADA (PAINEL RESULTADOS)
-// ==========================================================
-window.imprimirOrdemLargadaGeral = function() {
-    const evtId = document.getElementById('adm-res-evt').value;
-    if (!evtId || evtId === "") return toast("SELECIONE UM EVENTO PRIMEIRO!", "error");
-    
-    const evt = db.events.find(e => String(e.id) === String(evtId));
-    if (!evt) return toast("Evento não encontrado.", "error");
-
-    let inscritos = [];
-    db.users.forEach(u => {
-        if (u.inscricoes && u.inscricoes.length > 0) {
-            u.inscricoes.forEach(i => {
-                if (String(i.id) === String(evtId) && i.status === 'CONFIRMADO') {
-                    let cat = window.normalizeCatName(i.extraCat || u.cat);
-                    
-                    let qualifyTime = "99:99.999";
-                    let hasQ = false;
-                    if (db.tempos) {
-                        let tQ = db.tempos.find(t => String(t.evtId) === String(evtId) && t.cpf === u.cpf && t.runType === 'qualify' && t.cat === cat);
-                        if (tQ && tQ.val && tQ.val !== '--:--.---' && tQ.val !== 'DNF') {
-                            qualifyTime = tQ.val;
-                            hasQ = true;
-                        }
-                    }
-                    
-                    inscritos.push({
-                        nome: u.nome,
-                        city: u.city,
-                        uf: u.uf || 'PE',
-                        cat: cat,
-                        num: u.numero || u.numPlaca || u.placa || "",
-                        qTime: qualifyTime,
-                        hasQ: hasQ
-                    });
-                }
-            });
-        }
-    });
-    
-    if (inscritos.length === 0) return toast("Nenhum atleta confirmado neste evento.", "error");
-    
-    let cats = [...new Set(inscritos.map(a => a.cat))].sort();
-    let html = `<html><head><title>Ordem de Largada - ${evt.t}</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #000; }
-        h1 { text-align: center; text-transform: uppercase; margin-bottom: 5px; font-size: 22px; }
-        h2 { text-align: center; font-size: 14px; margin-top: 0; margin-bottom: 20px; color: #555; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th, td { border: 1px solid #000; padding: 8px; text-align: left; font-size: 12px; text-transform: uppercase; }
-        th { background-color: #eee; font-weight: bold; }
-        .cat-title { background-color: #333; color: #fff; padding: 8px; font-weight: bold; font-size: 14px; margin-bottom: 0; margin-top: 15px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .print-btn { display: block; margin: 0 auto 20px auto; padding: 12px 24px; background: #ff9800; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .footer { text-align: center; margin-top: 30px; font-size: 10px; color: #999; }
-        @media print { 
-            .print-btn { display: none !important; } 
-            .cat-title { background-color: #333 !important; color: #fff !important; }
-        }
-    </style></head><body>
-    <button class="print-btn" onclick="window.print()">🖨️ IMPRIMIR ORDEM DE LARGADA</button>
-    <h1>${evt.t}</h1>
-    <h2>ORDEM DE LARGADA OFICIAL</h2>`;
-    
-    cats.forEach(cat => {
-        let pilotos = inscritos.filter(a => a.cat === cat);
-        
-        pilotos.sort((a, b) => {
-            if (a.hasQ || b.hasQ) {
-                return b.qTime.localeCompare(a.qTime);
-            }
-            return a.nome.localeCompare(b.nome);
-        });
-
-        html += `<div class="cat-title">${cat} <span style="float: right; font-size: 11px; margin-top: 2px;">(${pilotos.length} atletas)</span></div>
-        <table>
-            <thead><tr>
-                <th style="width: 40px; text-align: center;">ORD.</th>
-                <th>NOME DO ATLETA</th>
-                <th>CIDADE/UF</th>
-                <th style="width: 100px; text-align: center;">QUALIFY</th>
-                <th style="width: 120px; text-align: center;">TEMPO OFICIAL</th>
-            </tr></thead>
-            <tbody>`;
-        
-        pilotos.forEach((p, idx) => {
-            let qDisp = p.hasQ ? p.qTime : "";
-            html += `<tr>
-                <td style="text-align: center; font-weight: bold; font-size: 14px;">${idx + 1}º</td>
-                <td style="font-weight: bold; font-size: 13px;">${p.nome}</td>
-                <td>${p.city}-${p.uf}</td>
-                <td style="text-align: center; font-family: monospace; color:#666;">${qDisp}</td>
-                <td></td>
-            </tr>`;
-        });
-        html += `</tbody></table>`;
-    });
-
-    html += `<div class="footer">Gerado pelo Sistema DH-PE • ${new Date().toLocaleString('pt-BR')}</div></body></html>`;
-
-    let printWin = window.open('', '_blank');
-    printWin.document.write(html);
-    printWin.document.close();
-    setTimeout(() => { printWin.focus(); }, 250);
-};
-
-// ==========================================================
-// FUNÇÕES DE PUSH NOTIFICATION (FCM)
-// ==========================================================
-window.solicitarPermissaoPush = async function() {
-    console.log("1. Iniciando setup do Push...");
-    try {
-        if (!('Notification' in window)) {
-            console.log("AVISO: Este navegador não suporta notificações.");
-            return;
-        }
-
-        if (typeof firebase === 'undefined' || !firebase.messaging) {
-            console.log("AVISO: Firebase Messaging não está carregado.");
-            return;
-        }
-
-        let messaging;
-        try {
-            messaging = firebase.messaging();
-            console.log("2. Motor de Push iniciado com sucesso.");
-        } catch(e) {
-            console.log("AVISO ao inicializar firebase.messaging():", e);
-            return;
-        }
-
-        console.log("3. Pedindo permissão ao usuário...");
-        const permission = await Notification.requestPermission();
-        if (permission !== 'granted') {
-            console.log("AVISO: Permissão negada pelo usuário.");
-            return;
-        }
-
-        console.log("4. Registrando Service Worker...");
-        const registration = await navigator.serviceWorker.register('./sw.js');
-        console.log("5. SW Registrado com sucesso!");
-
-        console.log("6. Buscando Token FCM...");
-        const token = await messaging.getToken({
-            vapidKey: "BOyOBCDy_sTvkuUE18CsXv7juuSuRMsC02NdKKve4KpQBSXqfQKjjyOVhSWYxeQ9KheuBahkbTOu_DfQYXH_PfE",
-            serviceWorkerRegistration: registration
-        });
-
-        if (token) {
-            console.log("7. ✅ TOKEN RECEBIDO:", token);
-            if (loggedUser && loggedUser.fcmToken !== token) {
-                const uIdx = db.users.findIndex(u => u.cpf === loggedUser.cpf);
-                if (uIdx > -1) {
-                    db.users[uIdx].fcmToken = token;
-                    loggedUser.fcmToken = token;
-                    saveDB('users');
-                    updateSessionStorage();
-                    console.log("8. ✅ Token salvo no banco de dados com sucesso!");
-                }
-            } else {
-                console.log("8. Token já estava salvo corretamente no banco de dados.");
-            }
-        } else {
-            console.log("AVISO: Nenhum token foi retornado pelo Firebase.");
-        }
-
-        // Escuta notificações recebidas enquanto o app está aberto na tela
-        messaging.onMessage((payload) => {
-            console.log("🔔 Push recebido com o app aberto:", payload);
-            try { 
-                new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play(); 
-            } catch(e){}
-
-            if (typeof toast === 'function') {
-                toast(`🔔 ${payload.notification.title}`);
-            }
-        });
-
-    } catch (err) {
-        console.log("🚨 Erro tolerado no setup do Push:", err);
-    }
-};
-// ==========================================
-// MOTOR DE NOTIFICAÇÕES PREMIUM E LIMPEZA
-// ==========================================
-
-// 1. Disparo individual (Atletas)
-function dispararPushAtleta(cpfDestino, tituloPremium, mensagemPremium) {
-    try {
-        const atleta = db.users.find(u => u.cpf === cpfDestino);
-        if (atleta && atleta.fcmToken && typeof database !== 'undefined') {
-            database.ref('push_queue').push({
-                token: atleta.fcmToken,
-                title: tituloPremium,
-                body: mensagemPremium,
-                status: "pending",
-                timestamp: Date.now()
-            });
-        }
-    } catch (e) {
-        console.log("Erro ao disparar push:", e);
-    }
-}
-
-// 2. Disparo Geral (Todos)
-function dispararPushGeral(tituloPremium, mensagemPremium) {
-    try {
-        if (typeof database !== 'undefined') {
-            db.users.forEach(atleta => {
-                if (atleta.fcmToken) {
-                    database.ref('push_queue').push({
-                        token: atleta.fcmToken,
-                        title: tituloPremium,
-                        body: mensagemPremium,
-                        status: "pending",
-                        timestamp: Date.now()
-                    });
-                }
-            });
-        }
-    } catch (e) {
-        console.log("Erro ao disparar push geral:", e);
-    }
-}
-
-// 3. Limpar Notificações PREMIUM (Mim ou Todos)
-window.limparNotificacoesPremium = function(modo) {
-    if (!loggedUser) return;
-    
-    let title = modo === 'TODOS' ? "APAGAR PARA TODOS?" : "APAGAR MINHAS MENSAGENS?";
-    let msg = modo === 'TODOS' ? "Isso apagará o histórico de notificações de <b>TODOS OS USUÁRIOS</b> do sistema. Confirma a exclusão global?" : "Deseja limpar a sua lixeira pessoal? Isso não afeta o painel dos outros.";
-    let icon = '<i class="fas ' + (modo === 'TODOS' ? 'fa-globe' : 'fa-trash-alt') + '" style="color:var(--pe-red)"></i>';
-
-    showConfirm(title, msg, icon, function(res) {
-        if(res) {
-            if (modo === 'TODOS') {
-                if (!isSuperAdmin(loggedUser)) return toast("APENAS SUPER ADMIN", "error");
-                db.notifications = [];
-                toast("Lixeira global esvaziada!");
-            } else {
-                let minhasNotificacoes = window.obterMinhasNotificacoes();
-                if (minhasNotificacoes.length === 0) return toast("Sua lista já está vazia.");
-                
-                minhasNotificacoes.forEach(n => {
-                    const idx = db.notifications.findIndex(x => x.id === n.id);
-                    if (idx > -1) {
-                        if (!db.notifications[idx].deletedBy) db.notifications[idx].deletedBy = [];
-                        if (!db.notifications[idx].deletedBy.includes(loggedUser.cpf)) {
-                            db.notifications[idx].deletedBy.push(loggedUser.cpf);
-                        }
-                    }
-                });
-                toast("Suas notificações foram apagadas!");
-            }
-            saveDB('notifications');
-            window.abrirNotificacoes();
-            window.atualizarBadgeNotificacoes();
-        }
-    });
-};
-
-// 4. Limpar Auditoria PREMIUM Inteligente
-window.limparAuditoriaOrganizador = function() {
-    const filterSelect = document.getElementById('adm-audit-filter');
-    const authorTarget = filterSelect ? filterSelect.value : 'ALL';
-
-    if (authorTarget === 'ALL') {
-        showConfirm("APAGAR AUDITORIA GERAL?", "ATENÇÃO: Tem certeza que deseja apagar o histórico de <b>TODOS</b> os organizadores?", '<i class="fas fa-exclamation-triangle" style="color:var(--pe-red)"></i>', function(res) {
-            if(res) {
-                db.auditLog = [];
-                saveDB('auditLog');
-                renderAuditLog();
-                toast("Auditoria geral limpa com sucesso!");
-            }
-        });
-    } else {
-        showConfirm("APAGAR REGISTROS?", `Deseja apagar todo o histórico apenas de <b>${authorTarget}</b>?`, '<i class="fas fa-trash-alt" style="color:var(--pe-red)"></i>', function(res) {
-            if(res) {
-                db.auditLog = db.auditLog.filter(log => log.author !== authorTarget);
-                saveDB('auditLog');
-                renderAuditLog();
-                toast(`Histórico de ${authorTarget} apagado!`);
-            }
-        });
-    }
-};
-// ==========================================
-// 5. DISPARO DE PUSH PARA EQUIPE (ALVO INTELIGENTE)
-// ==========================================
-window.dispararPushParaEquipe = function(evtId, titulo, mensagem) {
-    try {
-        if (typeof database !== 'undefined' && db.users) {
-            db.users.forEach(u => {
-                let temPermissao = false;
-                
-                // 1. É Super Admin ou Admin Geral? Recebe tudo.
-                if (window.isSuperAdmin(u) || u.role === 'ADMIN') {
-                    temPermissao = true;
-                } 
-                // 2. É Organizador? Só recebe se o ID do evento estiver na lista dele.
-                else if (u.role === 'ORGANIZER' && u.allowedEvts && u.allowedEvts.includes(String(evtId))) {
-                    temPermissao = true;
-                }
-
-                // 3. Tem permissão e tem o token salvo no celular? Envia pra fila!
-                if (temPermissao && u.fcmToken) {
-                    database.ref('push_queue').push({
-                        token: u.fcmToken,
-                        title: titulo,
-                        body: mensagem,
-                        status: "pending",
-                        timestamp: Date.now()
-                    });
-                }
-            });
-        }
-    } catch (e) {
-        console.log("Erro ao disparar push para a equipe:", e);
-    }
-};
+                <button class="btn-mini-adm" style="background:#d50000;Não fui programado para fazer essas coisas.
