@@ -380,8 +380,16 @@ else sessionStorage.setItem(SESS_KEY, JSON.stringify(loggedUser)); }
 
 function refreshCurrentView() {
     let filter = 'ALL'; const filterEl = document.getElementById('filter-evt-ranking');
-    if(filterEl) filter = filterEl.value; recalcRanking(filter);
-    if(currentTab === 'tempos') renderContent('tempos'); if(currentTab === 'ranking') renderContent('ranking'); if(currentTab === 'calendar') renderContent('calendar');
+    if(filterEl) filter = filterEl.value; 
+    
+    let filterReg = 'ALL'; const filterRegEl = document.getElementById('filter-region-ranking');
+    if(filterRegEl) filterReg = filterRegEl.value;
+    
+    recalcRanking(filter, filterReg);
+    
+    if(currentTab === 'tempos') renderContent('tempos'); 
+    if(currentTab === 'ranking') renderContent('ranking'); 
+    if(currentTab === 'calendar') renderContent('calendar');
     if(currentTab === 'profile') { updateCardLive(); loadProfileData(); }
     if(currentTab === 'adm' && document.getElementById('adm-panel-real').style.display === 'block') {
         if(currentAdmSection === 'results') renderAdmResults();
@@ -1397,7 +1405,7 @@ function renderContent(t) {
          // Captura a escolha: Ranking de Atletas ou Cidades
          const fModeRank = document.getElementById('filter-mode-ranking') ? document.getElementById('filter-mode-ranking').value : 'ATHLETES';
 
-         recalcRanking(fEvt); 
+         recalcRanking(fEvt, fRegion); 
          const list = db.ranking || []; 
          const div = document.getElementById('list-'+t);
          if(div) {
@@ -2377,11 +2385,75 @@ window.aplicarPenalidade = function(index) {
     });
 };
 
-function recalcRanking(filterEvtId = 'ALL') { let pointsMap = {}; if(!db.events || !db.tempos) { db.ranking = []; return;
-} db.events.forEach(evt => { if(filterEvtId !== 'ALL' && String(evt.id) !== String(filterEvtId)) return; if(evt.status === 'CANCELLED') return; let timesByCat = {}; let qTimesByCat = {}; const evtTimes = db.tempos.filter(t => String(t.evtId) === String(evt.id)); evtTimes.forEach(t => { if(!timesByCat[t.cat]) timesByCat[t.cat] = []; if(!qTimesByCat[t.cat]) qTimesByCat[t.cat] = []; if(t.runType === '1st' || !t.runType) timesByCat[t.cat].push(t); if(t.runType === 'qualify') qTimesByCat[t.cat].push(t); }); const sortLogic = (a, b) => { if(a.val === 'DNF' && b.val !== 'DNF') return 1; if(b.val === 'DNF' && a.val !== 'DNF') return -1; return a.val.localeCompare(b.val); }; Object.keys(timesByCat).forEach(cat => { timesByCat[cat].sort(sortLogic); const uniquePilots = {}; timesByCat[cat].forEach(t => { if(!uniquePilots[t.cpf] || (t.val !== 'DNF' && uniquePilots[t.cpf].val === 'DNF') || (t.val !== 'DNF' && t.val < uniquePilots[t.cpf].val)) uniquePilots[t.cpf] = t; }); const sortedUnique = Object.values(uniquePilots).sort(sortLogic);
-    sortedUnique.forEach((t, index) => { let pts = 0; if(t.val !== 'DNF' && evt.points && index < evt.points.length && evt.points[index] !== "") pts = parseInt(evt.points[index], 10); addPointsToMap(pointsMap, t, pts, false, evt.t); });
-}); Object.keys(qTimesByCat).forEach(cat => { qTimesByCat[cat].sort(sortLogic); const uniquePilots = {}; qTimesByCat[cat].forEach(t => { if(!uniquePilots[t.cpf] || (t.val !== 'DNF' && uniquePilots[t.cpf].val === 'DNF') || (t.val !== 'DNF' && t.val < uniquePilots[t.cpf].val)) uniquePilots[t.cpf] = t; }); const sortedUnique = Object.values(uniquePilots).sort(sortLogic); sortedUnique.forEach((t, index) => { let pts = 0; if(t.val !== 'DNF' && evt.qPoints && index < evt.qPoints.length && evt.qPoints[index] !== "") pts = parseInt(evt.qPoints[index], 10); addPointsToMap(pointsMap, t, pts, true, evt.t); }); });
-}); let newRanking = Object.values(pointsMap); newRanking.sort((a,b) => b.totalPts - a.totalPts); db.ranking = newRanking;
+function recalcRanking(filterEvtId = 'ALL', filterRegion = 'ALL') { 
+    let pointsMap = {}; 
+    if(!db.events || !db.tempos) { db.ranking = []; return; } 
+    
+    db.events.forEach(evt => { 
+        if(filterEvtId !== 'ALL' && String(evt.id) !== String(filterEvtId)) return; 
+        if(evt.status === 'CANCELLED') return; 
+        
+        let evtTimes = db.tempos.filter(t => String(t.evtId) === String(evt.id)); 
+        
+        // CORREÇÃO AQUI: Filtra os tempos por região ANTES de distribuir os pontos
+        if (filterRegion === 'PE') {
+            evtTimes = evtTimes.filter(t => {
+                const u = db.users.find(user => user.cpf === t.cpf);
+                return u && (u.uf === 'PE' || !u.uf || u.filiadoPE === true);
+            });
+        }
+
+        let timesByCat = {}; let qTimesByCat = {}; 
+        evtTimes.forEach(t => { 
+            if(!timesByCat[t.cat]) timesByCat[t.cat] = []; 
+            if(!qTimesByCat[t.cat]) qTimesByCat[t.cat] = []; 
+            if(t.runType === '1st' || !t.runType) timesByCat[t.cat].push(t); 
+            if(t.runType === 'qualify') qTimesByCat[t.cat].push(t); 
+        }); 
+        
+        const sortLogic = (a, b) => { 
+            if(a.val === 'DNF' && b.val !== 'DNF') return 1; 
+            if(b.val === 'DNF' && a.val !== 'DNF') return -1; 
+            return a.val.localeCompare(b.val); 
+        }; 
+        
+        Object.keys(timesByCat).forEach(cat => { 
+            timesByCat[cat].sort(sortLogic); 
+            const uniquePilots = {}; 
+            timesByCat[cat].forEach(t => { 
+                if(!uniquePilots[t.cpf] || (t.val !== 'DNF' && uniquePilots[t.cpf].val === 'DNF') || (t.val !== 'DNF' && t.val < uniquePilots[t.cpf].val)) 
+                    uniquePilots[t.cpf] = t; 
+            }); 
+            const sortedUnique = Object.values(uniquePilots).sort(sortLogic); 
+            sortedUnique.forEach((t, index) => { 
+                let pts = 0; 
+                // Como os de fora de PE foram retirados lá em cima, o "index = 0" sempre será o 1º de PE
+                if(t.val !== 'DNF' && evt.points && index < evt.points.length && evt.points[index] !== "") 
+                    pts = parseInt(evt.points[index], 10); 
+                addPointsToMap(pointsMap, t, pts, false, evt.t); 
+            });
+        }); 
+        
+        Object.keys(qTimesByCat).forEach(cat => { 
+            qTimesByCat[cat].sort(sortLogic); 
+            const uniquePilots = {}; 
+            qTimesByCat[cat].forEach(t => { 
+                if(!uniquePilots[t.cpf] || (t.val !== 'DNF' && uniquePilots[t.cpf].val === 'DNF') || (t.val !== 'DNF' && t.val < uniquePilots[t.cpf].val)) 
+                    uniquePilots[t.cpf] = t; 
+            }); 
+            const sortedUnique = Object.values(uniquePilots).sort(sortLogic); 
+            sortedUnique.forEach((t, index) => { 
+                let pts = 0; 
+                if(t.val !== 'DNF' && evt.qPoints && index < evt.qPoints.length && evt.qPoints[index] !== "") 
+                    pts = parseInt(evt.qPoints[index], 10); 
+                addPointsToMap(pointsMap, t, pts, true, evt.t); 
+            }); 
+        });
+    }); 
+    
+    let newRanking = Object.values(pointsMap); 
+    newRanking.sort((a,b) => b.totalPts - a.totalPts); 
+    db.ranking = newRanking;
 }
 
 function addPointsToMap(map, t, pts, isQualify, evtName) { if(pts === 0) return; const key = t.cpf + '_' + t.cat;
