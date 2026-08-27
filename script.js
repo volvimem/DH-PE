@@ -1862,11 +1862,64 @@ window.toggleCategory = function(catName) {
 window.renderAdmCategories = function() {
     const list = document.getElementById('adm-cats-list');
     if (!list) return;
-    if (!db.config.categories || db.config.categories.length === 0) { list.innerHTML = '<div style="padding:10px; color:#666; text-align:center;">Nenhuma categoria encontrada.</div>'; return; }
+    
+    if (!db.config.categories || db.config.categories.length === 0) {
+        list.innerHTML = '<div style="padding:10px; color:#666; text-align:center;">Nenhuma categoria encontrada.</div>';
+        return;
+    }
+    
     const sortedCats = [...db.config.categories].sort((a,b) => a.name.localeCompare(b.name));
+    
     list.innerHTML = sortedCats.map(c => {
-        const isActive = c.active; const bg = isActive ? 'var(--pe-green)' : '#94a3b8'; const icon = isActive ? 'fa-check' : 'fa-times';
-        return `<div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid #cbd5e1; padding:10px; border-radius:6px;"><b style="font-size:12px; color:#334155;">${c.name}</b><button class="btn-mini-adm" style="background:${bg}; margin:0; width:80px; text-align:center;" onclick="toggleCategory('${c.name}')"><i class="fas ${icon}"></i> ${isActive ? 'ATIVA' : 'INATIVA'}</button></div>`;
+        const isActive = c.active;
+        const bg = isActive ? 'var(--pe-green)' : '#94a3b8';
+        const icon = isActive ? 'fa-check' : 'fa-times';
+        
+        // 1. FILTRAR E CONTAR OS ATLETAS DESTA CATEGORIA NO BANCO DE DADOS
+        const atletasCat = db.users.filter(u => u.cat === c.name).sort((a, b) => a.nome.localeCompare(b.nome));
+        const qtdAtletas = atletasCat.length;
+        
+        // ID único para o painel expansível da categoria (remove espaços para não quebrar o HTML)
+        const listId = `cat-ath-list-${c.name.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        
+        // 2. MONTAR A LISTA DE ATLETAS (NOME E CIDADE/ESTADO)
+        let atletasHtml = '';
+        if (qtdAtletas === 0) {
+            atletasHtml = '<div style="padding:10px; text-align:center; color:#94a3b8; font-size:10px; font-style:italic;">Nenhum atleta cadastrado nesta categoria.</div>';
+        } else {
+            atletasHtml = atletasCat.map((ath, idx) => {
+                return `<div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #e2e8f0; font-size:11px; color:#334155; align-items:center;">
+                    <div><b style="color:#94a3b8; margin-right:5px; font-size:10px;">${idx+1}º</b> <b style="text-transform:uppercase;">${ath.nome}</b></div>
+                    <div style="font-weight:900; color:var(--pe-blue); background:#e0e7ff; padding:2px 6px; border-radius:4px; font-size:9px;">${ath.city}-${ath.uf || 'PE'}</div>
+                </div>`;
+            }).join('');
+        }
+        
+        // 3. RETORNAR O CARD EXPANSÍVEL (ACORDEÃO)
+        return `
+        <div style="border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; margin-bottom: 5px; background: white;">
+            
+            <!-- HEADER DO CARD (CLICÁVEL PARA EXPANDIR) -->
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:10px; cursor:pointer;" onclick="document.getElementById('${listId}').style.display = document.getElementById('${listId}').style.display === 'none' ? 'block' : 'none'">
+                <div style="display:flex; align-items:center; gap: 8px;">
+                    <b style="font-size:12px; color:#334155;">${c.name}</b>
+                    <span style="background:var(--pe-blue); color:white; font-size:9px; padding:2px 6px; border-radius:10px; font-weight:bold;">${qtdAtletas} <i class="fas fa-users"></i></span>
+                </div>
+                <div>
+                    <!-- O event.stopPropagation() IMPEDE QUE O CLIQUE NO BOTÃO ABRA/FECHE A LISTA -->
+                    <button class="btn-mini-adm" style="background:${bg}; margin:0; width:80px; text-align:center;" onclick="event.stopPropagation(); toggleCategory('${c.name}')">
+                        <i class="fas ${icon}"></i> ${isActive ? 'ATIVA' : 'INATIVA'}
+                    </button>
+                </div>
+            </div>
+            
+            <!-- LISTA OCULTA DE ATLETAS -->
+            <div id="${listId}" style="display:none; padding:10px 15px; background:#fff; border-top:1px dashed #cbd5e1; width:100%; max-height:250px; overflow-y:auto;">
+                <b style="font-size:10px; color:#64748b; display:block; margin-bottom:5px;">LISTA DE ATLETAS:</b>
+                ${atletasHtml}
+            </div>
+            
+        </div>`;
     }).join('');
 };
 
