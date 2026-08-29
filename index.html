@@ -973,7 +973,6 @@
         catsToShow.forEach(cat => {
             let qualified = athletes.filter(a => a.category === cat);
             if (runType === 'segunda') qualified = qualified.filter(a => a.times && a.times.oficial !== null);
-            
             // NOVA ORDENAÇÃO CORRIGIDA: Usa o tempo ou a ordem alfabética
             qualified.sort((a, b) => {
                 let tA = (sourceTimeKey && a.times && a.times[sourceTimeKey] !== null) ? a.times[sourceTimeKey] : 99999999;
@@ -1236,7 +1235,6 @@
             let qualified = athletes.filter(a => a.category === cat);
             if (runType === 'segunda') qualified = qualified.filter(a => a.times && a.times.oficial !== null);
 
-            // Usa a mesma regra nova para alinhar a impressão
             qualified.sort((a, b) => {
                 let tA = (sourceTimeKey && a.times && a.times[sourceTimeKey] !== null) ? a.times[sourceTimeKey] : 99999999;
                 let tB = (sourceTimeKey && b.times && b.times[sourceTimeKey] !== null) ? b.times[sourceTimeKey] : 99999999;
@@ -1284,7 +1282,21 @@
         let printWin = window.open('', '_blank');
         printWin.document.write(html);
         printWin.document.close();
-        </script>
+        setTimeout(() => { printWin.focus(); }, 250);
+    }
+
+    function syncSlotToFirebase(index) {
+        if(!activeDbKey || !activeEvtId) return;
+        let s = slots[index];
+        let payload = s.rider ? {
+            riderId: s.rider.id,
+            isRunning: s.isRunning,
+            startTimeMs: s.startTimeMs,
+            clockStartStr: s.clockStartStr
+        } : null;
+        dbFirebase.ref(activeDbKey + '/live_slots/' + activeEvtId + '/' + index).set(payload);
+    }
+</script>
 </body>
 </html>
 </template>
