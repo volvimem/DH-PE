@@ -2546,58 +2546,63 @@ window.syncLiveTimes = function(liveData) {
 };
 
 function gatherAndPushData(win) {
-    let evtId = document.getElementById('adm-res-evt').value;
-    const evtObj = db.events.find(e => String(e.id) === String(evtId));
-    let activeCategories = []; 
-    if (evtObj && evtObj.type === 'NON_OFFICIAL' && evtObj.extraVals) {
-        activeCategories = Object.keys(evtObj.extraVals).filter(k => evtObj.extraVals[k] && String(evtObj.extraVals[k]).trim() !== "").sort((a,b) => a.localeCompare(b));
-    } else if (db.config && db.config.categories) {
-        activeCategories = db.config.categories.filter(c => c.active).map(c => c.name).sort((a,b) => a.localeCompare(b));
-    }
-    if (activeCategories.length === 0) activeCategories = ["ELITE", "OPEN (EXTRA)", "RÍGIDA (EXTRA)"];
-    
-    let liveDataArray = [];
-    if (typeof db !== 'undefined' && db.users) { 
-        db.users.forEach(u => { 
-            let nome = (u.nome || u.name || "").toString().trim().toUpperCase(); 
-            let city = (u.cidade || u.city || "-").toString().trim().toUpperCase(); 
-            let uf = (u.uf || u.estado || "PE").toString().trim().toUpperCase(); 
-            let cityUF = `${city}-${uf}`; 
-            
-            if(nome && u.inscricoes) { 
-                u.inscricoes.forEach(insc => { 
-                    if(String(insc.id) === String(evtId) && insc.status === 'CONFIRMADO') { 
-                        let cat = window.normalizeCatName ? window.normalizeCatName(insc.extraCat ? insc.extraCat : (u.cat || "GERAL")) : (insc.extraCat || u.cat).toUpperCase(); 
-                        
-                        if (evtObj && evtObj.type === 'NON_OFFICIAL') {
-                            cat = cat.replace(" (EXTRA)", "");
-                        }
+        let evtId = document.getElementById('adm-res-evt').value;
+        const evtObj = db.events.find(e => String(e.id) === String(evtId));
+        let activeCategories = []; 
+        if (evtObj && evtObj.type === 'NON_OFFICIAL' && evtObj.extraVals) {
+            activeCategories = Object.keys(evtObj.extraVals).filter(k => evtObj.extraVals[k] && String(evtObj.extraVals[k]).trim() !== "").sort((a,b) => a.localeCompare(b));
+        } else if (db.config && db.config.categories) {
+            // A CORREÇÃO ESTÁ AQUI: Normaliza os nomes para garantir que os atletas batam com a lista de Extra
+            activeCategories = db.config.categories.filter(c => c.active).map(c => window.normalizeCatName ? window.normalizeCatName(c.name) : c.name).sort((a,b) => a.localeCompare(b));
+        }
+        
+        // Remove duplicatas caso existam
+        activeCategories = [...new Set(activeCategories)];
+        
+        if (activeCategories.length === 0) activeCategories = ["ELITE", "OPEN (EXTRA)", "RÍGIDA (EXTRA)"];
+        
+        let liveDataArray = [];
+        if (typeof db !== 'undefined' && db.users) { 
+            db.users.forEach(u => { 
+                let nome = (u.nome || u.name || "").toString().trim().toUpperCase(); 
+                let city = (u.cidade || u.city || "-").toString().trim().toUpperCase(); 
+                let uf = (u.uf || u.estado || "PE").toString().trim().toUpperCase(); 
+                let cityUF = `${city}-${uf}`; 
+                
+                if(nome && u.inscricoes) { 
+                    u.inscricoes.forEach(insc => { 
+                        if(String(insc.id) === String(evtId) && insc.status === 'CONFIRMADO') { 
+                            let cat = window.normalizeCatName ? window.normalizeCatName(insc.extraCat ? insc.extraCat : (u.cat || "GERAL")) : (insc.extraCat || u.cat).toUpperCase(); 
+                            
+                            if (evtObj && evtObj.type === 'NON_OFFICIAL') {
+                                cat = cat.replace(" (EXTRA)", "");
+                            }
 
-                        let times = {qualify: null, oficial: null, segunda: null};
-                        let startClocks = {qualify: null, oficial: null, segunda: null}; 
-                        
-                        if (db.tempos) { 
-                            db.tempos.forEach(t => { 
-                                let timeCat = t.cat;
-                                if (evtObj && evtObj.type === 'NON_OFFICIAL') timeCat = timeCat.replace(" (EXTRA)", "");
+                            let times = {qualify: null, oficial: null, segunda: null};
+                            let startClocks = {qualify: null, oficial: null, segunda: null}; 
+                            
+                            if (db.tempos) { 
+                                db.tempos.forEach(t => { 
+                                    let timeCat = t.cat;
+                                    if (evtObj && evtObj.type === 'NON_OFFICIAL') timeCat = timeCat.replace(" (EXTRA)", "");
 
-                                if (String(t.evtId) === String(evtId) && t.cpf === u.cpf && timeCat === cat) { 
-                                    let key = t.runType === '1st' ? 'oficial' : (t.runType === '2nd' ? 'segunda' : 'qualify'); 
-                                    times[key] = timeToMs(t.val); 
-                                    startClocks[key] = t.startClock || null; 
-                                } 
-                            }); 
+                                    if (String(t.evtId) === String(evtId) && t.cpf === u.cpf && timeCat === cat) { 
+                                        let key = t.runType === '1st' ? 'oficial' : (t.runType === '2nd' ? 'segunda' : 'qualify'); 
+                                        times[key] = timeToMs(t.val); 
+                                        startClocks[key] = t.startClock || null; 
+                                    } 
+                                }); 
+                            } 
+                            liveDataArray.push({ id: u.cpf + '||' + cat, originalCpf: u.cpf, name: nome, city: cityUF, region: uf, number: u.numero || u.numPlaca || u.placa || "S/N", category: cat, status: 'CONFIRMADO', times: times, startClocks: startClocks, isRerun: false });
                         } 
-                        liveDataArray.push({ id: u.cpf + '||' + cat, originalCpf: u.cpf, name: nome, city: cityUF, region: uf, number: u.numero || u.numPlaca || u.placa || "S/N", category: cat, status: 'CONFIRMADO', times: times, startClocks: startClocks, isRerun: false });
-                    } 
-                });
-            } 
-        });
+                    });
+                } 
+            });
+        }
+        
+        if (win && win.receiveData) { win.receiveData(liveDataArray, activeCategories, db.config.rerunPass || "admin123", DB_KEY, evtId);
+        }
     }
-    
-    if (win && win.receiveData) { win.receiveData(liveDataArray, activeCategories, db.config.rerunPass || "admin123", DB_KEY, evtId);
-    }
-}
 
 window.forcePushData = function(win) { gatherAndPushData(win); };
 window.liveTimingWindow = null;
