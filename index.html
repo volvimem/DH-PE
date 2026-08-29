@@ -973,8 +973,14 @@
         catsToShow.forEach(cat => {
             let qualified = athletes.filter(a => a.category === cat);
             if (runType === 'segunda') qualified = qualified.filter(a => a.times && a.times.oficial !== null);
-            if(runType === 'qualify') { qualified.sort((a,b) => String(a.id).localeCompare(String(b.id))); } 
-            else if(runType === 'oficial') { qualified.sort((a, b) => { let tA = (a.times && a.times.qualify !== null) ? a.times.qualify : 99999999; let tB = (b.times && b.times.qualify !== null) ? b.times.qualify : 99999999; return tB - tA; }); }
+            
+            // NOVA ORDENAÇÃO CORRIGIDA: Usa o tempo ou a ordem alfabética
+            qualified.sort((a, b) => {
+                let tA = (sourceTimeKey && a.times && a.times[sourceTimeKey] !== null) ? a.times[sourceTimeKey] : 99999999;
+                let tB = (sourceTimeKey && b.times && b.times[sourceTimeKey] !== null) ? b.times[sourceTimeKey] : 99999999;
+                if (tA !== 99999999 || tB !== 99999999) return tB - tA; 
+                return a.name.localeCompare(b.name); 
+            });
 
             if (qualified.length > 0) {
                 let visibleList = qualified.filter(a => !a.times || a.times[runType] === null || a.isRerun);
@@ -1198,45 +1204,85 @@
     
     function setFilter(cat) { currentActiveFilter = cat; refreshListsOnly(); }
     
-    function printStartList() { window.print(); }
+    function printStartList() {
+        const runType = document.getElementById('runType').value;
+        let sourceTimeKey = runType === 'oficial' ? 'qualify' : (runType === 'segunda' ? 'oficial' : null);
+        let catsToShow = currentActiveFilter === 'Todas' ? categories : [currentActiveFilter];
+        let evtName = document.getElementById('live-evt-title') ? document.getElementById('live-evt-title').innerText : "ETAPA DOWNHILL";
 
-    function syncSlotToFirebase(index) {
-        if(!activeDbKey || !activeEvtId) return;
-        let s = slots[index];
-        let payload = s.rider ? {
-            riderId: s.rider.id,
-            isRunning: s.isRunning,
-            startTimeMs: s.startTimeMs,
-            clockStartStr: s.clockStartStr
-        } : null;
-        dbFirebase.ref(activeDbKey + '/live_slots/' + activeEvtId + '/' + index).set(payload);
+        let html = `<html><head><title>Ordem de Largada - Live Timing</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #000; }
+            h1 { text-align: center; text-transform: uppercase; margin-bottom: 5px; font-size: 22px; }
+            h2 { text-align: center; font-size: 14px; margin-top: 0; margin-bottom: 20px; color: #555; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            th, td { border: 1px solid #000; padding: 8px; text-align: left; font-size: 12px; text-transform: uppercase; }
+            th { background-color: #eee; font-weight: bold; }
+            .cat-title { background-color: #333; color: #fff; padding: 8px; font-weight: bold; font-size: 14px; margin-bottom: 0; margin-top: 15px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .print-btn { display: block; margin: 0 auto 20px auto; padding: 12px 24px; background: #ff9800; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .footer { text-align: center; margin-top: 30px; font-size: 10px; color: #999; }
+            @media print { 
+                .print-btn { display: none !important; } 
+                .cat-title { background-color: #333 !important; color: #fff !important; }
+            }
+        </style></head><body>
+        <button class="print-btn" onclick="window.print()">🖨️ IMPRIMIR ORDEM DE LARGADA</button>
+        <h1>${evtName}</h1>
+        <h2>ORDEM DE LARGADA (LIVE) - ${runType.toUpperCase()}</h2>`;
+
+        let hasAnyData = false;
+
+        catsToShow.forEach(cat => {
+            let qualified = athletes.filter(a => a.category === cat);
+            if (runType === 'segunda') qualified = qualified.filter(a => a.times && a.times.oficial !== null);
+
+            // Usa a mesma regra nova para alinhar a impressão
+            qualified.sort((a, b) => {
+                let tA = (sourceTimeKey && a.times && a.times[sourceTimeKey] !== null) ? a.times[sourceTimeKey] : 99999999;
+                let tB = (sourceTimeKey && b.times && b.times[sourceTimeKey] !== null) ? b.times[sourceTimeKey] : 99999999;
+                if (tA !== 99999999 || tB !== 99999999) return tB - tA;
+                return a.name.localeCompare(b.name);
+            });
+
+            let visibleList = qualified.filter(a => !a.times || a.times[runType] === null || a.isRerun);
+
+            if (visibleList.length > 0) {
+                hasAnyData = true;
+                html += `<div class="cat-title">${cat} <span style="float: right; font-size: 11px; margin-top: 2px;">(${visibleList.length} atletas)</span></div>
+                <table>
+                    <thead><tr>
+                        <th style="width: 40px; text-align: center;">ORD.</th>
+                        <th>NOME DO ATLETA</th>
+                        <th>CIDADE/UF</th>
+                        <th style="width: 80px; text-align: center;">PLACA</th>
+                        <th style="width: 100px; text-align: center;">QUALIFY</th>
+                        <th style="width: 120px; text-align: center;">TEMPO OFICIAL</th>
+                    </tr></thead>
+                    <tbody>`;
+                
+                visibleList.forEach((p, idx) => {
+                    let prevTimeDisplay = (sourceTimeKey && p.times && p.times[sourceTimeKey]) ? msToTime(p.times[sourceTimeKey]) : "";
+                    html += `<tr>
+                        <td style="text-align: center; font-weight: bold; font-size: 14px;">${idx + 1}º</td>
+                        <td style="font-weight: bold; font-size: 13px;">${p.name}</td>
+                        <td>${p.city}</td>
+                        <td style="text-align: center;"></td>
+                        <td style="text-align: center; font-family: monospace; color:#666;">${prevTimeDisplay}</td>
+                        <td></td>
+                    </tr>`;
+                });
+                html += `</tbody></table>`;
+            }
+        });
+
+        if(!hasAnyData) {
+            html += `<p style="text-align:center; padding: 20px;">Nenhum atleta na fila de largada.</p>`;
+        }
+
+        html += `<div class="footer">Gerado pelo Sistema DH-PE • ${new Date().toLocaleString('pt-BR')}</div></body></html>`;
+
+        let printWin = window.open('', '_blank');
+        printWin.document.write(html);
+        printWin.document.close();
+        setTimeout(() => { printWin.focus(); }, 250);
     }
-</script>
-</body>
-</html>
-</template>
-
-<div id="pwa-install-banner" class="pwa-install-banner">
-    <div style="display:flex; align-items:center; gap:10px;">
-        <img src="logo.png" style="width:40px; height:40px; border-radius:8px;">
-        <div style="text-align:left;">
-            <b style="color:var(--pe-blue); font-size:12px; display:block;">Baixar App DH-PE</b>
-            <span style="font-size:10px; color:#666;">Mais rápido e não gasta memória!</span>
-        </div>
-    </div>
-    <div style="display:flex; align-items:center; gap:5px;">
-        <button onclick="installApp()" style="background:var(--pe-yellow); color:black; border:none; padding:8px 12px; border-radius:6px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(255, 229, 0, 0.4);">INSTALAR</button>
-        <button onclick="closeInstallBanner()" style="background:transparent; border:none; color:#999; font-size:18px; cursor:pointer; padding:5px;"><i class="fas fa-times"></i></button>
-    </div>
-</div>
-
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
-
-<script src="script.js?v=148"></script>
-
-</body>
-</html>
