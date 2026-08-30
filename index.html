@@ -974,10 +974,16 @@
         catsToShow.forEach(cat => {
             let qualified = athletes.filter(a => a.category === cat);
             if (runType === 'segunda') qualified = qualified.filter(a => a.times && a.times.oficial !== null);
-            // NOVA ORDENAÇÃO CORRIGIDA: Usa o tempo ou a ordem alfabética
+            // NOVA ORDENAÇÃO CORRIGIDA COM PROTEÇÃO MATEMÁTICA CONTRA DNF
             qualified.sort((a, b) => {
                 let tA = (sourceTimeKey && a.times && a.times[sourceTimeKey] !== null) ? a.times[sourceTimeKey] : 99999999;
                 let tB = (sourceTimeKey && b.times && b.times[sourceTimeKey] !== null) ? b.times[sourceTimeKey] : 99999999;
+                
+                // Evita que (Infinito - Infinito = NaN) quebre a fila de atletas
+                if (tA === Infinity && tB === Infinity) return a.name.localeCompare(b.name);
+                if (tA === Infinity) return -1; // Quem não tem tempo (DNF) é "mais lento", então larga primeiro
+                if (tB === Infinity) return 1;
+
                 if (tA !== 99999999 || tB !== 99999999) return tB - tA; 
                 return a.name.localeCompare(b.name); 
             });
