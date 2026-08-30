@@ -2602,7 +2602,6 @@ function gatherAndPushData(win) {
                                 let timeCat = t.cat;
                                 if (evtObj && evtObj.type === 'NON_OFFICIAL') timeCat = timeCat.replace(" (EXTRA)", "");
 
-                                // Mesma correção segura de comparação aqui também
                                 let cleanTimeCat = timeCat.replace(" (EXTRA)", "").trim();
                                 let cleanLoopCat = cat.replace(" (EXTRA)", "").trim();
 
@@ -2620,7 +2619,7 @@ function gatherAndPushData(win) {
         });
     }
     
-    // NOVO: Gera os filtros (Bolinhas) dinamicamente baseados SÓ nos atletas que vão correr
+    // NOVO: Gera os filtros dinamicamente baseados SÓ nos atletas que vão correr
     let activeCategories = [...new Set(liveDataArray.map(a => a.category))].sort((a,b) => a.localeCompare(b));
     if (activeCategories.length === 0) activeCategories = ["GERAL"];
     
