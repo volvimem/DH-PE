@@ -1333,6 +1333,12 @@ function renderContent(t) {
                      let pNameFull = getPilotName(r.cpf, r.name); let _pts = pNameFull.split(' '); let _lim = ['DE','DA','DO','DOS','DAS'].includes(_pts[1]) ? 3 : 2; const pName = _pts.slice(0, _lim).join(' '); const pCityUF = getPilotCityUF(r.cpf, r.city); const cClass = getCatClass(r.cat); let columnsHtml = '';
                      const evtTag = `<div style="font-size:9px; color:var(--pe-blue); font-weight:900; margin-bottom:2px; text-transform:uppercase;"><i class="fas fa-flag-checkered"></i> ETAPA: ${r.evtName}</div>`;
                      
+                     // --- INÍCIO DA LÓGICA DA PLACA ---
+                     let userObj = db.users.find(u => u.cpf === r.cpf);
+                     let placaStr = userObj ? (userObj.numero || userObj.numPlaca || userObj.placa || "") : "";
+                     let placaHtml = placaStr ? `<span style="background:#1e293b; color:white; font-size:11px; font-weight:900; padding:2px 6px; border-radius:4px; margin-left:5px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">#${placaStr}</span>` : "";
+                     // --- FIM DA LÓGICA DA PLACA ---
+                     
                      let catHeader = '';
                      let posDisplay = (i + 1) + 'º';
                      if (fCat === 'ALL_SEP') {
@@ -1385,7 +1391,7 @@ function renderContent(t) {
                          columnsHtml = `<div style="width:100%; border-top:1px dashed #eee; padding:10px; background:${bg}; text-align:center;"><div style="font-size:10px; color:${color}; font-weight:bold; margin-bottom:2px;">TEMPO ${label}</div><div style="font-family:monospace; font-size:16px; font-weight:bold; color:#333">${getTpl(val, pen)}</div>${gapHtml}</div>`; 
                      }
                      
-                     let rowHtml = `<div class="rank-row" style="flex-direction:column; padding:0; margin-bottom:${fCat==='ALL_SEP'?'0':'5px'}; background:${i%2==0 ? '#fff' : '#f9f9f9'}; border-bottom:1px solid #ddd; border-radius: 6px; overflow: hidden; border: 1px solid #e2e8f0;"><div style="padding:8px 10px; display:flex; justify-content:space-between; width:100%; align-items:center;"><div>${evtTag}<div style="font-weight:bold; font-size:13px; color:#333; display:flex; align-items:center; flex-wrap:wrap;">${posDisplay} ${pName} <span class="badge-city" style="margin-left:5px">${pCityUF}</span></div><span class="${cClass}">${r.cat}</span></div></div>${columnsHtml}</div>`;
+                     let rowHtml = `<div class="rank-row" style="flex-direction:column; padding:0; margin-bottom:${fCat==='ALL_SEP'?'0':'5px'}; background:${i%2==0 ? '#fff' : '#f9f9f9'}; border-bottom:1px solid #ddd; border-radius: 6px; overflow: hidden; border: 1px solid #e2e8f0;"><div style="padding:8px 10px; display:flex; justify-content:space-between; width:100%; align-items:center;"><div>${evtTag}<div style="font-weight:bold; font-size:13px; color:#333; display:flex; align-items:center; flex-wrap:wrap;">${posDisplay} ${pName} ${placaHtml} <span class="badge-city" style="margin-left:5px">${pCityUF}</span></div><span class="${cClass}">${r.cat}</span></div></div>${columnsHtml}</div>`;
 
                      return catHeader + rowHtml;
                  }).join('');
