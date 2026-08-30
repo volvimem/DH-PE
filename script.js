@@ -2577,6 +2577,20 @@ function gatherAndPushData(win) {
     let evtId = document.getElementById('adm-res-evt').value;
     const evtObj = db.events.find(e => String(e.id) === String(evtId));
     
+    // Função auxiliar para evitar o erro do timeToMs que quebrava a tela
+    const parseMs = (timeStr) => {
+        if(!timeStr || timeStr === "--:--.---") return null; 
+        if(timeStr === "DNF") return Infinity; 
+        let parts = timeStr.split(':'); 
+        if(parts.length < 2) return null; 
+        let m = parseInt(parts[0], 10); 
+        let secParts = parts[1].split('.'); 
+        let s = parseInt(secParts[0], 10); 
+        let msString = secParts.length > 1 ? secParts[1] : "000"; 
+        let ms = Math.round(parseFloat("0." + msString) * 1000); 
+        return (m * 60000) + (s * 1000) + ms;
+    };
+    
     let liveDataArray = [];
     if (typeof db !== 'undefined' && db.users) { 
         db.users.forEach(u => { 
@@ -2607,7 +2621,10 @@ function gatherAndPushData(win) {
 
                                 if (String(t.evtId) === String(evtId) && t.cpf === u.cpf && cleanTimeCat === cleanLoopCat) { 
                                     let key = t.runType === '1st' ? 'oficial' : (t.runType === '2nd' ? 'segunda' : 'qualify'); 
-                                    times[key] = timeToMs(t.val); 
+                                    
+                                    // CORREÇÃO CRÍTICA AQUI: O sistema agora usa a função interna segura
+                                    times[key] = parseMs(t.val); 
+                                    
                                     startClocks[key] = t.startClock || null; 
                                 } 
                             }); 
@@ -2619,7 +2636,7 @@ function gatherAndPushData(win) {
         });
     }
     
-    // NOVO: Gera os filtros dinamicamente baseados SÓ nos atletas que vão correr
+    // Gera os filtros dinamicamente baseados SÓ nos atletas que vão correr
     let activeCategories = [...new Set(liveDataArray.map(a => a.category))].sort((a,b) => a.localeCompare(b));
     if (activeCategories.length === 0) activeCategories = ["GERAL"];
     
