@@ -861,8 +861,8 @@
     let slots = [ { id: 0, rider: null, isRunning: false, startTimeMs: null, clockStartStr: null, animFrame: null }, { id: 1, rider: null, isRunning: false, startTimeMs: null, clockStartStr: null, animFrame: null } ];
     
     window.normalizeCatName = function(catName) { if(!catName) return "GERAL"; let c = catName.toUpperCase().trim(); if(c === "OPEN") return "OPEN (EXTRA)"; if(c === "ESTREANTE") return "ESTREANTE (EXTRA)"; if(c === "RÍGIDA" || c === "RIGIDA") return "RÍGIDA (EXTRA)"; if(c === "E-BIKE") return "E-BIKE (EXTRA)"; if(c === "PCD") return "PCD (EXTRA)"; return c; };
-    function timeToMs(timeStr) { if(!timeStr || timeStr === "--:--.---") return null; let parts = timeStr.split(':'); if(parts.length < 2) return null; let m = parseInt(parts[0], 10); let secParts = parts[1].split('.'); let s = parseInt(secParts[0], 10); let msString = secParts.length > 1 ? secParts[1] : "000"; let ms = Math.round(parseFloat("0." + msString) * 1000); return (m * 60000) + (s * 1000) + ms; }
-    function msToTime(ms) { if (ms === null || isNaN(ms)) return null; let m = Math.floor(ms / 60000).toString().padStart(2, '0'); let s = Math.floor((ms % 60000) / 1000).toString().padStart(2, '0'); let mls = Math.floor(ms % 1000).toString().padStart(3, '0'); return `${m}:${s}.${mls}`; }
+    function timeToMs(timeStr) { if(!timeStr || timeStr === "--:--.---") return null; if(timeStr === "DNF") return Infinity; let parts = timeStr.split(':'); if(parts.length < 2) return null; let m = parseInt(parts[0], 10); let secParts = parts[1].split('.'); let s = parseInt(secParts[0], 10); let msString = secParts.length > 1 ? secParts[1] : "000"; let ms = Math.round(parseFloat("0." + msString) * 1000); return (m * 60000) + (s * 1000) + ms; }
+    function msToTime(ms) { if (ms === null || isNaN(ms)) return null; if (ms === Infinity) return "DNF"; let m = Math.floor(ms / 60000).toString().padStart(2, '0'); let s = Math.floor((ms % 60000) / 1000).toString().padStart(2, '0'); let mls = Math.floor(ms % 1000).toString().padStart(3, '0'); return `${m}:${s}.${mls}`; }
 
     window.receiveData = function(data, catsArray, rPass, dbKey, evtId) {
         athletes = data; categories = catsArray;
@@ -882,7 +882,8 @@
                 
                 allTimes.forEach(t => {
                     if(String(t.evtId) === String(activeEvtId)) {
-                        let a = athletes.find(x => x.originalCpf === t.cpf && x.category === window.normalizeCatName(t.cat));
+                        let cleanDbCat = t.cat.replace(" (EXTRA)", "").trim();
+                        let a = athletes.find(x => x.originalCpf === t.cpf && x.category.replace(" (EXTRA)", "").trim() === cleanDbCat);
                         if(a) {
                             let key = t.runType === '1st' ? 'oficial' : (t.runType === '2nd' ? 'segunda' : 'qualify');
                             a.times[key] = timeToMs(t.val);
