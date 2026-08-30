@@ -1296,7 +1296,17 @@ function renderContent(t) {
              if (fCat && fCat !== 'ALL' && fCat !== 'ALL_SEP') allTimes = allTimes.filter(i => window.normalizeCatName(i.cat) === window.normalizeCatName(fCat));
              if (fRegion === 'PE') allTimes = allTimes.filter(t => { const u = db.users.find(user => user.cpf === t.cpf); return u && (u.uf === 'PE' || !u.uf || u.filiadoPE === true); });
              const grouped = {};
-             allTimes.forEach(t => { const key = t.cpf + '_' + t.cat + '_' + t.evtId; if(!grouped[key]) { const evtObj = db.events.find(e => String(e.id) === String(t.evtId)); grouped[key] = { cpf: t.cpf, name: t.name, city: t.city, cat: t.cat, evtName: evtObj ? evtObj.t : "ETAPA", q: '--:--.---', o: '--:--.---', s: '--:--.---' }; } if(t.runType === 'qualify') grouped[key].q = t.val; else if(t.runType === '2nd') grouped[key].s = t.val; else grouped[key].o = t.val; });
+             allTimes.forEach(t => { 
+                 const key = t.cpf + '_' + t.cat + '_' + t.evtId; 
+                 if(!grouped[key]) { 
+                     const evtObj = db.events.find(e => String(e.id) === String(t.evtId)); 
+                     grouped[key] = { cpf: t.cpf, name: t.name, city: t.city, cat: t.cat, evtName: evtObj ? evtObj.t : "ETAPA", q: '--:--.---', o: '--:--.---', s: '--:--.---', num: "" }; 
+                 } 
+                 if(t.num) grouped[key].num = t.num; // Pega a placa
+                 if(t.runType === 'qualify') grouped[key].q = t.val; 
+                 else if(t.runType === '2nd') grouped[key].s = t.val; 
+                 else grouped[key].o = t.val; 
+             });
              let sortedList = Object.values(grouped);
              
              if(fType !== 'ALL') { 
@@ -1333,12 +1343,11 @@ function renderContent(t) {
                      let pNameFull = getPilotName(r.cpf, r.name); let _pts = pNameFull.split(' '); let _lim = ['DE','DA','DO','DOS','DAS'].includes(_pts[1]) ? 3 : 2; const pName = _pts.slice(0, _lim).join(' '); const pCityUF = getPilotCityUF(r.cpf, r.city); const cClass = getCatClass(r.cat); let columnsHtml = '';
                      const evtTag = `<div style="font-size:9px; color:var(--pe-blue); font-weight:900; margin-bottom:2px; text-transform:uppercase;"><i class="fas fa-flag-checkered"></i> ETAPA: ${r.evtName}</div>`;
                      
-                     // --- INÍCIO DA LÓGICA DA PLACA ---
+                     // LÓGICA DA PLACA
                      let userObj = db.users.find(u => u.cpf === r.cpf);
-                     let placaStr = userObj ? (userObj.numero || userObj.numPlaca || userObj.placa || "") : "";
+                     let placaStr = r.num || (userObj ? (userObj.numero || userObj.numPlaca || userObj.placa || "") : "");
                      let placaHtml = placaStr ? `<span style="background:#1e293b; color:white; font-size:11px; font-weight:900; padding:2px 6px; border-radius:4px; margin-left:5px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">#${placaStr}</span>` : "";
-                     // --- FIM DA LÓGICA DA PLACA ---
-                     
+
                      let catHeader = '';
                      let posDisplay = (i + 1) + 'º';
                      if (fCat === 'ALL_SEP') {
@@ -1355,14 +1364,11 @@ function renderContent(t) {
                      let msAtleta = tempoParaMilissegundos(tA);
                      let catKey = fCat === 'ALL_SEP' ? r.cat : 'GERAL';
                      
-                     // 1. GAP PARA O LÍDER (VERMELHO)
                      let gapStr = (msAtleta !== Infinity && msAtleta > temposLideres[catKey]) ? formatarDiferenca(msAtleta - temposLideres[catKey]) : '';
                      
-                     // 2. GAP PARA O ATLETA ANTERIOR (ROXO)
                      let gapPrevStr = '';
                      if (i > 0 && msAtleta !== Infinity) {
                          let prevR = sortedList[i-1];
-                         // Se o filtro for "TODAS SEPARADAS", só mede com o anterior se for da mesma categoria
                          if (fCat !== 'ALL_SEP' || prevR.cat === r.cat) {
                              let tPrev = (fType === 'qualify') ? prevR.q : (fType === '1st' ? prevR.o : (fType === '2nd' ? prevR.s : (prevR.o !== '--:--.---' ? prevR.o : (prevR.q !== '--:--.---' ? prevR.q : prevR.s))));
                              let msPrev = tempoParaMilissegundos(tPrev);
@@ -1372,7 +1378,6 @@ function renderContent(t) {
                          }
                      }
 
-                     // 3. MONTA O HTML FINAL DOS GAPS
                      let gapHtml = '';
                      if (gapStr || gapPrevStr) {
                          gapHtml = `<div style="margin-top:3px; display:flex; flex-direction:column; gap:1px;">`;
@@ -2276,13 +2281,26 @@ window.addResult = function() {
     const val = document.getElementById('adm-res-val').value; 
     const runTypeManual = document.getElementById('adm-res-runtype').value; 
     const editIdxInput = document.getElementById('adm-res-idx-edit').value;
+    
+    // NOVO: Puxa o valor da placa digitado no input
+    const numPlaca = document.getElementById('adm-res-num').value || "";
+
     if(!evtId || !name || !val || !cpf) return toast("PREENCHA TUDO", "error"); 
     if(val.length < 4) return toast("FORMATO DE TEMPO INVÁLIDO", "error");
-    const newTime = { evtId: evtId, cpf: cpf, name: name.toUpperCase(), city: city, cat: cat, val: val, status: 'OK', runType: runTypeManual };
+    
+    // NOVO: Inclui a placa (num) no objeto salvo no banco
+    const newTime = { evtId: evtId, cpf: cpf, name: name.toUpperCase(), city: city, cat: cat, val: val, status: 'OK', runType: runTypeManual, num: numPlaca };
     const existingIndex = editIdxInput !== "" ? parseInt(editIdxInput, 10) : db.tempos.findIndex(t => t && String(t.evtId) === String(evtId) && t.cpf === cpf && t.runType === runTypeManual && t.cat === cat );
     const performSave = (idx) => { 
         if(idx > -1) { db.tempos[idx] = newTime;
         } else { db.tempos.push(newTime); } 
+        
+        // NOVO: Salva a placa também no cadastro principal do atleta
+        if(numPlaca) {
+            let uIdx = db.users.findIndex(u => u.cpf === cpf);
+            if(uIdx > -1) { db.users[uIdx].numero = numPlaca; saveDB('users'); }
+        }
+
         saveDB('tempos');
         dispararPushAtleta(cpf, "Tempo Registrado! ⏱️", `Seu tempo de ${val} acabou de entrar no sistema. Confira sua posição!`); 
         toast("✅ TEMPO ATUALIZADO NO SISTEMA!"); 
@@ -2353,12 +2371,16 @@ window.editRes = function(index) {
     const execEdit = () => { const t = db.tempos[index];
     if(!t) return; const setAndSave = (elId, val) => { const el = document.getElementById(elId); if(el) { el.value = val;
     localStorage.setItem('autosave_' + elId, val); } }; setAndSave('adm-res-evt', t.evtId); setAndSave('adm-res-id', t.cpf || ""); setAndSave('adm-res-name-display', t.name); setAndSave('adm-res-city-edit', t.city); setAndSave('adm-res-cat-edit', t.cat); setAndSave('adm-res-val', t.val);
+    
+    // NOVO: Puxa a placa de volta para a edição
+    setAndSave('adm-res-num', t.num || "");
+
     setAndSave('adm-res-idx-edit', index); document.getElementById('btn-save-res').innerText = "SALVAR ALTERAÇÃO"; document.getElementById('btn-cancel-res').style.display = 'block'; };
     if(!isSuperAdmin(loggedUser)) { showPrompt("AUTORIZAÇÃO NECESSÁRIA", "Digite a Senha Master para editar este tempo:", function(pwd) { if(pwd === db.config.rerunPass) execEdit(); else toast("SENHA INCORRETA", "error"); });
     } else { execEdit(); }
 };
 
-window.cancelEditRes = function() { ['adm-res-idx-edit', 'adm-res-name-display', 'adm-res-val', 'adm-res-id'].forEach(id => { const el = document.getElementById(id); if(el) { el.value = ''; localStorage.removeItem('autosave_' + id); } });
+window.cancelEditRes = function() { ['adm-res-idx-edit', 'adm-res-name-display', 'adm-res-val', 'adm-res-id', 'adm-res-num'].forEach(id => { const el = document.getElementById(id); if(el) { el.value = ''; localStorage.removeItem('autosave_' + id); } });
 document.getElementById('btn-save-res').innerText = "LANÇAR / SALVAR"; document.getElementById('btn-cancel-res').style.display = 'none'; };
 
 window.renderAdmResults = function() { 
