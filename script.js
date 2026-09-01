@@ -2545,10 +2545,147 @@ map[key].totalPts += pts; if(isQualify) map[key].qPts += pts; else map[key].oPts
 window.compartilharResultados = function(tipo) {
     const listDiv = document.getElementById('list-' + tipo);
     if (!listDiv || listDiv.innerHTML.trim() === '') return toast("Nenhum dado para compartilhar", "error");
+    window.imprimirOrdemLargadaGeral = function() {
+    const evtId = document.getElementById('adm-res-evt').value;
+    if (!evtId || evtId === "") return toast("SELECIONE UM EVENTO PRIMEIRO!", "error");
+    
+    const evt = db.events.find(e => String(e.id) === String(evtId));
+    if (!evt) return toast("Evento não encontrado.", "error");
+
+    let inscritos = [];
+    db.users.forEach(u => {
+        if (u.inscricoes && u.inscricoes.length > 0) {
+            u.inscricoes.forEach(i => {
+                if (String(i.id) === String(evtId) && i.status === 'CONFIRMADO') {
+                    let cat = window.normalizeCatName(i.extraCat || u.cat);
+                    
+                    let qualifyTime = "99:99.999";
+                    let hasQ = false;
+                    if (db.tempos) {
+                        let tQ = db.tempos.find(t => String(t.evtId) === String(evtId) && t.cpf === u.cpf && t.runType === 'qualify' && t.cat === cat);
+                        if (tQ && tQ.val && tQ.val !== '--:--.---' && tQ.val !== 'DNF') {
+                            qualifyTime = tQ.val;
+                            hasQ = true;
+                        }
+                    }
+                    
+                    inscritos.push({
+                        nome: u.nome,
+                        city: u.city,
+                        uf: u.uf || 'PE',
+                        cat: cat,
+                        num: u.numero || u.numPlaca || u.placa || "",
+                        qTime: qualifyTime,
+                        hasQ: hasQ
+                    });
+                }
+            });
+        }
+    });
+    
+    if (inscritos.length === 0) return toast("Nenhum atleta confirmado neste evento.", "error");
+    
+    // ======== CÓDIGO DA ORDEM DA CATEGORIA ========
+    let cats = [...new Set(inscritos.map(a => a.cat))];
+    
+    const ordemDesejada = [
+        "ESTREANTE",
+        "RÍGIDA",
+        "RIGIDA", 
+        "OPEN",
+        "PCD",
+        "FEMININO ELITE",
+        "MASTER D",
+        "MASTER C2",
+        "MASTER C1",
+        "MASTER B2",
+        "MASTER B1",
+        "MASTER A2",
+        "MASTER A1",
+        "JUNIOR",
+        "JUVENIL",
+        "INFANTO-JUVENIL",
+        "SUB-30",
+        "ELITE"
+    ];
+
+    cats.sort((a, b) => {
+        let cleanA = a.replace(" (EXTRA)", "").trim().toUpperCase();
+        let cleanB = b.replace(" (EXTRA)", "").trim().toUpperCase();
+        
+        let indexA = ordemDesejada.indexOf(cleanA);
+        let indexB = ordemDesejada.indexOf(cleanB);
+        
+        // Se a categoria não estiver na lista acima, joga para o final (posição 999)
+        if (indexA === -1) indexA = 999;
+        if (indexB === -1) indexB = 999;
+        
+        if (indexA === indexB) return a.localeCompare(b);
+        
+        return indexA - indexB; 
+    });
+    // ==============================================
+
+    let html = `<html><head><title>Ordem de Largada - ${evt.t}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #000; }
+        h1 { text-align: center; text-transform: uppercase; margin-bottom: 5px; font-size: 22px; }
+        h2 { text-align: center; font-size: 14px; margin-top: 0; margin-bottom: 20px; color: #555; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #000; padding: 8px; text-align: left; font-size: 12px; text-transform: uppercase; }
+        th { background-color: #eee; font-weight: bold; }
+        .cat-title { background-color: #333; color: #fff; padding: 8px; font-weight: bold; font-size: 14px; margin-bottom: 0; margin-top: 15px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .print-btn { display: block; margin: 0 auto 20px auto; padding: 12px 24px; background: #ff9800; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .footer { text-align: center; margin-top: 30px; font-size: 10px; color: #999; }
+        @media print { 
+            .print-btn { display: none !important; } 
+            .cat-title { background-color: #333 !important; color: #fff !important; }
+        }
+    </style></head><body>
+    <button class="print-btn" onclick="window.print()">🖨️ IMPRIMIR ORDEM DE LARGADA</button>
+    <h1>${evt.t}</h1>
+    <h2>ORDEM DE LARGADA OFICIAL</h2>`;
+    
+    cats.forEach(cat => {
+        let pilotos = inscritos.filter(a => a.cat === cat);
+        
+        pilotos.sort((a, b) => {
+            if (a.hasQ || b.hasQ) {
+                return b.qTime.localeCompare(a.qTime);
+            }
+            return a.nome.localeCompare(b.nome);
+        });
+
+        html += `<div class="cat-title">${cat} <span style="float: right; font-size: 11px; margin-top: 2px;">(${pilotos.length} atletas)</span></div>
+        <table>
+            <thead><tr>
+                <th style="width: 40px; text-align: center;">ORD.</th>
+                <th>NOME DO ATLETA</th>
+                <th>CIDADE/UF</th>
+                <th style="width: 100px; text-align: center;">QUALIFY</th>
+                <th style="width: 120px; text-align: center;">TEMPO OFICIAL</th>
+            </tr></thead>
+            <tbody>`;
+        
+        pilotos.forEach((p, idx) => {
+            let qDisp = p.hasQ ? p.qTime : "";
+            html += `<tr>
+                <td style="text-align: center; font-weight: bold; font-size: 14px;">${idx + 1}º</td>
+                <td style="font-weight: bold; font-size: 13px;">${p.nome}</td>
+                <td>${p.city}-${p.uf}</td>
+                <td style="text-align: center; font-family: monospace; color:#666;">${qDisp}</td>
+                <td></td>
+            </tr>`;
+        });
+        html += `</tbody></table>`;
+    });
+
+    html += `<div class="footer">Gerado pelo Sistema DH-PE • ${new Date().toLocaleString('pt-BR')}</div></body></html>`;
+
     let printWin = window.open('', '_blank');
-    let title = tipo === 'tempos' ? 'Resultados Oficiais' : 'Ranking Geral Oficial';
-    let html = `<html><head><title>${title}</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"><style>:root { --pe-blue: #0038a8; --pe-red: #d50000; --pe-green: #009b3a; --pe-yellow: #ffe500; } * { box-sizing: border-box !important; } body { font-family: Arial, sans-serif; padding: 20px; color: #333; background: #fff; margin:0; } .print-container { max-width: 800px; margin: 0 auto; background: #fff; padding: 10px; width: 100%; overflow: hidden; } .print-header { padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; color: white; background: var(--pe-blue); -webkit-print-color-adjust: exact; print-color-adjust: exact; } .rank-row { border: 1px solid #ddd; margin-bottom: 5px; padding: 8px; border-radius: 6px; width: 100%; } .badge-city { background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; color: #475569; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .badge-cat, .badge-cat-extra { background: #e0e7ff; color: #3730a3; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .cat-print-page { margin-bottom: 10px; border: 2px solid #0038a8; border-radius: 8px; overflow: hidden; width: 100%; } .cat-title-box { background: #0038a8 !important; color: white !important; padding: 10px; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 16px; -webkit-print-color-adjust: exact; print-color-adjust: exact; } @media print { @page { margin: 1cm; size: A4 portrait; } body { padding: 0; } .print-container { max-width: 100%; width: 100%; padding:0; overflow: hidden; } .cat-print-page { page-break-after: auto !important; page-break-inside: auto !important; break-inside: auto !important; margin-bottom: 15px !important; } .rank-row { page-break-inside: avoid !important; break-inside: avoid !important; width: 100%; } .no-print { display: none !important; } * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }</style></head><body><div style="text-align:center; margin-bottom:20px;" class="no-print"><button onclick="window.print()" style="padding:12px 24px; background:#009b3a; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🖨️ IMPRIMIR / SALVAR PDF</button><button onclick="window.close()" style="padding:12px 24px; background:#d50000; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; margin-left:10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">❌ FECHAR ABA</button></div><div class="print-container">${listDiv.innerHTML}</div></body></html>`;
-    printWin.document.write(html); printWin.document.close(); setTimeout(() => { printWin.focus(); }, 250);
+    printWin.document.write(html);
+    printWin.document.close();
+    setTimeout(() => { printWin.focus(); }, 250);
 };
 
 // ==========================================================
@@ -2954,53 +3091,7 @@ window.imprimirOrdemLargadaGeral = function() {
     
     if (inscritos.length === 0) return toast("Nenhum atleta confirmado neste evento.", "error");
     
-    if (inscritos.length === 0) return toast("Nenhum atleta confirmado neste evento.", "error");
-    
-    // === INÍCIO DA NOVA ORDENAÇÃO CUSTOMIZADA DE CATEGORIAS ===
-    let cats = [...new Set(inscritos.map(a => a.cat))];
-    
-    // Lista com a ordem exata de largada
-    const ordemDesejada = [
-        "ESTREANTE",
-        "RÍGIDA",
-        "RIGIDA", // (Adicionado sem acento como margem de segurança)
-        "OPEN",
-        "PCD",
-        "FEMININO ELITE", // (Nome oficial da categoria no banco)
-        "MASTER D",
-        "MASTER C2",
-        "MASTER C1",
-        "MASTER B2",
-        "MASTER B1",
-        "MASTER A2",
-        "MASTER A1",
-        "JUNIOR",
-        "JUVENIL",
-        "INFANTO-JUVENIL",
-        "SUB-30",
-        "ELITE"
-    ];
-
-    cats.sort((a, b) => {
-        // Remove a tag "(EXTRA)" caso o sistema tenha adicionado nas categorias base
-        let cleanA = a.replace(" (EXTRA)", "").trim().toUpperCase();
-        let cleanB = b.replace(" (EXTRA)", "").trim().toUpperCase();
-        
-        let indexA = ordemDesejada.indexOf(cleanA);
-        let indexB = ordemDesejada.indexOf(cleanB);
-        
-        // Se aparecer alguma categoria que não está na sua lista (Ex: E-Bike), joga para o final (posição 999)
-        if (indexA === -1) indexA = 999;
-        if (indexB === -1) indexB = 999;
-        
-        // Se as duas não estiverem na lista, organiza elas em ordem alfabética no fim da página
-        if (indexA === indexB) return a.localeCompare(b);
-        
-        return indexA - indexB; // Posiciona baseado na ordem da lista
-    });
-    // === FIM DA NOVA ORDENAÇÃO CUSTOMIZADA ===
-
-    let html = `<html><head><title>Ordem de Largada - ${evt.t}</title>
+    let cats = [...new Set(inscritos.map(a => a.cat))].sort();
     let html = `<html><head><title>Ordem de Largada - ${evt.t}</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #000; }
