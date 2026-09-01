@@ -2954,7 +2954,53 @@ window.imprimirOrdemLargadaGeral = function() {
     
     if (inscritos.length === 0) return toast("Nenhum atleta confirmado neste evento.", "error");
     
-    let cats = [...new Set(inscritos.map(a => a.cat))].sort();
+    if (inscritos.length === 0) return toast("Nenhum atleta confirmado neste evento.", "error");
+    
+    // === INÍCIO DA NOVA ORDENAÇÃO CUSTOMIZADA DE CATEGORIAS ===
+    let cats = [...new Set(inscritos.map(a => a.cat))];
+    
+    // Lista com a ordem exata de largada
+    const ordemDesejada = [
+        "ESTREANTE",
+        "RÍGIDA",
+        "RIGIDA", // (Adicionado sem acento como margem de segurança)
+        "OPEN",
+        "PCD",
+        "FEMININO ELITE", // (Nome oficial da categoria no banco)
+        "MASTER D",
+        "MASTER C2",
+        "MASTER C1",
+        "MASTER B2",
+        "MASTER B1",
+        "MASTER A2",
+        "MASTER A1",
+        "JUNIOR",
+        "JUVENIL",
+        "INFANTO-JUVENIL",
+        "SUB-30",
+        "ELITE"
+    ];
+
+    cats.sort((a, b) => {
+        // Remove a tag "(EXTRA)" caso o sistema tenha adicionado nas categorias base
+        let cleanA = a.replace(" (EXTRA)", "").trim().toUpperCase();
+        let cleanB = b.replace(" (EXTRA)", "").trim().toUpperCase();
+        
+        let indexA = ordemDesejada.indexOf(cleanA);
+        let indexB = ordemDesejada.indexOf(cleanB);
+        
+        // Se aparecer alguma categoria que não está na sua lista (Ex: E-Bike), joga para o final (posição 999)
+        if (indexA === -1) indexA = 999;
+        if (indexB === -1) indexB = 999;
+        
+        // Se as duas não estiverem na lista, organiza elas em ordem alfabética no fim da página
+        if (indexA === indexB) return a.localeCompare(b);
+        
+        return indexA - indexB; // Posiciona baseado na ordem da lista
+    });
+    // === FIM DA NOVA ORDENAÇÃO CUSTOMIZADA ===
+
+    let html = `<html><head><title>Ordem de Largada - ${evt.t}</title>
     let html = `<html><head><title>Ordem de Largada - ${evt.t}</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #000; }
