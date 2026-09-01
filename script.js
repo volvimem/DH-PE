@@ -2545,507 +2545,10 @@ map[key].totalPts += pts; if(isQualify) map[key].qPts += pts; else map[key].oPts
 window.compartilharResultados = function(tipo) {
     const listDiv = document.getElementById('list-' + tipo);
     if (!listDiv || listDiv.innerHTML.trim() === '') return toast("Nenhum dado para compartilhar", "error");
-    window.imprimirOrdemLargadaGeral = function() {
-    const evtId = document.getElementById('adm-res-evt').value;
-    if (!evtId || evtId === "") return toast("SELECIONE UM EVENTO PRIMEIRO!", "error");
-    
-    const evt = db.events.find(e => String(e.id) === String(evtId));
-    if (!evt) return toast("Evento não encontrado.", "error");
-
-    let inscritos = [];
-    db.users.forEach(u => {
-        if (u.inscricoes && u.inscricoes.length > 0) {
-            u.inscricoes.forEach(i => {
-                if (String(i.id) === String(evtId) && i.status === 'CONFIRMADO') {
-                    let cat = window.normalizeCatName(i.extraCat || u.cat);
-                    
-                    let qualifyTime = "99:99.999";
-                    let hasQ = false;
-                    if (db.tempos) {
-                        let tQ = db.tempos.find(t => String(t.evtId) === String(evtId) && t.cpf === u.cpf && t.runType === 'qualify' && t.cat === cat);
-                        if (tQ && tQ.val && tQ.val !== '--:--.---' && tQ.val !== 'DNF') {
-                            qualifyTime = tQ.val;
-                            hasQ = true;
-                        }
-                    }
-                    
-                    inscritos.push({
-                        nome: u.nome,
-                        city: u.city,
-                        uf: u.uf || 'PE',
-                        cat: cat,
-                        num: u.numero || u.numPlaca || u.placa || "",
-                        qTime: qualifyTime,
-                        hasQ: hasQ
-                    });
-                }
-            });
-        }
-    });
-    
-    if (inscritos.length === 0) return toast("Nenhum atleta confirmado neste evento.", "error");
-    
-    // ======== CÓDIGO DA ORDEM DA CATEGORIA ========
-    let cats = [...new Set(inscritos.map(a => a.cat))];
-    
-    const ordemDesejada = [
-        "ESTREANTE",
-        "RÍGIDA",
-        "RIGIDA", 
-        "OPEN",
-        "PCD",
-        "FEMININO ELITE",
-        "MASTER D",
-        "MASTER C2",
-        "MASTER C1",
-        "MASTER B2",
-        "MASTER B1",
-        "MASTER A2",
-        "MASTER A1",
-        "JUNIOR",
-        "JUVENIL",
-        "INFANTO-JUVENIL",
-        "SUB-30",
-        "ELITE"
-    ];
-
-    cats.sort((a, b) => {
-        let cleanA = a.replace(" (EXTRA)", "").trim().toUpperCase();
-        let cleanB = b.replace(" (EXTRA)", "").trim().toUpperCase();
-        
-        let indexA = ordemDesejada.indexOf(cleanA);
-        let indexB = ordemDesejada.indexOf(cleanB);
-        
-        // Se a categoria não estiver na lista acima, joga para o final (posição 999)
-        if (indexA === -1) indexA = 999;
-        if (indexB === -1) indexB = 999;
-        
-        if (indexA === indexB) return a.localeCompare(b);
-        
-        return indexA - indexB; 
-    });
-    // ==============================================
-
-    let html = `<html><head><title>Ordem de Largada - ${evt.t}</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #000; }
-        h1 { text-align: center; text-transform: uppercase; margin-bottom: 5px; font-size: 22px; }
-        h2 { text-align: center; font-size: 14px; margin-top: 0; margin-bottom: 20px; color: #555; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th, td { border: 1px solid #000; padding: 8px; text-align: left; font-size: 12px; text-transform: uppercase; }
-        th { background-color: #eee; font-weight: bold; }
-        .cat-title { background-color: #333; color: #fff; padding: 8px; font-weight: bold; font-size: 14px; margin-bottom: 0; margin-top: 15px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .print-btn { display: block; margin: 0 auto 20px auto; padding: 12px 24px; background: #ff9800; color: #fff; border: none; font-weight: bold; cursor: pointer; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .footer { text-align: center; margin-top: 30px; font-size: 10px; color: #999; }
-        @media print { 
-            .print-btn { display: none !important; } 
-            .cat-title { background-color: #333 !important; color: #fff !important; }
-        }
-    </style></head><body>
-    <button class="print-btn" onclick="window.print()">🖨️ IMPRIMIR ORDEM DE LARGADA</button>
-    <h1>${evt.t}</h1>
-    <h2>ORDEM DE LARGADA OFICIAL</h2>`;
-    
-    cats.forEach(cat => {
-        let pilotos = inscritos.filter(a => a.cat === cat);
-        
-        pilotos.sort((a, b) => {
-            if (a.hasQ || b.hasQ) {
-                return b.qTime.localeCompare(a.qTime);
-            }
-            return a.nome.localeCompare(b.nome);
-        });
-
-        html += `<div class="cat-title">${cat} <span style="float: right; font-size: 11px; margin-top: 2px;">(${pilotos.length} atletas)</span></div>
-        <table>
-            <thead><tr>
-                <th style="width: 40px; text-align: center;">ORD.</th>
-                <th>NOME DO ATLETA</th>
-                <th>CIDADE/UF</th>
-                <th style="width: 100px; text-align: center;">QUALIFY</th>
-                <th style="width: 120px; text-align: center;">TEMPO OFICIAL</th>
-            </tr></thead>
-            <tbody>`;
-        
-        pilotos.forEach((p, idx) => {
-            let qDisp = p.hasQ ? p.qTime : "";
-            html += `<tr>
-                <td style="text-align: center; font-weight: bold; font-size: 14px;">${idx + 1}º</td>
-                <td style="font-weight: bold; font-size: 13px;">${p.nome}</td>
-                <td>${p.city}-${p.uf}</td>
-                <td style="text-align: center; font-family: monospace; color:#666;">${qDisp}</td>
-                <td></td>
-            </tr>`;
-        });
-        html += `</tbody></table>`;
-    });
-
-    html += `<div class="footer">Gerado pelo Sistema DH-PE • ${new Date().toLocaleString('pt-BR')}</div></body></html>`;
-
     let printWin = window.open('', '_blank');
-    printWin.document.write(html);
-    printWin.document.close();
-    setTimeout(() => { printWin.focus(); }, 250);
-};
-
-// ==========================================================
-// 14. LIVE TIMING, SERVICE WORKER E PWA
-// ==========================================================
-window.syncLiveTimes = function(liveData) {
-    try {
-        let evtId = document.getElementById('adm-res-evt').value;
-        if(!evtId) return; let hasChanges = false;
-        liveData.forEach(liveAthlete => {
-            let cpf = liveAthlete.originalCpf; let cat = liveAthlete.category; let times = liveAthlete.times;
-            const updateOrAddTime = (runTypeKey, runTypeDb) => {
-                let msVal = times[runTypeKey]; let clockVal = liveAthlete.startClocks ? liveAthlete.startClocks[runTypeKey] : null;
-                if (msVal !== null) {
-                    let strVal = msToTime(msVal); let existingIndex = db.tempos.findIndex(t => t && String(t.evtId) === String(evtId) && t.cpf === cpf && t.cat === cat && t.runType === runTypeDb);
-                    if (existingIndex > -1) { if(db.tempos[existingIndex].val !== strVal) { db.tempos[existingIndex].val = strVal; db.tempos[existingIndex].startClock = clockVal; hasChanges = true; } } else { db.tempos.push({ evtId: evtId, cpf: cpf, name: liveAthlete.name, city: liveAthlete.city, cat: cat, val: strVal, startClock: clockVal, status: 'OK', runType: runTypeDb }); hasChanges = true; }
-                }
-            };
-            updateOrAddTime('qualify', 'qualify'); updateOrAddTime('oficial', '1st'); updateOrAddTime('segunda', '2nd');
-        });
-        if(hasChanges) { saveDB('tempos'); toast("DADOS DO LIVE SINCRONIZADOS!"); renderAdmResults(); }
-    } catch(e) { console.error("Falha ao salvar de volta:", e); }
-};
-
-function gatherAndPushData(win) {
-    let evtId = document.getElementById('adm-res-evt').value;
-    const evtObj = db.events.find(e => String(e.id) === String(evtId));
-    
-    // Função auxiliar para evitar o erro do timeToMs que quebrava a tela
-    const parseMs = (timeStr) => {
-        if(!timeStr || timeStr === "--:--.---") return null; 
-        if(timeStr === "DNF") return Infinity; 
-        let parts = timeStr.split(':'); 
-        if(parts.length < 2) return null; 
-        let m = parseInt(parts[0], 10); 
-        let secParts = parts[1].split('.'); 
-        let s = parseInt(secParts[0], 10); 
-        let msString = secParts.length > 1 ? secParts[1] : "000"; 
-        let ms = Math.round(parseFloat("0." + msString) * 1000); 
-        return (m * 60000) + (s * 1000) + ms;
-    };
-    
-    let liveDataArray = [];
-    if (typeof db !== 'undefined' && db.users) { 
-        db.users.forEach(u => { 
-            let nome = (u.nome || u.name || "").toString().trim().toUpperCase(); 
-            let city = (u.cidade || u.city || "-").toString().trim().toUpperCase(); 
-            let uf = (u.uf || u.estado || "PE").toString().trim().toUpperCase(); 
-            let cityUF = `${city}-${uf}`; 
-            
-            if(nome && u.inscricoes) { 
-                u.inscricoes.forEach(insc => { 
-                    if(String(insc.id) === String(evtId) && insc.status === 'CONFIRMADO') { 
-                        let cat = window.normalizeCatName ? window.normalizeCatName(insc.extraCat ? insc.extraCat : (u.cat || "GERAL")) : (insc.extraCat || u.cat).toUpperCase(); 
-                        
-                        if (evtObj && evtObj.type === 'NON_OFFICIAL') {
-                            cat = cat.replace(" (EXTRA)", "");
-                        }
-
-                        let times = {qualify: null, oficial: null, segunda: null};
-                        let startClocks = {qualify: null, oficial: null, segunda: null}; 
-                        
-                        if (db.tempos) { 
-                            db.tempos.forEach(t => { 
-                                let timeCat = t.cat;
-                                if (evtObj && evtObj.type === 'NON_OFFICIAL') timeCat = timeCat.replace(" (EXTRA)", "");
-
-                                let cleanTimeCat = timeCat.replace(" (EXTRA)", "").trim();
-                                let cleanLoopCat = cat.replace(" (EXTRA)", "").trim();
-
-                                if (String(t.evtId) === String(evtId) && t.cpf === u.cpf && cleanTimeCat === cleanLoopCat) { 
-                                    let key = t.runType === '1st' ? 'oficial' : (t.runType === '2nd' ? 'segunda' : 'qualify'); 
-                                    
-                                    // CORREÇÃO CRÍTICA AQUI: O sistema agora usa a função interna segura
-                                    times[key] = parseMs(t.val); 
-                                    
-                                    startClocks[key] = t.startClock || null; 
-                                } 
-                            }); 
-                        } 
-                        liveDataArray.push({ id: u.cpf + '||' + cat, originalCpf: u.cpf, name: nome, city: cityUF, region: uf, number: u.numero || u.numPlaca || u.placa || "S/N", category: cat, status: 'CONFIRMADO', times: times, startClocks: startClocks, isRerun: false });
-                    } 
-                });
-            } 
-        });
-    }
-    
-    // Gera os filtros dinamicamente baseados SÓ nos atletas que vão correr
-    let activeCategories = [...new Set(liveDataArray.map(a => a.category))].sort((a,b) => a.localeCompare(b));
-    if (activeCategories.length === 0) activeCategories = ["GERAL"];
-    
-    if (win && win.receiveData) { 
-        win.receiveData(liveDataArray, activeCategories, db.config.rerunPass || "admin123", DB_KEY, evtId);
-    }
-}
-
-window.forcePushData = function(win) { gatherAndPushData(win); };
-window.liveTimingWindow = null;
-
-function launchUnifiedLiveTiming() {
-    const btn = document.querySelector('.btn-live-launch');
-    const evtId = document.getElementById('adm-res-evt').value; if(!evtId) return toast("SELECIONE UM EVENTO PRIMEIRO", "error");
-    const origHtml = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ABRINDO...'; const width = 1280, height = 720;
-    const left = (screen.width / 2) - (width / 2); const top = (screen.height / 2) - (height / 2);
-    const win = window.open('', 'DHPE_Unified_Live', `width=${width},height=${height},top=${top},left=${left},resizable=yes,scrollbars=yes,toolbar=no,menubar=no,location=no,directories=no,status=no`);
-    if (win) { window.liveTimingWindow = win; const template = document.getElementById('template-live-timing'); win.document.open(); win.document.write(template.innerHTML); win.document.close();
-    setTimeout(() => { gatherAndPushData(win); btn.innerHTML = origHtml; }, 600); } else { alert("O navegador bloqueou o pop-up. Permita e tente novamente.");
-    btn.innerHTML = origHtml; }
-}
-
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; setTimeout(() => { const banner = document.getElementById('pwa-install-banner'); if(banner) banner.style.display = 'flex'; }, 2000); });
-window.installApp = async () => { if (deferredPrompt) { deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice;
-if (outcome === 'accepted') { const banner = document.getElementById('pwa-install-banner'); if(banner) banner.style.display = 'none'; } deferredPrompt = null; } };
-window.closeInstallBanner = () => { const banner = document.getElementById('pwa-install-banner'); if(banner) banner.style.display = 'none'; };
-if ('serviceWorker' in navigator) { 
-    window.addEventListener('load', () => { 
-        navigator.serviceWorker.register('./sw.js').then((reg) => { 
-            console.log('[SW] Registrado com Sucesso:', reg.scope); 
-            reg.update();
-        }).catch((err) => { 
-            console.error('[SW] Erro no registro:', err); 
-        }); 
-    });
-}
-
-// ==========================================================
-// 15. BACKUPS
-// ==========================================================
-window.downloadBackup = function() { if(!isSuperAdmin(loggedUser) && (!loggedUser || loggedUser.role !== 'ORGANIZER')) return toast("Sem permissão", "error");
-if(!db) return toast("Sem dados para salvar", "error"); const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db)); const downloadAnchorNode = document.createElement('a'); downloadAnchorNode.setAttribute("href", dataStr);
-downloadAnchorNode.setAttribute("download", "backup_dhpe_" + new Date().toISOString().slice(0,10) + ".json"); document.body.appendChild(downloadAnchorNode); downloadAnchorNode.click(); downloadAnchorNode.remove(); toast("BACKUP BAIXADO!"); };
-window.restoreBackup = function() { if(!isSuperAdmin(loggedUser) && (!loggedUser || loggedUser.role !== 'ORGANIZER')) return toast("Sem permissão", "error"); const input = document.getElementById('backup-input-file');
-if(input) input.click(); };
-window.processRestoreFile = function(input) { const file = input.files[0]; if(!file) return; const reader = new FileReader();
-reader.onload = function(e) { try { const restoredDb = JSON.parse(e.target.result);
-if(restoredDb && Array.isArray(restoredDb.users)) { showConfirm("RESTAURAR DADOS?", "Isso substituirá TODOS os dados atuais pelos do backup. Continuar?", '<i class="fas fa-exclamation-triangle" style="color:var(--pe-red)"></i>', function(res) { if(res) { db = restoredDb; saveDB(); toast("DADOS RESTAURADOS!"); setTimeout(() => window.location.reload(), 1500); } });
-} else { toast("ARQUIVO INVÁLIDO", "error"); } } catch(err) { console.error(err); toast("ERRO AO LER ARQUIVO", "error"); } }; reader.readAsText(file); };
-
-// ==========================================================
-// FUNÇÕES DE GERENCIAMENTO DE INSCRIÇÕES E STATUS
-// ==========================================================
-window.renderInscriptions = function() {
-    const evtId = document.getElementById('fin-evt-select').value;
-    const listContainer = document.getElementById('fin-list-container');
-    if (!listContainer) return;
-    
-    if (!evtId || evtId === "") {
-        listContainer.innerHTML = '<div style="padding:15px; text-align:center; color:#999;">Selecione um evento acima.</div>';
-        document.getElementById('fin-total-val').innerText = 'Total: 0';
-        document.getElementById('fin-paid-val').innerText = 'Pagos: 0';
-        return;
-    }
-
-    let inscritos = [];
-    let totalArrecadado = 0;
-    let totalPagos = 0;
-    const isGeral = (evtId === 'ALL');
-    db.users.forEach(u => {
-        if (u.inscricoes && u.inscricoes.length > 0) {
-            u.inscricoes.forEach(i => {
-                if (isGeral || String(i.id) === String(evtId)) {
-                    let evtObj = db.events.find(e => String(e.id) === String(i.id));
-                    if(evtObj) {
-                        let catNome = window.normalizeCatName(i.extraCat || u.cat);
-                        let valStr = evtObj.val || "0";
-                        
-                        if (evtObj.type === 'NON_OFFICIAL') {
-                            let cleanCat = catNome.replace(" (EXTRA)", "");
-                            if (evtObj.extraVals && evtObj.extraVals[catNome] && evtObj.extraVals[catNome].trim() !== "") {
-                                valStr = evtObj.extraVals[catNome];
-                            } else if (evtObj.extraVals && evtObj.extraVals[cleanCat] && evtObj.extraVals[cleanCat].trim() !== "") {
-                                valStr = evtObj.extraVals[cleanCat];
-                            }
-                            catNome = cleanCat;
-                        } else {
-                            if (i.extraCat && evtObj.extraVals && evtObj.extraVals[catNome] && evtObj.extraVals[catNome].trim() !== "") {
-                                valStr = evtObj.extraVals[catNome];
-                            }
-                        }
-                        
-                        let valNum = parseFloat(valStr.replace(',', '.')) || 0;
-                        
-                        if (i.status === 'CONFIRMADO') {
-                            totalArrecadado += valNum;
-                            totalPagos++;
-                        }
-
-                        inscritos.push({
-                            cpf: u.cpf, nome: u.nome, city: u.city, uf: u.uf || 'PE', cat: catNome,
-                            status: i.status, evtName: evtObj.t, evtIdInsc: i.id, valDisplay: valStr, 
-                            date: i.date || 0, tel: u.tel
-                        });
-                    }
-                }
-            });
-        }
-    });
-
-    document.getElementById('fin-total-val').innerText = `Total: ${inscritos.length}`;
-    document.getElementById('fin-paid-val').innerHTML = `Pagos: ${totalPagos} <span style="font-size:9px; margin-left:5px; opacity:0.8;">(R$ ${totalArrecadado.toFixed(2).replace('.', ',')})</span>`;
-    if (currentFilterStatus !== 'ALL') {
-        inscritos = inscritos.filter(a => a.status === currentFilterStatus);
-    }
-
-    const buscaInput = document.getElementById('inputBuscaAtleta');
-    const termo = buscaInput ? buscaInput.value.toLowerCase() : "";
-    if (termo) {
-        inscritos = inscritos.filter(a => 
-            a.nome.toLowerCase().includes(termo) || 
-            a.cpf.includes(termo) || 
-            a.city.toLowerCase().includes(termo)
-        );
-    }
-
-    inscritos.sort((a, b) => a.nome.localeCompare(b.nome));
-
-    if (inscritos.length === 0) {
-        listContainer.innerHTML = '<div style="padding:15px; text-align:center; color:#999;">Nenhuma inscrição encontrada para este filtro.</div>';
-        return;
-    }
-
-    listContainer.innerHTML = inscritos.map(a => {
-        const isPago = a.status === 'CONFIRMADO';
-        const bgStatus = isPago ? '#dcfce7' : '#fff7ed';
-        const colorStatus = isPago ? '#15803d' : '#c2410c';
-        const borderStatus = isPago ? '#86efac' : '#fdba74';
-        const iconStatus = isPago ? 'fa-check-circle' : 'fa-clock';
-        
-        const btnAcao = !isPago 
-            ? `<button class="btn-mini-adm" style="background:#009b3a; flex:1; font-weight:bold; padding:8px 0; margin:0;" onclick="aprovarInscricao('${a.cpf}', '${a.evtIdInsc}', '${a.cat}')"><i class="fas fa-check"></i> APROVAR</button>` 
-            : `<button class="btn-mini-adm" style="background:#d65a00; flex:1; font-weight:bold; padding:8px 0; margin:0;" onclick="estornarInscricao('${a.cpf}', '${a.evtIdInsc}', '${a.cat}')"><i class="fas fa-undo"></i> ESTORNAR</button>`;
-            
-        const wppBtn = a.tel ? `<button class="btn-mini-adm" style="background:#25D366; width:45px; margin:0;" onclick="openWhatsApp('${a.tel}', 'Olá ${a.nome}, vimos sua inscrição na etapa...')"><i class="fab fa-whatsapp" style="font-size:14px;"></i></button>` : '';
-
-        return `
-        <div class="adm-card" style="display:flex; flex-direction:column; gap:8px; border: 2px solid ${isPago ? '#bbf7d0' : '#cbd5e1'}; padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); background: ${isPago ? '#f0fdf4' : '#ffffff'};">
-            <div style="display:flex; justify-content:space-between; align-items:start;">
-                <div>
-                    <div style="font-weight:900; font-size:14px; color:var(--pe-blue); text-transform:uppercase;">${a.nome} <span class="badge-city" style="vertical-align:middle;">${a.city}-${a.uf}</span></div>
-                    <div style="margin-top:6px; display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
-                        <span style="background:${bgStatus}; color:${colorStatus}; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:bold; border:1px solid ${borderStatus};"><i class="fas ${iconStatus}"></i> ${isPago ? 'PAGO' : 'PENDENTE'}</span>
-                        <span class="badge-cat" style="margin:0; ${a.cat.includes('EXTRA') ? 'background:#fffbeb; color:#b45309; border-color:#fde68a;' : ''}">${a.cat}</span>
-                        ${isGeral ? `<span style="background:#e2e8f0; color:#334155; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:bold; border:1px solid #cbd5e1;"><i class="fas fa-flag-checkered"></i> ${a.evtName}</span>` : ''}
-                    </div>
-                </div>
-                <div style="text-align:right;">
-                    <b style="font-family:monospace; font-size:14px; background:#f1f5f9; padding:4px 6px; border-radius:6px; border:1px solid #e2e8f0; color:#1e293b;">R$ ${a.valDisplay}</b>
-                    <div style="font-size:10px; color:#64748b; margin-top:4px; font-weight:bold;">${new Date(a.date).toLocaleDateString('pt-BR')}</div>
-                </div>
-            </div>
-            <div style="display:flex; gap:5px; border-top:1px dashed #e2e8f0; padding-top:10px; margin-top:4px;">
-                ${wppBtn}
-                ${btnAcao}
-                <button class="btn-mini-adm" style="background:var(--pe-red); color:white; width:45px; margin:0;" onclick="removerInscricao('${a.cpf}', '${a.evtIdInsc}', '${a.cat}')"><i class="fas fa-trash"></i></button>
-            </div>
-        </div>`;
-    }).join('');
-};
-
-window.filterFinList = function(status) {
-    currentFilterStatus = status;
-    localStorage.setItem('ui_fin-status', status);
-    renderInscriptions();
-};
-
-window.filtrarAtletasStatus = function() {
-    renderInscriptions(); 
-};
-
-// FIX APLICADO NO APROVARINSCRIÇÃO: Agora ele faz o .replace(" (EXTRA)", "") nos dois lados da verificação
-window.aprovarInscricao = function(cpf, evtId, cat) {
-    if(!isSuperAdmin(loggedUser) && loggedUser.role !== 'ORGANIZER') return toast("SEM PERMISSÃO", "error");
-    showConfirm("APROVAR INSCRIÇÃO?", "Confirmar o recebimento do pagamento e liberar o atleta?", '<i class="fas fa-check-circle" style="color:#009b3a"></i>', function(res) {
-        if(res) {
-            const uIdx = db.users.findIndex(u => u.cpf === cpf);
-            if(uIdx > -1 && db.users[uIdx].inscricoes) {
-                const iIdx = db.users[uIdx].inscricoes.findIndex(i => String(i.id) === String(evtId) && window.normalizeCatName(i.extraCat || db.users[uIdx].cat).replace(" (EXTRA)", "") === cat.replace(" (EXTRA)", ""));
-                
-                if(iIdx > -1) {
-                    db.users[uIdx].inscricoes[iIdx].status = 'CONFIRMADO';
-                    saveDB('users');
-                    const author = loggedUser.nome;
-                    window.logAction(`Aprovou a inscrição de ${db.users[uIdx].nome} (Cat: ${cat}) no evento ID: ${evtId}`);
-                    window.enviarNotificacao(`✅ Seu pagamento foi aprovado! Inscrição confirmada na categoria ${cat}.`, 'USER', cpf, evtId);
-                    window.enviarNotificacao(`✅ O(a) org. ${author} APROVOU a inscrição de ${db.users[uIdx].nome} (${cat}).`, 'ADMIN', null, evtId);
-                    
-                    try {
-                        if (database && db.users[uIdx].fcmToken) {
-                            database.ref('push_queue').push({
-                                token: db.users[uIdx].fcmToken,
-                                title: "Inscrição Aprovada! 🚵‍♂️",
-                                body: `Sua inscrição na categoria ${cat} foi confirmada pela organização.`,
-                                status: "pending",
-                                timestamp: Date.now()
-                            });
-                        }
-                    } catch (pushError) {
-                        console.log("Notificação Push em background ignorada para não travar a aprovação:", pushError);
-                    }
-                    
-                    toast("INSCRIÇÃO APROVADA!", "success");
-                    renderInscriptions();
-                } else {
-                    toast("ERRO: Inscrição não encontrada no banco.", "error");
-                }
-            }
-        }
-    });
-};
-
-window.estornarInscricao = function(cpf, evtId, cat) {
-    if(!isSuperAdmin(loggedUser) && loggedUser.role !== 'ORGANIZER') return toast("SEM PERMISSÃO", "error");
-    showConfirm("VOLTAR PARA PENDENTE?", "Deseja remover a confirmação de pagamento deste atleta?", '<i class="fas fa-undo" style="color:#d50000"></i>', function(res) {
-        if(res) {
-            const uIdx = db.users.findIndex(u => u.cpf === cpf);
-            if(uIdx > -1 && db.users[uIdx].inscricoes) {
-                const iIdx = db.users[uIdx].inscricoes.findIndex(i => String(i.id) === String(evtId) && window.normalizeCatName(i.extraCat || db.users[uIdx].cat).replace(" (EXTRA)", "") === cat.replace(" (EXTRA)", ""));
-                
-                if(iIdx > -1) {
-                    db.users[uIdx].inscricoes[iIdx].status = 'PENDENTE';
-                    saveDB('users');
-                    const author = loggedUser.nome;
-                    window.logAction(`Estornou a inscrição de ${db.users[uIdx].nome} (Cat: ${cat}) no evento ID: ${evtId} para PENDENTE`);
-                    dispararPushAtleta(cpf, "Inscrição Pendente ⚠️", "Sua inscrição voltou para o status pendente (Estorno).");
-                    
-                    toast("INSCRIÇÃO ESTORNADA!");
-                    renderInscriptions();
-                } else {
-                    toast("ERRO: Inscrição não encontrada no banco.", "error");
-                }
-            }
-        }
-    });
-};
-
-window.removerInscricao = function(cpf, evtId, cat) {
-    if(!isSuperAdmin(loggedUser) && loggedUser.role !== 'ORGANIZER') return toast("SEM PERMISSÃO", "error");
-    showConfirm("APAGAR INSCRIÇÃO?", "Esta ação removerá completamente a inscrição do atleta neste evento.", '<i class="fas fa-trash" style="color:#d50000"></i>', function(res) {
-        if(res) {
-            const uIdx = db.users.findIndex(u => u.cpf === cpf);
-            if(uIdx > -1 && db.users[uIdx].inscricoes) {
-                const iIdx = db.users[uIdx].inscricoes.findIndex(i => String(i.id) === String(evtId) && window.normalizeCatName(i.extraCat || db.users[uIdx].cat).replace(" (EXTRA)", "") === cat.replace(" (EXTRA)", ""));
-                
-                if(iIdx > -1) {
-                    db.users[uIdx].inscricoes.splice(iIdx, 1);
-                    saveDB('users');
-                    const author = loggedUser.nome;
-                    window.logAction(`Apagou a inscrição de ${db.users[uIdx].nome} (Cat: ${cat}) no evento ID: ${evtId}`);
-                    dispararPushAtleta(cpf, "Inscrição Excluída ❌", "Sua inscrição na etapa foi removida pela organização.");
-                    
-                    toast("INSCRIÇÃO APAGADA!");
-                    renderInscriptions();
-                } else {
-                    toast("ERRO: Inscrição não encontrada no banco.", "error");
-                }
-            }
-        }
-    });
+    let title = tipo === 'tempos' ? 'Resultados Oficiais' : 'Ranking Geral Oficial';
+    let html = `<html><head><title>${title}</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"><style>:root { --pe-blue: #0038a8; --pe-red: #d50000; --pe-green: #009b3a; --pe-yellow: #ffe500; } * { box-sizing: border-box !important; } body { font-family: Arial, sans-serif; padding: 20px; color: #333; background: #fff; margin:0; } .print-container { max-width: 800px; margin: 0 auto; background: #fff; padding: 10px; width: 100%; overflow: hidden; } .print-header { padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; color: white; background: var(--pe-blue); -webkit-print-color-adjust: exact; print-color-adjust: exact; } .rank-row { border: 1px solid #ddd; margin-bottom: 5px; padding: 8px; border-radius: 6px; width: 100%; } .badge-city { background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; color: #475569; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .badge-cat, .badge-cat-extra { background: #e0e7ff; color: #3730a3; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .cat-print-page { margin-bottom: 10px; border: 2px solid #0038a8; border-radius: 8px; overflow: hidden; width: 100%; } .cat-title-box { background: #0038a8 !important; color: white !important; padding: 10px; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 16px; -webkit-print-color-adjust: exact; print-color-adjust: exact; } @media print { @page { margin: 1cm; size: A4 portrait; } body { padding: 0; } .print-container { max-width: 100%; width: 100%; padding:0; overflow: hidden; } .cat-print-page { page-break-after: auto !important; page-break-inside: auto !important; break-inside: auto !important; margin-bottom: 15px !important; } .rank-row { page-break-inside: avoid !important; break-inside: avoid !important; width: 100%; } .no-print { display: none !important; } * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }</style></head><body><div style="text-align:center; margin-bottom:20px;" class="no-print"><button onclick="window.print()" style="padding:12px 24px; background:#009b3a; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🖨️ IMPRIMIR / SALVAR PDF</button><button onclick="window.close()" style="padding:12px 24px; background:#d50000; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; margin-left:10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">❌ FECHAR ABA</button></div><div class="print-container">${listDiv.innerHTML}</div></body></html>`;
+    printWin.document.write(html); printWin.document.close(); setTimeout(() => { printWin.focus(); }, 250);
 };
 
 // ==========================================================
@@ -3091,7 +2594,47 @@ window.imprimirOrdemLargadaGeral = function() {
     
     if (inscritos.length === 0) return toast("Nenhum atleta confirmado neste evento.", "error");
     
-    let cats = [...new Set(inscritos.map(a => a.cat))].sort();
+    // === INÍCIO DA NOVA ORDENAÇÃO CUSTOMIZADA DE CATEGORIAS ===
+    let cats = [...new Set(inscritos.map(a => a.cat))];
+    
+    const ordemDesejada = [
+        "ESTREANTE",
+        "RÍGIDA",
+        "RIGIDA", 
+        "OPEN",
+        "PCD",
+        "FEMININO ELITE",
+        "MASTER D",
+        "MASTER C2",
+        "MASTER C1",
+        "MASTER B2",
+        "MASTER B1",
+        "MASTER A2",
+        "MASTER A1",
+        "JUNIOR",
+        "JUVENIL",
+        "INFANTO-JUVENIL",
+        "SUB-30",
+        "ELITE"
+    ];
+
+    cats.sort((a, b) => {
+        let cleanA = a.replace(" (EXTRA)", "").trim().toUpperCase();
+        let cleanB = b.replace(" (EXTRA)", "").trim().toUpperCase();
+        
+        let indexA = ordemDesejada.indexOf(cleanA);
+        let indexB = ordemDesejada.indexOf(cleanB);
+        
+        // Se a categoria não estiver na lista acima, joga para o final
+        if (indexA === -1) indexA = 999;
+        if (indexB === -1) indexB = 999;
+        
+        if (indexA === indexB) return a.localeCompare(b);
+        
+        return indexA - indexB; 
+    });
+    // === FIM DA NOVA ORDENAÇÃO ===
+
     let html = `<html><head><title>Ordem de Largada - ${evt.t}</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #000; }
