@@ -2583,7 +2583,7 @@ window.imprimirOrdemLargadaGeral = function() {
                         city: u.city,
                         uf: u.uf || 'PE',
                         cat: cat,
-                        num: u.numero || u.numPlaca || u.placa || "", // Puxa a placa que vc cadastrou no painel
+                        num: u.numero || u.numPlaca || u.placa || "",
                         qTime: qualifyTime,
                         hasQ: hasQ
                     });
@@ -2594,7 +2594,7 @@ window.imprimirOrdemLargadaGeral = function() {
     
     if (inscritos.length === 0) return toast("Nenhum atleta confirmado neste evento.", "error");
     
-    // === ORDENAÇÃO CUSTOMIZADA DE CATEGORIAS ===
+    // === INÍCIO DA NOVA ORDENAÇÃO CUSTOMIZADA DE CATEGORIAS ===
     let cats = [...new Set(inscritos.map(a => a.cat))];
     
     const ordemDesejada = [
@@ -2625,6 +2625,7 @@ window.imprimirOrdemLargadaGeral = function() {
         let indexA = ordemDesejada.indexOf(cleanA);
         let indexB = ordemDesejada.indexOf(cleanB);
         
+        // Se a categoria não estiver na lista acima, joga para o final
         if (indexA === -1) indexA = 999;
         if (indexB === -1) indexB = 999;
         
@@ -2632,7 +2633,7 @@ window.imprimirOrdemLargadaGeral = function() {
         
         return indexA - indexB; 
     });
-    // ==============================================
+    // === FIM DA NOVA ORDENAÇÃO ===
 
     let html = `<html><head><title>Ordem de Largada - ${evt.t}</title>
     <style>
@@ -2668,7 +2669,6 @@ window.imprimirOrdemLargadaGeral = function() {
         <table>
             <thead><tr>
                 <th style="width: 40px; text-align: center;">ORD.</th>
-                <th style="width: 60px; text-align: center;">PLACA</th>
                 <th>NOME DO ATLETA</th>
                 <th>CIDADE/UF</th>
                 <th style="width: 100px; text-align: center;">QUALIFY</th>
@@ -2678,12 +2678,8 @@ window.imprimirOrdemLargadaGeral = function() {
         
         pilotos.forEach((p, idx) => {
             let qDisp = p.hasQ ? p.qTime : "";
-            // Formata a placa com '#' na frente, se houver placa
-            let numDisp = p.num ? `#${p.num}` : ""; 
-            
             html += `<tr>
                 <td style="text-align: center; font-weight: bold; font-size: 14px;">${idx + 1}º</td>
-                <td style="text-align: center; font-weight: bold; font-size: 14px; color:#d50000;">${numDisp}</td>
                 <td style="font-weight: bold; font-size: 13px;">${p.nome}</td>
                 <td>${p.city}-${p.uf}</td>
                 <td style="text-align: center; font-family: monospace; color:#666;">${qDisp}</td>
