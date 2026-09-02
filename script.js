@@ -2954,7 +2954,40 @@ window.imprimirOrdemLargadaGeral = function() {
     
     if (inscritos.length === 0) return toast("Nenhum atleta confirmado neste evento.", "error");
     
-    let cats = [...new Set(inscritos.map(a => a.cat))].sort();
+    let cats = [...new Set(inscritos.map(a => a.cat))];
+    
+    // Array com a ordem exata desejada (inclui variações extras por segurança)
+    const ordemDesejada = [
+        "ESTREANTE", "ESTREANTE (EXTRA)",
+        "RIGIDA", "RÍGIDA", "RÍGIDA (EXTRA)",
+        "OPEN", "OPEN (EXTRA)",
+        "ELITE FEMININA", "FEMININO ELITE", "FEMININO",
+        "INFANTO-JUVENIL",
+        "JUVENIL",
+        "PCD", "PCD (EXTRA)",
+        "MASTER D",
+        "MASTER C2",
+        "MASTER C1", "MASTER C",
+        "MASTER B2",
+        "MASTER B1", "MASTER B",
+        "MASTER A2",
+        "MASTER A1", "MASTER A",
+        "E-BIKE", "E-BIKE (EXTRA)",
+        "JUNIOR",
+        "SUB-30",
+        "ELITE"
+    ];
+
+    // Aplica a ordenação customizada nas categorias
+    cats.sort((a, b) => {
+        let indexA = ordemDesejada.indexOf(a);
+        let indexB = ordemDesejada.indexOf(b);
+        if (indexA === -1) indexA = 999; // Se a categoria não estiver na lista, vai pro final
+        if (indexB === -1) indexB = 999;
+        if (indexA !== indexB) return indexA - indexB;
+        return a.localeCompare(b); // Desempate em ordem alfabética caso as duas não estejam na lista
+    });
+
     let html = `<html><head><title>Ordem de Largada - ${evt.t}</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #000; }
@@ -2989,6 +3022,7 @@ window.imprimirOrdemLargadaGeral = function() {
         <table>
             <thead><tr>
                 <th style="width: 40px; text-align: center;">ORD.</th>
+                <th style="width: 60px; text-align: center;">PLACA</th>
                 <th>NOME DO ATLETA</th>
                 <th>CIDADE/UF</th>
                 <th style="width: 100px; text-align: center;">QUALIFY</th>
@@ -3000,6 +3034,7 @@ window.imprimirOrdemLargadaGeral = function() {
             let qDisp = p.hasQ ? p.qTime : "";
             html += `<tr>
                 <td style="text-align: center; font-weight: bold; font-size: 14px;">${idx + 1}º</td>
+                <td style="text-align: center; font-weight: bold; font-size: 14px; color: #d50000;">${p.num}</td>
                 <td style="font-weight: bold; font-size: 13px;">${p.nome}</td>
                 <td>${p.city}-${p.uf}</td>
                 <td style="text-align: center; font-family: monospace; color:#666;">${qDisp}</td>
