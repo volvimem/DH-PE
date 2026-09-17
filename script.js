@@ -2268,6 +2268,104 @@ window.gerarExcelCBC = function() {
     }, 500);
 };
 
+window.gerarExcelLargada = function() {
+    // Puxa o ID do evento selecionado no painel de Resultados
+    const evtId = document.getElementById('adm-res-evt').value; 
+    if(!evtId) return toast("Selecione um evento primeiro!", "error");
+    
+    const evt = db.events.find(e => String(e.id) === String(evtId));
+    if(!evt) return toast("Evento não encontrado", "error");
+
+    toast("GERANDO PLANILHA DE LARGADA...", "info");
+    
+    setTimeout(() => {
+        try {
+            let inscritos = [];
+            db.users.forEach(u => {
+                if (u.inscricoes) {
+                    u.inscricoes.forEach(i => {
+                        if (String(i.id) === String(evtId) && i.status === 'CONFIRMADO') {
+                            let cat = window.normalizeCatName(i.extraCat || u.cat);
+                            
+                            // Busca o tempo de Qualify se já existir no banco
+                            let qTime = "";
+                            if(db.tempos) {
+                                let tQ = db.tempos.find(t => String(t.evtId) === String(evtId) && t.cpf === u.cpf && t.runType === 'qualify');
+                                if (tQ && tQ.val && tQ.val !== '--:--.---' && tQ.val !== 'DNF') qTime = tQ.val;
+                            }
+                            
+                            inscritos.push({
+                                ordem: 0,
+                                placa: u.numero || u.numPlaca || u.placa || "",
+                                cat: cat,
+                                nome: u.nome,
+                                cidade: u.city + '-' + (u.uf || 'PE'),
+                                qualify: qTime
+                            });
+                        }
+                    });
+                }
+            });
+
+            // Ordena primeiro pela Categoria e, dentro da categoria, pelo tempo do Qualify
+            inscritos.sort((a, b) => {
+                if (a.cat !== b.cat) return a.cat.localeCompare(b.cat);
+                return b.qualify.localeCompare(a.qualify);
+            });
+
+            let ws_data = [
+                ["Ordem", "Placa", "Categoria", "Nome do Atleta", "Cidade/UF", "Tempo Qualify", "Tempo Oficial (Preencher)", "Status", "Penalidade (+s)"]
+            ];
+
+            // Estilos visuais idênticos ao template
+            let thStyle = { 
+                font: { bold: true, color: {rgb: "FFFFFF"} }, 
+                fill: { fgColor: {rgb: "0038A8"} }, 
+                alignment: { horizontal: "center", vertical: "center" } 
+            };
+            let inputStyle = { fill: { fgColor: {rgb: "FFF2CC"} } };
+            let centerStyle = { alignment: { horizontal: "center", vertical: "center" } };
+
+            // Aplica os estilos no cabeçalho
+            let headerRow = ws_data[0].map(h => ({ v: h, t: 's', s: thStyle }));
+            let final_data = [headerRow];
+
+            // Insere os atletas no Excel
+            inscritos.forEach((p, index) => {
+                p.ordem = index + 1;
+                final_data.push([
+                    {v: p.ordem, t: 'n', s: centerStyle},
+                    {v: p.placa, t: 's', s: centerStyle},
+                    {v: p.cat, t: 's'},
+                    {v: p.nome, t: 's'},
+                    {v: p.cidade, t: 's'},
+                    {v: p.qualify, t: 's', s: centerStyle},
+                    {v: "", t: 's', s: inputStyle},       // Espaço p/ Tempo Oficial
+                    {v: "OK", t: 's', s: inputStyle},     // Status 
+                    {v: "", t: 's', s: inputStyle}        // Espaço p/ Penalidade
+                ]);
+            });
+
+            let ws = XLSX.utils.aoa_to_sheet(final_data);
+            
+            // Largura das colunas
+            ws['!cols'] = [ {wch: 8}, {wch: 10}, {wch: 20}, {wch: 35}, {wch: 25}, {wch: 15}, {wch: 28}, {wch: 15}, {wch: 15} ];
+            
+            let wb = XLSX.utils.book_new(); 
+            XLSX.utils.book_append_sheet(wb, ws, "Ordem de Largada");
+
+            // Dispara o download com o nome da Etapa
+            let safeTitle = evt.t.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            XLSX.writeFile(wb, `Ordem_Largada_Tempos_${safeTitle}.xlsx`);
+            toast("PLANILHA GERADA COM SUCESSO!", "success");
+            
+        } catch (err) { 
+            console.error(err); 
+            toast("ERRO AO GERAR EXCEL", "error");
+        }
+    }, 500);
+};
+
 // ==========================================================
 // 13. RESULTADOS (LANÇAR, EDITAR, PENALIZAR E RANKING)
 // ==========================================================
