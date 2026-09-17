@@ -249,6 +249,10 @@ function applyAdminPermissions() {
     const auditBtn = document.getElementById('btn-adm-audit');
     if(auditBtn) auditBtn.style.display = displayMode;
     document.getElementById('btn-adm-results').style.display = 'flex'; document.getElementById('btn-adm-fin').style.display = 'flex'; document.getElementById('btn-adm-backup').style.display = 'flex'; document.getElementById('btn-adm-restore').style.display = 'flex';
+    
+    // NOVO: Libera o botão de Importar Excel apenas para o Super Admin
+    const btnImport = document.getElementById('btn-import-excel');
+    if(btnImport) btnImport.style.display = isSuper ? 'flex' : 'none';
 }
 
 function setupAutoSave() {
@@ -2578,6 +2582,272 @@ window.importarExcelTempos = function(event) {
                 if (document.getElementById('list-tempos')) renderContent('tempos');
             } else {
                 toast("Nenhum tempo digitado encontrado na planilha.", "error");
+            }
+        } catch(err) { console.error(err); toast("ERRO AO LER O ARQUIVO", "error"); }
+        event.target.value = ""; 
+    };
+    reader.readAsArrayBuffer(file);
+};
+
+// ==========================================================
+// FUNÇÕES DE INTEGRAÇÃO EXCEL (GERAR LARGADA E IMPORTAR)
+// ==========================================================
+window.gerarExcelLargada = function() {
+    const evtId = document.getElementById('adm-res-evt').value; 
+    if(!evtId) return toast("Selecione um evento primeiro!", "error");
+    
+    const evt = db.events.find(e => String(e.id) === String(evtId));
+    if(!evt) return toast("Evento não encontrado", "error");
+
+    const btnClicado = document.activeElement;
+    const textoOriginal = btnClicado ? btnClicado.innerHTML : ""; 
+    if(btnClicado && btnClicado.tagName === 'BUTTON') { 
+        btnClicado.disabled = true;
+        btnClicado.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GERANDO...'; 
+    } 
+
+    toast("GERANDO PLANILHA DE LARGADA...", "info");
+    
+    setTimeout(() => {
+        try {
+            let inscritos = [];
+            db.users.forEach(u => {
+                if (u.inscricoes) {
+                    u.inscricoes.forEach(i => {
+                        if (String(i.id) === String(evtId) && i.status === 'CONFIRMADO') {
+                            let cat = window.normalizeCatName(i.extraCat || u.cat);
+                            
+                            let qTime = "";
+                            if(db.tempos) {
+                                let tQ = db.tempos.find(t => String(t.evtId) === String(evtId) && t.cpf === u.cpf && t.runType === 'qualify' && t.cat === cat);
+                                if (tQ && tQ.val && tQ.val !== '--:--.---' && tQ.val !== 'DNF') qTime = tQ.val;
+                            }
+                            
+                            inscritos.push({
+                                ordem: 0,
+                                placa: u.numero || u.numPlaca || u.placa || "",
+                                cat: cat,
+                                nome: u.nome,
+                                cidade: u.city + '-' + (u.uf || 'PE'),
+                                qualify: qTime,
+                                cpf: u.cpf
+                            });
+                        }
+                    });
+                }
+            });
+
+            if(inscritos.length === 0) {
+                if(btnClicado && btnClicado.tagName === 'BUTTON') { btnClicado.innerHTML = textoOriginal; btnClicado.disabled = false; } 
+                return toast("Nenhum atleta confirmado nesta etapa.", "error");
+            }
+
+            // FILTRO OFICIAL DO SISTEMA
+            const ordemDesejada = [
+                "ESTREANTE", "ESTREANTE (EXTRA)",
+                "RIGIDA", "RÍGIDA", "RÍGIDA (EXTRA)",
+                "OPEN", "OPEN (EXTRA)",
+                "ELITE FEMININA", "FEMININO ELITE", "FEMININO",
+                "INFANTO-JUVENIL", "JUVENIL", "PCD", "PCD (EXTRA)",
+                "MASTER D", "MASTER C2", "MASTER C1", "MASTER C",
+                "MASTER B2", "MASTER B1", "MASTER B",
+                "MASTER A2", "MASTER A1", "MASTER A",
+                "E-BIKE", "E-BIKE (EXTRA)", "JUNIOR", "SUB-30", "ELITE"
+            ];
+
+            inscritos.sort((a, b) => {
+                let indexA = ordemDesejada.indexOf(a.cat);
+                let indexB = ordemDesejada.indexOf(b.cat);
+                if (indexA === -1) indexA = 999;
+                if (indexB === -1) indexB = 999;
+
+                // 1º Ordena pela Categoria Oficial
+                if (indexA !== indexB) return indexA - indexB;
+                
+                // 2º Ordena pelo Qualify (se houver) ou Nome
+                if (a.qualify && b.qualify) return b.qualify.localeCompare(a.qualify);
+                return a.nome.localeCompare(b.nome);
+            });
+
+            let ws_data = [
+                ["Ordem", "Placa", "Categoria", "Nome do Atleta", "Cidade/UF", "Tempo Qualify", "Tempo Oficial (Preencher)", "Status", "Penalidade (+s)", "ID_SISTEMA"]
+            ];
+
+            // ESTILOS
+            let thStyle = { font: { bold: true, color: {rgb: "FFFFFF"} }, fill: { fgColor: {rgb: "0038A8"} }, alignment: { horizontal: "center", vertical: "center" } };
+            let inputCenterStyle = { fill: { fgColor: {rgb: "FFF2CC"} }, alignment: { horizontal: "center", vertical: "center" } }; // Amarelo Centralizado
+            let centerStyle = { alignment: { horizontal: "center", vertical: "center" } };
+            let separatorStyle = { fill: { fgColor: {rgb: "E2E8F0"} } }; // Linha Cinza
+
+            let headerRow = ws_data[0].map(h => ({ v: h, t: 's', s: thStyle }));
+            let final_data = [headerRow];
+
+            let currentCat = null;
+            let catCount = 0;
+
+            inscritos.forEach((p, index) => {
+                // Insere linha cinza entre categorias e zera a contagem
+                if (currentCat !== null && currentCat !== p.cat) {
+                    final_data.push([
+                        {v: "", t: 's', s: separatorStyle}, {v: "", t: 's', s: separatorStyle}, {v: "", t: 's', s: separatorStyle}, 
+                        {v: "", t: 's', s: separatorStyle}, {v: "", t: 's', s: separatorStyle}, {v: "", t: 's', s: separatorStyle}, 
+                        {v: "", t: 's', s: separatorStyle}, {v: "", t: 's', s: separatorStyle}, {v: "", t: 's', s: separatorStyle}, {v: "", t: 's', s: separatorStyle}
+                    ]);
+                    catCount = 0;
+                }
+                currentCat = p.cat;
+                catCount++;
+                p.ordem = catCount;
+
+                final_data.push([
+                    {v: p.ordem, t: 'n', s: centerStyle},
+                    {v: p.placa, t: 's', s: inputCenterStyle}, // Placa agora é amarela e digitável
+                    {v: p.cat, t: 's'},
+                    {v: p.nome, t: 's'},
+                    {v: p.cidade, t: 's'},
+                    {v: p.qualify, t: 's', s: centerStyle},
+                    {v: "", t: 's', s: inputCenterStyle},
+                    {v: "OK", t: 's', s: inputCenterStyle},
+                    {v: "", t: 's', s: inputCenterStyle},
+                    {v: p.cpf, t: 's'} 
+                ]);
+            });
+
+            let ws = XLSX.utils.aoa_to_sheet(final_data);
+            ws['!cols'] = [ {wch: 8}, {wch: 10}, {wch: 25}, {wch: 40}, {wch: 25}, {wch: 15}, {wch: 28}, {wch: 15}, {wch: 15}, {wch: 15} ];
+            let wb = XLSX.utils.book_new(); 
+            XLSX.utils.book_append_sheet(wb, ws, "Ordem de Largada");
+
+            let safeTitle = evt.t.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            XLSX.writeFile(wb, `Ordem_Largada_Tempos_${safeTitle}.xlsx`);
+            toast("PLANILHA GERADA COM SUCESSO!", "success");
+            
+        } catch (err) { console.error(err); toast("ERRO AO GERAR EXCEL", "error"); }
+
+        if(btnClicado && btnClicado.tagName === 'BUTTON') { btnClicado.innerHTML = textoOriginal; btnClicado.disabled = false; } 
+    }, 500);
+};
+
+window.importarExcelTempos = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const evtId = document.getElementById('adm-res-evt').value;
+    const runTypeManual = document.getElementById('adm-res-runtype').value; 
+    
+    if (!evtId) {
+        event.target.value = ""; 
+        return toast("Selecione um evento primeiro!", "error");
+    }
+
+    toast("LENDO PLANILHA E CALCULANDO...", "info");
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const json = XLSX.utils.sheet_to_json(worksheet, {defval: ""});
+
+            let contagemSalvos = 0;
+
+            const parseTempoPlanilha = (val) => {
+                if (typeof val === 'number') {
+                    let totalMs = Math.round(val * 24 * 60 * 60 * 1000);
+                    let min = Math.floor(totalMs / 60000).toString().padStart(2, '0');
+                    let sec = Math.floor((totalMs % 60000) / 1000).toString().padStart(2, '0');
+                    let ms = (totalMs % 1000).toString().padStart(3, '0');
+                    return `${min}:${sec}.${ms}`;
+                }
+                return String(val).trim();
+            };
+
+            json.forEach(row => {
+                const cpfAtleta = row["ID_SISTEMA"] || row["CPF"];
+                const nomeStr = row["Nome do Atleta"];
+                const catStr = row["Categoria"];
+                const placaStr = row["Placa"] || "";
+                let tempoStr = row["Tempo Oficial (Preencher)"] || "";
+                const statusStr = (row["Status"] || "OK").toString().trim().toUpperCase();
+                const penStr = row["Penalidade (+s)"] || "";
+
+                if (cpfAtleta) {
+                    const uObj = db.users.find(x => x.cpf === cpfAtleta);
+                    let atualizouAlgo = false;
+
+                    // 1. Atualiza a Placa do Atleta, se foi digitada no Excel
+                    if (placaStr !== "" && uObj && uObj.numero !== placaStr.toString()) {
+                        uObj.numero = placaStr.toString();
+                        atualizouAlgo = true;
+                    }
+
+                    // 2. Atualiza o Tempo, apenas se a célula de tempo tiver algo, ou se for DNF/DSQ/DNS
+                    if (tempoStr !== "" || statusStr === 'DNF' || statusStr === 'DSQ' || statusStr === 'DNS') {
+                        let tempoFinalizado = parseTempoPlanilha(tempoStr);
+                        let statusDb = 'OK';
+                        let stringPenalidade = "";
+                        
+                        if (statusStr === 'DNF' || statusStr === 'DSQ' || statusStr === 'DNS') {
+                            tempoFinalizado = 'DNF';
+                            statusDb = 'DNF';
+                        } else if (tempoFinalizado) {
+                            let segundosPenalidade = parseInt(penStr, 10);
+                            if (!isNaN(segundosPenalidade) && segundosPenalidade > 0) {
+                                let msAtual = tempoParaMilissegundos(tempoFinalizado);
+                                if (msAtual !== Infinity) {
+                                    msAtual += (segundosPenalidade * 1000);
+                                    let novoMin = Math.floor(msAtual / 60000); 
+                                    let novoSec = Math.floor((msAtual % 60000) / 1000); 
+                                    let novoMs = msAtual % 1000; 
+                                    tempoFinalizado = `${novoMin.toString().padStart(2,'0')}:${novoSec.toString().padStart(2,'0')}.${novoMs.toString().padStart(3,'0')}`;
+                                    stringPenalidade = `+${segundosPenalidade}s`;
+                                }
+                            }
+                        }
+
+                        if (tempoFinalizado && tempoFinalizado !== "") {
+                            let runTypeDb = runTypeManual === 'oficial' ? '1st' : (runTypeManual === 'segunda' ? '2nd' : 'qualify');
+                            if(runTypeManual === '1st' || runTypeManual === 'qualify' || runTypeManual === '2nd') runTypeDb = runTypeManual;
+                            
+                            let idxExistente = db.tempos.findIndex(t => t && String(t.evtId) === String(evtId) && t.cpf === cpfAtleta && t.runType === runTypeDb && window.normalizeCatName(t.cat) === window.normalizeCatName(catStr));
+                            const cidadeLimpa = uObj ? uObj.city : "";
+
+                            const objTempo = { 
+                                evtId: evtId, 
+                                cpf: cpfAtleta, 
+                                name: nomeStr.toUpperCase(), 
+                                city: cidadeLimpa, 
+                                cat: window.normalizeCatName(catStr), 
+                                val: tempoFinalizado, 
+                                status: statusDb, 
+                                runType: runTypeDb, 
+                                num: placaStr.toString(),
+                                penaltyStr: stringPenalidade
+                            };
+
+                            if (idxExistente > -1) {
+                                db.tempos[idxExistente] = objTempo;
+                            } else {
+                                db.tempos.push(objTempo);
+                            }
+                            atualizouAlgo = true;
+                        }
+                    }
+
+                    if (atualizouAlgo) contagemSalvos++;
+                }
+            });
+
+            if(contagemSalvos > 0) {
+                saveDB(['tempos', 'users']); 
+                toast(`✅ REGISTROS LIDOS E ATUALIZADOS!`);
+                renderAdmResults();
+                recalcRanking();
+                if (document.getElementById('list-tempos')) renderContent('tempos');
+            } else {
+                toast("Nenhum dado modificado na planilha.", "error");
             }
         } catch(err) { console.error(err); toast("ERRO AO LER O ARQUIVO", "error"); }
         event.target.value = ""; 
