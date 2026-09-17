@@ -439,29 +439,29 @@
                     <div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;">
                         
                         <div style="display:flex; justify-content:space-between; align-items:center; gap: 5px; flex-wrap: wrap;">
-                        <b style="color:var(--pe-green); font-size:12px">LANÇAR RESULTADO</b>
-                        <div style="display:flex; gap:5px;">
-                            
-                            <!-- MECANISMO INVISÍVEL PARA LER O ARQUIVO -->
-                            <input type="file" id="input-import-excel" accept=".xlsx, .xls" style="display:none" onchange="window.importarExcelTempos(event)">
-                            
-                            <!-- BOTÃO DE IMPORTAR -->
-                            <button class="btn-live-launch" title="Importar Tempos do Excel" style="background:#0038a8; color:white; padding:6px 10px; border:none; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer; display:flex; align-items:center; gap:5px;" onclick="document.getElementById('input-import-excel').click()">
-                                <i class="fas fa-upload"></i> IMPORTAR
-                            </button>
+                            <b style="color:var(--pe-green); font-size:12px">LANÇAR RESULTADO</b>
+                            <div style="display:flex; gap:5px;">
+                                
+                                <!-- MECANISMO INVISÍVEL PARA LER O ARQUIVO -->
+                                <input type="file" id="input-import-excel" accept=".xlsx, .xls" style="display:none" onchange="window.importarExcelTempos(event)">
+                                
+                                <!-- BOTÃO DE IMPORTAR (INVISÍVEL POR PADRÃO, COM ID) -->
+                                <button id="btn-import-excel" class="btn-live-launch" title="Importar Tempos do Excel" style="background:#0038a8; color:white; padding:6px 10px; border:none; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer; display:none; align-items:center; gap:5px;" onclick="document.getElementById('input-import-excel').click()">
+                                    <i class="fas fa-upload"></i> IMPORTAR
+                                </button>
 
-                            <!-- BOTÃO DE GERAR EXCEL LARGADA -->
-                            <button class="btn-live-launch" title="Baixar Planilha de Largada" style="background:#107c41; color:white; padding:6px 10px; border:none; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer; display:flex; align-items:center; gap:5px;" onclick="window.gerarExcelLargada()">
-                                <i class="fas fa-file-excel"></i> LARGADA
-                            </button>
-                            
-                            <button class="btn-live-launch" style="background:#ff9800; color:white; padding:6px 10px; border:none; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer;" onclick="imprimirOrdemLargadaGeral()"><i class="fas fa-print"></i> IMPRIMIR</button>
-                            
-                            <button class="btn-live-launch" style="background:#dc3545; color:white; padding:6px 10px; border:none; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer; display:flex; align-items:center; gap:5px;" onclick="launchUnifiedLiveTiming()">
-                                LIVE <i class="fas fa-external-link-alt"></i>
-                            </button>
+                                <!-- BOTÃO DE GERAR EXCEL LARGADA -->
+                                <button class="btn-live-launch" title="Baixar Planilha de Largada" style="background:#107c41; color:white; padding:6px 10px; border:none; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer; display:flex; align-items:center; gap:5px;" onclick="window.gerarExcelLargada()">
+                                    <i class="fas fa-file-excel"></i> LARGADA
+                                </button>
+                                
+                                <button class="btn-live-launch" style="background:#ff9800; color:white; padding:6px 10px; border:none; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer;" onclick="imprimirOrdemLargadaGeral()"><i class="fas fa-print"></i> IMPRIMIR</button>
+                                
+                                <button class="btn-live-launch" style="background:#dc3545; color:white; padding:6px 10px; border:none; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer; display:flex; align-items:center; gap:5px;" onclick="launchUnifiedLiveTiming()">
+                                    LIVE <i class="fas fa-external-link-alt"></i>
+                                </button>
+                            </div>
                         </div>
-                    </div>
 
                         <div style="display:flex; gap:5px; margin-top:10px;">
                              <select id="adm-res-evt" class="input-field" onchange="renderAdmResults()"><option value="">SELECIONE EVENTO...</option></select>
