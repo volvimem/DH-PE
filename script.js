@@ -1248,6 +1248,12 @@ window.populatePublicFilters = function(tab) {
 };
 
 function renderContent(t) { 
+    // CHAMA A TELA DO X1 COM SEGURANÇA
+    if(t === 'x1') {
+        window.renderX1List('ALL');
+        return;
+    }
+    
     if(t === 'calendar') { 
         document.getElementById('lbl-cal-year').innerText = SYSTEM_YEAR;
         const hD = document.getElementById('calendar-highlight'); const oD = document.getElementById('calendar-others'); const pD = document.getElementById('calendar-past-bar');
@@ -4226,12 +4232,3 @@ window.calcularVencedoresX1 = function() {
     if(hasChanges) saveDB('x1_duels');
 };
 
-// Modificação extra para que nav('x1') chame o renderContent correto.
-const oldRenderContent = window.renderContent;
-window.renderContent = function(t) {
-    if(t === 'x1') {
-        window.renderX1List('ALL');
-    } else {
-        oldRenderContent(t);
-    }
-};
