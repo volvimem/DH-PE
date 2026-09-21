@@ -803,7 +803,7 @@
 <div class="modal-overlay" id="modal-criar-x1">
     <div class="modal-box">
         <h3 style="color:var(--pe-blue); margin-bottom:15px;"><i class="fas fa-bolt" style="color:#ffe500;"></i> LANÇAR DESAFIO X1</h3>
-        <p style="font-size:10px; color:#666; margin-bottom:10px;">Escolha a etapa, seu adversário e a aposta. Ambos pagam a aposta + R$ 5 de taxa ao sistema.</p>
+        <p style="font-size:10px; color:#666; margin-bottom:10px;">Escolha a etapa, adversário e a aposta. Ambos pagam a aposta + R$ 5 de taxa.</p>
         
         <select id="x1-evt-select" class="input-field" style="margin-bottom:10px;"><option value="">1º SELECIONE A ETAPA...</option></select>
         <div class="smart-search-container" style="margin-bottom:10px;">
@@ -815,10 +815,11 @@
         
         <label style="font-size:11px; font-weight:bold; color:var(--pe-blue); display:block; text-align:left; margin-bottom:5px;">VALOR DA APOSTA (R$)</label>
         <input type="number" id="x1-bet-value" class="input-field" placeholder="Ex: 50" style="margin-bottom:10px; font-size:20px; font-weight:900; color:var(--pe-green); text-align:center;">
-        
+
         <label style="font-size:11px; font-weight:bold; color:var(--pe-blue); display:block; text-align:left; margin-bottom:5px;">VANTAGEM DE TEMPO (Opcional)</label>
         <div style="display:flex; gap:5px; margin-bottom:15px;">
-            <input type="number" id="x1-adv-seconds" class="input-field" step="30" placeholder="Segundos (Ex: 30)" style="flex:1; text-align:center;">
+            <!-- step="0.01" permite digitar 0.30, 1.5, etc -->
+            <input type="number" id="x1-adv-seconds" class="input-field" step="0.01" placeholder="Ex: 0.30 ou 1.5" style="flex:1; text-align:center;">
             <select id="x1-adv-to" class="input-field" style="flex:1; font-size:12px;">
                 <option value="OPPONENT">P/ Adversário</option>
                 <option value="ME">Para Mim</option>
@@ -848,13 +849,13 @@
             
             <label style="font-size:10px; font-weight:bold;">NOVA VANTAGEM DE TEMPO (Opcional):</label>
             <div style="display:flex; gap:5px; margin-bottom:10px;">
-                <input type="number" id="x1-new-adv-seconds" class="input-field" step="30" placeholder="Segundos" style="flex:1; text-align:center;">
+                <input type="number" id="x1-new-adv-seconds" class="input-field" step="0.01" placeholder="Ex: 0.30" style="flex:1; text-align:center;">
                 <select id="x1-new-adv-to" class="input-field" style="flex:1; font-size:12px;">
                     <option value="ME">Para Mim</option>
                     <option value="OPPONENT">P/ Adversário</option>
                 </select>
             </div>
-            
+
             <button class="btn" style="background:var(--pe-blue); margin:0;" onclick="enviarContraPropostaX1()">ENVIAR PROPOSTA</button>
         </div>
         
@@ -883,7 +884,6 @@
         <button class="btn" style="background:#ccc; color:#333; margin:0;" onclick="fecharModal('modal-taxa-x1')">DEPOIS EU PAGO</button>
     </div>
 </div>
-        
 <!-- FIM MODAIS X1 -->
     
 <template id="template-live-timing">
