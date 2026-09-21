@@ -4031,7 +4031,6 @@ window.renderX1List = function(filterStatus = 'ALL') {
             }
         }
         
-        // NOVO: Botão apagar para Super Admins
         let admDeleteBtn = '';
         if(isSuperAdmin(loggedUser)) {
             admDeleteBtn = `<button class="btn-mini-adm" style="background:#d50000; width:100%; padding:8px; margin-top:10px; font-size:10px;" onclick="deletarX1Geral('${d.id}')"><i class="fas fa-trash-alt"></i> APAGAR COMBATE (ADMIN)</button>`;
@@ -4085,7 +4084,6 @@ window.abrirModalTaxaX1 = function(id, role) {
     document.getElementById('x1-taxa-id').value = id;
     currentTaxRole = role;
     
-    // Soma o valor do X1 com a taxa de R$5,00
     const duel = db.x1_duels.find(d => d.id === id);
     if(duel) {
         const totalPagar = duel.betValue + 5.00;
@@ -4114,126 +4112,8 @@ window.confirmarEnvioTaxaX1 = function() {
             window.enviarNotificacao(`Ambos pagaram a taxa do X1 (${db.x1_duels[idx].challengerName} vs ${db.x1_duels[idx].challengedName}). Aprove no painel.`, 'ADMIN', null, null);
         }
 
-        // Abre direto no WhatsApp com a mensagem pronta
         const msg = `Olá! Segue o comprovante do meu X1.\n\n*Combate:* ${duel.challengerName} VS ${duel.challengedName}\n*Valor Transferido:* R$ ${totalPagar.toFixed(2).replace('.', ',')}\n\n[Envie a foto do comprovante logo abaixo]`;
         openWhatsApp("81995005317", msg);
-    }
-};
-
-        return `
-        <div class="x1-card">
-            <div class="x1-header">
-                <span class="x1-header-evt"><i class="fas fa-flag-checkered"></i> ${evtName}</span>
-                <span class="x1-header-bet">R$ ${d.betValue.toFixed(2)}</span>
-            </div>
-            <div class="x1-body">
-                <div class="x1-athlete">
-                    ${winner1}
-                    <span class="x1-athlete-name">${d.challengerName}</span>
-                    <span class="x1-athlete-time">${t1}</span>
-                </div>
-                <div class="x1-vs-badge">VS</div>
-                <div class="x1-athlete">
-                    ${winner2}
-                    <span class="x1-athlete-name">${d.challengedName}</span>
-                    <span class="x1-athlete-time">${t2}</span>
-                </div>
-            </div>
-            <div class="x1-footer">
-                ${statusBadge}
-                ${actionBtn}
-            </div>
-        </div>`;
-    }).join('');
-};
-
-window.abrirAcaoX1 = function(id) {
-    const duel = db.x1_duels.find(d => d.id === id);
-    if(!duel) return;
-    document.getElementById('x1-acao-id').value = id;
-    document.getElementById('x1-acao-texto').innerText = `${duel.challengerName} apostou R$ ${duel.betValue.toFixed(2)} contra você!`;
-    document.getElementById('x1-contra-proposta-area').style.display = 'none';
-    document.getElementById('x1-acao-botoes').style.display = 'flex';
-    openModal('modal-acao-x1');
-};
-
-window.aceitarX1 = function() {
-    const id = document.getElementById('x1-acao-id').value;
-    const idx = db.x1_duels.findIndex(d => d.id === id);
-    if(idx > -1) {
-        db.x1_duels[idx].status = 'AGUARDANDO_TAXAS';
-        saveDB('x1_duels');
-        toast("🔥 DESAFIO ACEITO! Pague a taxa para validar.");
-        fecharModal('modal-acao-x1');
-        renderContent('x1');
-        window.enviarNotificacao(`Seu desafio X1 contra ${db.x1_duels[idx].challengedName} foi ACEITO! Pague a taxa de R$5.`, 'USER', db.x1_duels[idx].challengerCpf, db.x1_duels[idx].evtId);
-    }
-};
-
-window.arregarX1 = function() {
-    const id = document.getElementById('x1-acao-id').value;
-    const idx = db.x1_duels.findIndex(d => d.id === id);
-    if(idx > -1) {
-        db.x1_duels[idx].status = 'ARREGOU';
-        saveDB('x1_duels');
-        toast("Você arregou do combate.", "error");
-        fecharModal('modal-acao-x1');
-        renderContent('x1');
-    }
-};
-
-window.mostrarContraPropostaX1 = function() {
-    document.getElementById('x1-acao-botoes').style.display = 'none';
-    document.getElementById('x1-contra-proposta-area').style.display = 'block';
-};
-
-window.enviarContraPropostaX1 = function() {
-    const id = document.getElementById('x1-acao-id').value;
-    const novoValor = parseFloat(document.getElementById('x1-new-bet').value);
-    if(isNaN(novoValor) || novoValor <= 0) return toast("Valor inválido!", "error");
-    
-    const idx = db.x1_duels.findIndex(d => d.id === id);
-    if(idx > -1) {
-        const oldChallenger = db.x1_duels[idx].challengerCpf;
-        const oldChallengerName = db.x1_duels[idx].challengerName;
-        
-        db.x1_duels[idx].challengerCpf = db.x1_duels[idx].challengedCpf;
-        db.x1_duels[idx].challengerName = db.x1_duels[idx].challengedName;
-        db.x1_duels[idx].challengedCpf = oldChallenger;
-        db.x1_duels[idx].challengedName = oldChallengerName;
-        
-        db.x1_duels[idx].betValue = novoValor;
-        db.x1_duels[idx].status = 'PENDENTE_RESPOSTA';
-        
-        saveDB('x1_duels');
-        toast("CONTRA-PROPOSTA ENVIADA!");
-        fecharModal('modal-acao-x1');
-        renderContent('x1');
-        window.enviarNotificacao(`Contra-proposta no X1! O valor mudou para R$ ${novoValor}. Aceita?`, 'USER', oldChallenger, db.x1_duels[idx].evtId);
-    }
-};
-
-let currentTaxRole = '';
-window.abrirModalTaxaX1 = function(id, role) {
-    document.getElementById('x1-taxa-id').value = id;
-    currentTaxRole = role;
-    openModal('modal-taxa-x1');
-};
-
-window.confirmarEnvioTaxaX1 = function() {
-    const id = document.getElementById('x1-taxa-id').value;
-    const idx = db.x1_duels.findIndex(d => d.id === id);
-    if(idx > -1) {
-        if(currentTaxRole === 'challenger') db.x1_duels[idx].feeChallengerPaid = true;
-        if(currentTaxRole === 'challenged') db.x1_duels[idx].feeChallengedPaid = true;
-        saveDB('x1_duels');
-        toast("Comprovante registrado! Aguardando ADM.");
-        fecharModal('modal-taxa-x1');
-        renderContent('x1');
-        
-        if(db.x1_duels[idx].feeChallengerPaid && db.x1_duels[idx].feeChallengedPaid) {
-            window.enviarNotificacao(`Ambos pagaram a taxa do X1 (${db.x1_duels[idx].challengerName} vs ${db.x1_duels[idx].challengedName}). Aprove no painel.`, 'ADMIN', null, null);
-        }
     }
 };
 
@@ -4321,3 +4201,68 @@ window.calcularVencedoresX1 = function() {
     if(hasChanges) saveDB('x1_duels');
 };
 
+window.abrirAcaoX1 = function(id) {
+    const duel = db.x1_duels.find(d => d.id === id);
+    if(!duel) return;
+    document.getElementById('x1-acao-id').value = id;
+    document.getElementById('x1-acao-texto').innerText = `${duel.challengerName} apostou R$ ${duel.betValue.toFixed(2)} contra você!`;
+    document.getElementById('x1-contra-proposta-area').style.display = 'none';
+    document.getElementById('x1-acao-botoes').style.display = 'flex';
+    openModal('modal-acao-x1');
+};
+
+window.aceitarX1 = function() {
+    const id = document.getElementById('x1-acao-id').value;
+    const idx = db.x1_duels.findIndex(d => d.id === id);
+    if(idx > -1) {
+        db.x1_duels[idx].status = 'AGUARDANDO_TAXAS';
+        saveDB('x1_duels');
+        toast("🔥 DESAFIO ACEITO! Pague a taxa para validar.");
+        fecharModal('modal-acao-x1');
+        renderContent('x1');
+        window.enviarNotificacao(`Seu desafio X1 contra ${db.x1_duels[idx].challengedName} foi ACEITO! Pague a taxa de R$5.`, 'USER', db.x1_duels[idx].challengerCpf, db.x1_duels[idx].evtId);
+    }
+};
+
+window.arregarX1 = function() {
+    const id = document.getElementById('x1-acao-id').value;
+    const idx = db.x1_duels.findIndex(d => d.id === id);
+    if(idx > -1) {
+        db.x1_duels[idx].status = 'ARREGOU';
+        saveDB('x1_duels');
+        toast("Você arregou do combate.", "error");
+        fecharModal('modal-acao-x1');
+        renderContent('x1');
+    }
+};
+
+window.mostrarContraPropostaX1 = function() {
+    document.getElementById('x1-acao-botoes').style.display = 'none';
+    document.getElementById('x1-contra-proposta-area').style.display = 'block';
+};
+
+window.enviarContraPropostaX1 = function() {
+    const id = document.getElementById('x1-acao-id').value;
+    const novoValor = parseFloat(document.getElementById('x1-new-bet').value);
+    if(isNaN(novoValor) || novoValor <= 0) return toast("Valor inválido!", "error");
+    
+    const idx = db.x1_duels.findIndex(d => d.id === id);
+    if(idx > -1) {
+        const oldChallenger = db.x1_duels[idx].challengerCpf;
+        const oldChallengerName = db.x1_duels[idx].challengerName;
+        
+        db.x1_duels[idx].challengerCpf = db.x1_duels[idx].challengedCpf;
+        db.x1_duels[idx].challengerName = db.x1_duels[idx].challengedName;
+        db.x1_duels[idx].challengedCpf = oldChallenger;
+        db.x1_duels[idx].challengedName = oldChallengerName;
+        
+        db.x1_duels[idx].betValue = novoValor;
+        db.x1_duels[idx].status = 'PENDENTE_RESPOSTA';
+        
+        saveDB('x1_duels');
+        toast("CONTRA-PROPOSTA ENVIADA!");
+        fecharModal('modal-acao-x1');
+        renderContent('x1');
+        window.enviarNotificacao(`Contra-proposta no X1! O valor mudou para R$ ${novoValor}. Aceita?`, 'USER', oldChallenger, db.x1_duels[idx].evtId);
+    }
+};
