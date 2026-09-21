@@ -180,7 +180,30 @@
         </div>
 
         <div id="cont-ranking" class="c-sec" style="display:none; overflow-y:auto; height:100vh; padding-bottom:120px;">
-            <!-- TELA DO X1 -->
+            <div class="section-header-area">
+                <div class="section-title-row">
+                    <div class="section-title">RANKING</div>
+                    <div><button class="btn-mini-adm btn-print-pdf" style="background:#0038a8; color:white; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer; margin:0;" onclick="compartilharResultados('ranking')"><i class="fas fa-share-alt"></i> COMPARTILHAR / PDF</button></div>
+                </div>
+                <div class="filter-row" style="margin-top:5px; display:flex; flex-direction:column; gap:5px;">
+                    <select id="filter-region-ranking" onchange="renderContent('ranking')" style="padding:10px; font-size:12px; font-weight:900; background:#fff3e0; border:2px solid #ffa000; color:#e65100; border-radius:6px;">
+                        <option value="PE">🏆 RANKING PERNAMBUCANO (OFICIAL)</option>
+                        <option value="NORDESTE">🌎 RANKING NORDESTE (OPEN)</option>
+                    </select>
+                    <div style="display:flex; gap:5px;">
+                        <select id="filter-mode-ranking" onchange="renderContent('ranking')" style="flex:0.8; font-weight:bold; color:var(--pe-blue); background:#eef2ff; border:1px solid #c7d2fe; border-radius:4px; padding:5px; font-size:11px;">
+                            <option value="ATHLETES">👤 ATLETAS</option>
+                            <option value="CITIES">🏙️ CIDADES</option>
+                        </select>
+                        <select id="filter-evt-ranking" onchange="renderContent('ranking')" style="flex:1; padding:5px; font-size:11px;"><option value="ALL">GERAL (SOMA)</option></select>
+                        <select id="filter-cat-ranking" onchange="renderContent('ranking')" style="flex:1; padding:5px; font-size:11px;"><option value="ALL">CATEGORIAS</option></select>
+                    </div>
+                </div>
+            </div>
+            <div class="rank-list-container" id="list-ranking" style="background:white"></div>
+        </div>
+
+        <!-- TELA DO X1 -->
         <div id="cont-x1" class="c-sec" style="display:none; overflow-y:auto; height:100vh; padding-bottom:120px; background:#f1f5f9;">
             <div class="section-header-area" style="background: linear-gradient(135deg, #0f172a, #1e293b); color: white;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -201,35 +224,10 @@
                     <button class="btn-mini-adm" style="background:#009b3a; color:white; flex-shrink:0;" onclick="renderX1List('ATIVOS')">COMBATES ATIVOS</button>
                     <button class="btn-mini-adm" style="background:#64748b; color:white; flex-shrink:0;" onclick="renderX1List('CONCLUIDOS')">HISTÓRICO</button>
                 </div>
-                
                 <div id="list-x1-duels" style="display:flex; flex-direction:column; gap:10px;"></div>
             </div>
         </div>
         <!-- FIM TELA X1 -->
-            <div class="section-header-area">
-                <div class="section-title-row">
-                    <div class="section-title">RANKING</div>
-                    <div><button class="btn-mini-adm btn-print-pdf" style="background:#0038a8; color:white; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer; margin:0;" onclick="compartilharResultados('ranking')"><i class="fas fa-share-alt"></i> COMPARTILHAR / PDF</button></div>
-                </div>
-                <div class="filter-row" style="margin-top:5px; display:flex; flex-direction:column; gap:5px;">
-    <select id="filter-region-ranking" onchange="renderContent('ranking')" style="padding:10px; font-size:12px; font-weight:900; background:#fff3e0; border:2px solid #ffa000; color:#e65100; border-radius:6px;">
-        <option value="PE">🏆 RANKING PERNAMBUCANO (OFICIAL)</option>
-        <option value="NORDESTE">🌎 RANKING NORDESTE (OPEN)</option>
-    </select>
-    <div style="display:flex; gap:5px;">
-        <!-- NOVO BOTÃO: ESCOLHE ENTRE ATLETAS OU CIDADES -->
-        <select id="filter-mode-ranking" onchange="renderContent('ranking')" style="flex:0.8; font-weight:bold; color:var(--pe-blue); background:#eef2ff; border:1px solid #c7d2fe; border-radius:4px; padding:5px; font-size:11px;">
-            <option value="ATHLETES">👤 ATLETAS</option>
-            <option value="CITIES">🏙️ CIDADES</option>
-        </select>
-        
-        <select id="filter-evt-ranking" onchange="renderContent('ranking')" style="flex:1; padding:5px; font-size:11px;"><option value="ALL">GERAL (SOMA)</option></select>
-        <select id="filter-cat-ranking" onchange="renderContent('ranking')" style="flex:1; padding:5px; font-size:11px;"><option value="ALL">CATEGORIAS</option></select>
-    </div>
-</div>
-            </div>
-            <div class="rank-list-container" id="list-ranking" style="background:white"></div>
-        </div>
 
         <div id="cont-profile" class="c-sec" style="display:none; padding-bottom:80px; overflow-y:auto; height:100vh;">
             <div style="padding:20px; text-align:center;">
@@ -341,17 +339,7 @@
                     </div>
                     <button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
                 </div>
-                <div id="adm-sec-cats" class="adm-section" style="display:none">
-                    <div style="background:white; padding:10px; border-radius:8px;">
-                        <b style="color:var(--pe-blue); font-size:12px">GERENCIAR CATEGORIAS ATIVAS</b>
-                        <div id="adm-cats-list" style="margin-top:10px; display:grid; gap:5px;"></div>
-                    </div>
-                    <button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
-                </div>
 
-                <!-- ============================================== -->
-                <!-- COMEÇO DO PAINEL ADMIN DO X1 (COLE ESTA PARTE) -->
-                <!-- ============================================== -->
                 <div id="adm-sec-x1-admin" class="adm-section" style="display:none">
                     <div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;">
                         <b style="color:var(--pe-blue); font-size:12px"><i class="fas fa-bolt"></i> APROVAÇÃO DE COMBATES X1</b>
@@ -360,13 +348,6 @@
                     </div>
                     <button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
                 </div>
-                <!-- ============================================== -->
-                <!-- FIM DO PAINEL ADMIN DO X1                      -->
-                <!-- ============================================== -->
-
-                <div id="adm-sec-events" class="adm-section" style="display:none">
-                    <div style="background:white; padding:10px; border-radius:8px;">
-                        <b style="color:var(--pe-blue); font-size:12px">CRIAR/EDITAR EVENTO</b>
 
                 <div id="adm-sec-events" class="adm-section" style="display:none">
                     <div style="background:white; padding:10px; border-radius:8px;">
