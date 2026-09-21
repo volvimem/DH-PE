@@ -4022,14 +4022,103 @@ window.renderX1List = function(filterStatus = 'ALL') {
             }
             if(d.status === 'AGUARDANDO_TAXAS') {
                 if(d.challengerCpf === loggedUser.cpf && !d.feeChallengerPaid) {
-                    actionBtn = `<button class="btn-mini-adm" style="background:#25D366; width:100%; padding:10px; margin-top:10px; font-size:12px;" onclick="abrirModalTaxaX1('${d.id}', 'challenger')">PAGAR TAXA (R$5)</button>`;
+                    actionBtn = `<button class="btn-mini-adm" style="background:#25D366; width:100%; padding:10px; margin-top:10px; font-size:12px;" onclick="abrirModalTaxaX1('${d.id}', 'challenger')"><i class="fab fa-whatsapp"></i> PAGAR (Aposta + R$5)</button>`;
                 } else if(d.challengedCpf === loggedUser.cpf && !d.feeChallengedPaid) {
-                    actionBtn = `<button class="btn-mini-adm" style="background:#25D366; width:100%; padding:10px; margin-top:10px; font-size:12px;" onclick="abrirModalTaxaX1('${d.id}', 'challenged')">PAGAR TAXA (R$5)</button>`;
+                    actionBtn = `<button class="btn-mini-adm" style="background:#25D366; width:100%; padding:10px; margin-top:10px; font-size:12px;" onclick="abrirModalTaxaX1('${d.id}', 'challenged')"><i class="fab fa-whatsapp"></i> PAGAR (Aposta + R$5)</button>`;
                 } else if((d.challengerCpf === loggedUser.cpf && d.feeChallengerPaid) || (d.challengedCpf === loggedUser.cpf && d.feeChallengedPaid)) {
-                    actionBtn = `<div style="text-align:center; color:#f59e0b; font-size:10px; font-weight:bold; margin-top:10px;">AGUARDANDO ADM APROVAR TAXA</div>`;
+                    actionBtn = `<div style="text-align:center; color:#f59e0b; font-size:10px; font-weight:bold; margin-top:10px;">AGUARDANDO ADM APROVAR PAGAMENTO</div>`;
                 }
             }
         }
+        
+        // NOVO: Botão apagar para Super Admins
+        let admDeleteBtn = '';
+        if(isSuperAdmin(loggedUser)) {
+            admDeleteBtn = `<button class="btn-mini-adm" style="background:#d50000; width:100%; padding:8px; margin-top:10px; font-size:10px;" onclick="deletarX1Geral('${d.id}')"><i class="fas fa-trash-alt"></i> APAGAR COMBATE (ADMIN)</button>`;
+        }
+
+        return `
+        <div class="x1-card">
+            <div class="x1-header">
+                <span class="x1-header-evt"><i class="fas fa-flag-checkered"></i> ${evtName}</span>
+                <span class="x1-header-bet">R$ ${d.betValue.toFixed(2)}</span>
+            </div>
+            <div class="x1-body">
+                <div class="x1-athlete">
+                    ${winner1}
+                    <span class="x1-athlete-name">${d.challengerName}</span>
+                    <span class="x1-athlete-time">${t1}</span>
+                </div>
+                <div class="x1-vs-badge">VS</div>
+                <div class="x1-athlete">
+                    ${winner2}
+                    <span class="x1-athlete-name">${d.challengedName}</span>
+                    <span class="x1-athlete-time">${t2}</span>
+                </div>
+            </div>
+            <div class="x1-footer">
+                ${statusBadge}
+                ${actionBtn}
+                ${admDeleteBtn}
+            </div>
+        </div>`;
+    }).join('');
+};
+
+window.deletarX1Geral = function(id) {
+    if(!isSuperAdmin(loggedUser)) return toast("Acesso negado", "error");
+    showConfirm("APAGAR COMBATE?", "Tem certeza que deseja apagar este combate X1 permanentemente do sistema?", '<i class="fas fa-trash-alt" style="color:var(--pe-red)"></i>', function(res) {
+        if(res) {
+            const idx = db.x1_duels.findIndex(d => d.id === id);
+            if(idx > -1) {
+                db.x1_duels.splice(idx, 1);
+                saveDB('x1_duels');
+                toast("COMBATE APAGADO COM SUCESSO!");
+                renderContent('x1');
+            }
+        }
+    });
+};
+
+let currentTaxRole = '';
+window.abrirModalTaxaX1 = function(id, role) {
+    document.getElementById('x1-taxa-id').value = id;
+    currentTaxRole = role;
+    
+    // Soma o valor do X1 com a taxa de R$5,00
+    const duel = db.x1_duels.find(d => d.id === id);
+    if(duel) {
+        const totalPagar = duel.betValue + 5.00;
+        document.getElementById('x1-total-pagar').innerText = 'R$ ' + totalPagar.toFixed(2).replace('.', ',');
+    }
+    
+    openModal('modal-taxa-x1');
+};
+
+window.confirmarEnvioTaxaX1 = function() {
+    const id = document.getElementById('x1-taxa-id').value;
+    const idx = db.x1_duels.findIndex(d => d.id === id);
+    if(idx > -1) {
+        if(currentTaxRole === 'challenger') db.x1_duels[idx].feeChallengerPaid = true;
+        if(currentTaxRole === 'challenged') db.x1_duels[idx].feeChallengedPaid = true;
+        saveDB('x1_duels');
+        
+        const duel = db.x1_duels[idx];
+        const totalPagar = duel.betValue + 5.00;
+        
+        toast("Comprovante registrado! Abrindo WhatsApp...");
+        fecharModal('modal-taxa-x1');
+        renderContent('x1');
+        
+        if(db.x1_duels[idx].feeChallengerPaid && db.x1_duels[idx].feeChallengedPaid) {
+            window.enviarNotificacao(`Ambos pagaram a taxa do X1 (${db.x1_duels[idx].challengerName} vs ${db.x1_duels[idx].challengedName}). Aprove no painel.`, 'ADMIN', null, null);
+        }
+
+        // Abre direto no WhatsApp com a mensagem pronta
+        const msg = `Olá! Segue o comprovante do meu X1.\n\n*Combate:* ${duel.challengerName} VS ${duel.challengedName}\n*Valor Transferido:* R$ ${totalPagar.toFixed(2).replace('.', ',')}\n\n[Envie a foto do comprovante logo abaixo]`;
+        openWhatsApp("81995005317", msg);
+    }
+};
 
         return `
         <div class="x1-card">
