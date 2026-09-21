@@ -3977,8 +3977,8 @@ window.enviarDesafioX1 = function() {
     const oppCpf = document.getElementById('x1-opponent-cpf').value;
     const betVal = parseFloat(document.getElementById('x1-bet-value').value);
     
-    // Captura Vantagem
-    const advSec = parseInt(document.getElementById('x1-adv-seconds').value) || 0;
+    // Captura Vantagem (Permitindo tempo quebrado, ex: 0.30)
+    const advSec = parseFloat(document.getElementById('x1-adv-seconds').value) || 0;
     const advTo = document.getElementById('x1-adv-to').value;
     const advCpf = advSec > 0 ? (advTo === 'ME' ? loggedUser.cpf : oppCpf) : null;
     
@@ -4053,8 +4053,8 @@ window.renderX1List = function(filterStatus = 'ALL') {
         
         // Exibição do Tempo com a Vantagem Visualmente
         if(d.advantageSec > 0) {
-            if(d.advantageCpf === d.challengerCpf) t1 += ` <br><span style="color:#10b981; font-size:10px;">(-${d.advantageSec}s vantagem)</span>`;
-            if(d.advantageCpf === d.challengedCpf) t2 += ` <br><span style="color:#10b981; font-size:10px;">(-${d.advantageSec}s vantagem)</span>`;
+            if(d.advantageCpf === d.challengerCpf) t1 += ` <br><span style="color:#10b981; font-size:10px;">(-${d.advantageSec}s de vantagem)</span>`;
+            if(d.advantageCpf === d.challengedCpf) t2 += ` <br><span style="color:#10b981; font-size:10px;">(-${d.advantageSec}s de vantagem)</span>`;
         }
 
         let winner1 = (d.status === 'CONCLUIDO' && d.winnerCpf === d.challengerCpf) ? `<i class="fas fa-crown x1-winner-crown"></i>` : '';
@@ -4163,9 +4163,10 @@ window.confirmarEnvioTaxaX1 = function() {
             window.enviarNotificacao(`Ambos pagaram a taxa do X1 (${db.x1_duels[idx].challengerName} vs ${db.x1_duels[idx].challengedName}). Aprove no painel.`, 'ADMIN', null, null);
         }
 
+        // Manda o zap direto
         const adminPhone = (db.config && db.config.phone) ? db.config.phone : "81995005317";
         const msg = `Olá! Segue o comprovante do meu pagamento para o X1.\n\n*Combate:* ${duel.challengerName} VS ${duel.challengedName}\n*Valor Transferido:* R$ ${totalPagar.toFixed(2).replace('.', ',')}\n\n[Envie a foto do comprovante logo abaixo]`;
-        openWhatsApp("81995005317", msg);
+        openWhatsApp(adminPhone, msg);
     }
 };
 
@@ -4194,7 +4195,7 @@ window.renderAdmX1List = function() {
         }
         
         let statusLabel = d.status;
-        if(d.status === 'AGUARDANDO_TAXAS') statusLabel = 'AGUARDANDO APROVAÇÃO/PGTO';
+        if(d.status === 'AGUARDANDO_TAXAS') statusLabel = 'AGUARDANDO PGTO/APROVAÇÃO';
         if(d.status === 'PENDENTE_RESPOSTA') statusLabel = 'AGUARDANDO ACEITE';
         
         return `
@@ -4229,7 +4230,6 @@ window.aprovarX1Admin = function(id) {
 };
 
 window.cancelarX1Admin = function(id) {
-    // Redireciona para a mesma exclusão global
     deletarX1Geral(id);
 };
 
@@ -4251,8 +4251,8 @@ window.calcularVencedoresX1 = function() {
                 
                 // Aplica a Vantagem em milissegundos
                 if(d.advantageSec > 0 && d.advantageCpf) {
-                    if(d.advantageCpf === d.challengerCpf) ms1 -= (d.advantageSec * 1000);
-                    if(d.advantageCpf === d.challengedCpf) ms2 -= (d.advantageSec * 1000);
+                    if(d.advantageCpf === d.challengerCpf) ms1 -= Math.round(d.advantageSec * 1000);
+                    if(d.advantageCpf === d.challengedCpf) ms2 -= Math.round(d.advantageSec * 1000);
                 }
                 
                 if(ms1 < ms2) d.winnerCpf = d.challengerCpf;
@@ -4284,11 +4284,20 @@ window.abrirAcaoX1 = function(id) {
     
     let advText = '';
     if(duel.advantageSec > 0) {
-        if(duel.advantageCpf === duel.challengedCpf) advText = ` e te deu ${duel.advantageSec}s de vantagem`;
-        else advText = ` e pediu ${duel.advantageSec}s de vantagem`;
+        if(duel.advantageCpf === duel.challengedCpf) {
+            // Vantagem é para quem foi desafiado (A pessoa lendo)
+            advText = `<div style="margin-top:10px; background:#dcfce7; color:#15803d; padding:8px; border-radius:6px; border:1px solid #86efac; font-size:12px;">
+                <i class="fas fa-stopwatch"></i> Você terá <b>${duel.advantageSec} seg</b> de vantagem!
+            </div>`;
+        } else {
+            // Vantagem é para o desafiante (A pessoa lendo tem que ser mais rápida)
+            advText = `<div style="margin-top:10px; background:#fee2e2; color:#b91c1c; padding:8px; border-radius:6px; border:1px solid #fca5a5; font-size:12px;">
+                <i class="fas fa-exclamation-triangle"></i> Ele(a) pediu <b>${duel.advantageSec} seg</b> de vantagem!
+            </div>`;
+        }
     }
     
-    document.getElementById('x1-acao-texto').innerText = `${duel.challengerName} apostou R$ ${duel.betValue.toFixed(2)}${advText} contra você!`;
+    document.getElementById('x1-acao-texto').innerHTML = `${duel.challengerName} apostou <b>R$ ${duel.betValue.toFixed(2)}</b> contra você!${advText}`;
     document.getElementById('x1-contra-proposta-area').style.display = 'none';
     document.getElementById('x1-acao-botoes').style.display = 'flex';
     openModal('modal-acao-x1');
@@ -4335,7 +4344,7 @@ window.enviarContraPropostaX1 = function() {
     const novoValor = parseFloat(document.getElementById('x1-new-bet').value);
     if(isNaN(novoValor) || novoValor <= 0) return toast("Valor inválido!", "error");
     
-    const newAdvSec = parseInt(document.getElementById('x1-new-adv-seconds').value) || 0;
+    const newAdvSec = parseFloat(document.getElementById('x1-new-adv-seconds').value) || 0;
     const newAdvTo = document.getElementById('x1-new-adv-to').value; // 'ME' (quem responde) ou 'OPPONENT' (o antigo desafiante)
     
     const idx = db.x1_duels.findIndex(d => d.id === id);
@@ -4345,13 +4354,13 @@ window.enviarContraPropostaX1 = function() {
         const oldChallenged = db.x1_duels[idx].challengedCpf;
         const oldChallengedName = db.x1_duels[idx].challengedName;
         
-        // Quem está fazendo a contra-proposta agora vira o desafiante.
+        // Inverte quem desafiou e quem é desafiado
         db.x1_duels[idx].challengerCpf = oldChallenged;
         db.x1_duels[idx].challengerName = oldChallengedName;
         db.x1_duels[idx].challengedCpf = oldChallenger;
         db.x1_duels[idx].challengedName = oldChallengerName;
         
-        // Calcula quem recebe a vantagem na contra-proposta
+        // Calcula quem ganha a vantagem com base nos novos papéis
         let newAdvCpf = null;
         if(newAdvSec > 0) {
             if(newAdvTo === 'ME') newAdvCpf = oldChallenged;
