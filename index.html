@@ -822,17 +822,22 @@
 
 <div class="modal-overlay" id="modal-taxa-x1">
     <div class="modal-box">
-        <h3 style="color:var(--pe-blue);">TAXA DO COMBATE</h3>
-        <p style="font-size:12px; color:#666; margin-bottom:15px;">Para o combate ser validado, pague a taxa administrativa de <b>R$ 5,00</b> via PIX e envie o comprovante.</p>
+        <h3 style="color:var(--pe-blue);">PAGAMENTO DO COMBATE</h3>
+        <p style="font-size:12px; color:#666; margin-bottom:15px;">Pague o valor total (Sua Aposta + Taxa R$5) via PIX e envie o comprovante no WhatsApp.</p>
         
         <div style="background:#f8fafc; padding:15px; border-radius:8px; border:1px solid #cbd5e1; margin-bottom:15px;">
-            <b style="font-size:10px; color:#64748b; display:block;">CHAVE PIX DO ADMINISTRADOR:</b>
+            <b style="font-size:10px; color:#64748b; display:block;">VALOR TOTAL A TRANSFERIR:</b>
+            <div id="x1-total-pagar" style="font-size:24px; font-weight:900; color:var(--pe-green); margin:5px 0;">R$ 0,00</div>
+            
+            <b style="font-size:10px; color:#64748b; display:block; margin-top:15px;">CHAVE PIX:</b>
             <div id="x1-pix-admin-key" style="font-family:monospace; font-size:14px; font-weight:900; color:#1e293b; margin:5px 0;">81995074007</div>
-            <button class="btn-mini-adm" style="background:#334155; color:white; width:100%; margin-top:5px;" onclick="navigator.clipboard.writeText(document.getElementById('x1-pix-admin-key').innerText); toast('PIX COPIADO!');">COPIAR CHAVE</button>
+            <div id="x1-pix-admin-name" style="font-size:12px; font-weight:bold; color:#333; margin-bottom:10px; text-transform:uppercase;">SEU NOME AQUI</div>
+            
+            <button class="btn-mini-adm" style="background:#334155; color:white; width:100%; margin-top:5px;" onclick="navigator.clipboard.writeText(document.getElementById('x1-pix-admin-key').innerText); toast('PIX COPIADO!');">COPIAR CHAVE PIX</button>
         </div>
         
         <input type="hidden" id="x1-taxa-id">
-        <button class="btn" style="background:#25D366; margin-bottom:10px;" onclick="confirmarEnvioTaxaX1()">✅ ENVIEI O COMPROVANTE</button>
+        <button class="btn" style="background:#25D366; margin-bottom:10px;" onclick="confirmarEnvioTaxaX1()"><i class="fab fa-whatsapp"></i> ENVIAR COMPROVANTE</button>
         <button class="btn" style="background:#ccc; color:#333; margin:0;" onclick="fecharModal('modal-taxa-x1')">DEPOIS EU PAGO</button>
     </div>
 </div>
