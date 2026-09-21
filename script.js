@@ -1668,8 +1668,14 @@ window.openAdmSection = function(sec) {
     }
     if(sec === 'organizer') { renderOrgList(); const evtsHtml = db.events.map(e => `<label style="display:block; text-align:left; font-size:12px; margin-bottom:5px;"><input type="checkbox" class="org-evt-cb" value="${e.id}"> ${e.t}</label>`).join('');
     document.getElementById('org-events-list').innerHTML = evtsHtml; }
-    if(sec === 'config-global') { document.getElementById('adm-cfg-phone').value = db.config.phone || ''; document.getElementById('adm-cfg-rerun-pass').value = db.config.rerunPass ||
-    'admin123'; document.getElementById('adm-cfg-allow-ids').checked = db.config.allowAllIDs || false; document.getElementById('adm-cfg-search').value = ''; document.getElementById('adm-cfg-list').style.display = 'none';
+    if(sec === 'config-global') { 
+        document.getElementById('adm-cfg-phone').value = db.config.phone || ''; 
+        document.getElementById('adm-cfg-rerun-pass').value = db.config.rerunPass || 'admin123'; 
+        document.getElementById('adm-cfg-allow-ids').checked = db.config.allowAllIDs || false; 
+        if(document.getElementById('adm-cfg-pix-key')) document.getElementById('adm-cfg-pix-key').value = db.config.pixKeyX1 || '';
+        if(document.getElementById('adm-cfg-pix-name')) document.getElementById('adm-cfg-pix-name').value = db.config.pixNameX1 || '';
+        document.getElementById('adm-cfg-search').value = ''; 
+        document.getElementById('adm-cfg-list').style.display = 'none';
     }
     if(sec === 'audit') { renderAuditLog(); }
     // ABRE A TELA DO ADM DO X1
@@ -1984,8 +1990,18 @@ window.renderAdmCategories = function() {
     }).join('');
 };
 
-window.saveGlobalConfig = function(){ if(!isSuperAdmin(loggedUser)) return toast("APENAS ADMIN", "error"); db.config.phone = document.getElementById('adm-cfg-phone').value; db.config.rerunPass = document.getElementById('adm-cfg-rerun-pass').value || 'admin123'; db.config.allowAllIDs = document.getElementById('adm-cfg-allow-ids').checked;
-saveDB('config'); window.logAction(`Alterou Configurações Gerais do Sistema`); toast("CONFIGURAÇÕES SALVAS"); updateCardLive(); };
+window.saveGlobalConfig = function(){ 
+    if(!isSuperAdmin(loggedUser)) return toast("APENAS ADMIN", "error"); 
+    db.config.phone = document.getElementById('adm-cfg-phone').value; 
+    db.config.rerunPass = document.getElementById('adm-cfg-rerun-pass').value || 'admin123'; 
+    db.config.allowAllIDs = document.getElementById('adm-cfg-allow-ids').checked;
+    db.config.pixKeyX1 = document.getElementById('adm-cfg-pix-key').value;
+    db.config.pixNameX1 = document.getElementById('adm-cfg-pix-name').value;
+    saveDB('config'); 
+    window.logAction(`Alterou Configurações Gerais do Sistema`); 
+    toast("CONFIGURAÇÕES SALVAS"); 
+    updateCardLive(); 
+};
 
 // ==========================================================
 // 11. GERENCIAMENTO DE EVENTOS (CRIAR/EDITAR/EXCLUIR)
@@ -4031,6 +4047,7 @@ window.renderX1List = function(filterStatus = 'ALL') {
             }
         }
         
+        // NOVO: Botão apagar para Super Admins
         let admDeleteBtn = '';
         if(isSuperAdmin(loggedUser)) {
             admDeleteBtn = `<button class="btn-mini-adm" style="background:#d50000; width:100%; padding:8px; margin-top:10px; font-size:10px;" onclick="deletarX1Geral('${d.id}')"><i class="fas fa-trash-alt"></i> APAGAR COMBATE (ADMIN)</button>`;
@@ -4084,10 +4101,17 @@ window.abrirModalTaxaX1 = function(id, role) {
     document.getElementById('x1-taxa-id').value = id;
     currentTaxRole = role;
     
+    // Soma o valor do X1 com a taxa de R$5,00
     const duel = db.x1_duels.find(d => d.id === id);
     if(duel) {
         const totalPagar = duel.betValue + 5.00;
         document.getElementById('x1-total-pagar').innerText = 'R$ ' + totalPagar.toFixed(2).replace('.', ',');
+        
+        const pixKey = (db.config && db.config.pixKeyX1) ? db.config.pixKeyX1 : "81995005317";
+        const pixName = (db.config && db.config.pixNameX1) ? db.config.pixNameX1 : "NOME NÃO CADASTRADO";
+        
+        document.getElementById('x1-pix-admin-key').innerText = pixKey;
+        document.getElementById('x1-pix-admin-name').innerText = pixName;
     }
     
     openModal('modal-taxa-x1');
@@ -4112,8 +4136,10 @@ window.confirmarEnvioTaxaX1 = function() {
             window.enviarNotificacao(`Ambos pagaram a taxa do X1 (${db.x1_duels[idx].challengerName} vs ${db.x1_duels[idx].challengedName}). Aprove no painel.`, 'ADMIN', null, null);
         }
 
-        const msg = `Olá! Segue o comprovante do meu X1.\n\n*Combate:* ${duel.challengerName} VS ${duel.challengedName}\n*Valor Transferido:* R$ ${totalPagar.toFixed(2).replace('.', ',')}\n\n[Envie a foto do comprovante logo abaixo]`;
-        openWhatsApp("81995005317", msg);
+        // Abre direto no WhatsApp com a mensagem pronta
+        const adminPhone = (db.config && db.config.phone) ? db.config.phone : "81995005317";
+        const msg = `Olá! Segue o comprovante do meu pagamento para o X1.\n\n*Combate:* ${duel.challengerName} VS ${duel.challengedName}\n*Valor Transferido:* R$ ${totalPagar.toFixed(2).replace('.', ',')}\n\n[Envie a foto do comprovante logo abaixo]`;
+        openWhatsApp(adminPhone, msg);
     }
 };
 
