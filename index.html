@@ -343,7 +343,7 @@
                 <div id="adm-sec-x1-admin" class="adm-section" style="display:none">
                     <div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;">
                         <b style="color:var(--pe-blue); font-size:12px"><i class="fas fa-bolt"></i> APROVAÇÃO DE COMBATES X1</b>
-                        <p style="font-size:10px; color:#666; margin-bottom:10px;">Aqui aparecem os duelos onde ambos os atletas já clicaram que pagaram a taxa de R$5. Verifique o PIX e aprove.</p>
+                        <p style="font-size:10px; color:#666; margin-bottom:10px;">Aqui aparecem os duelos aguardando aprovação financeira.</p>
                         <div id="adm-x1-approval-list" style="display:flex; flex-direction:column; gap:10px; max-height:400px; overflow-y:auto;"></div>
                     </div>
                     <button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
@@ -591,6 +591,14 @@
                         <div class="input-group" style="margin-top:10px"><label>ZAP SUPORTE</label><input id="adm-cfg-phone" class="input-field" placeholder="Ex: 81900000000"></div>
                         <div class="input-group" style="margin-top:10px"><label>SENHA MASTER (Usada para alertas, exclusões e Live)</label><input id="adm-cfg-rerun-pass" class="input-field" placeholder="Senha padrão: admin123"></div>
 
+                        <div style="margin-top:15px; background:#fffbeb; padding:10px; border:1px solid #fde68a; border-radius:6px;">
+                            <label style="color:#b45309; margin-bottom:5px; font-weight:bold;"><i class="fas fa-bolt"></i> DADOS PIX PARA O X1</label>
+                            <input id="adm-cfg-pix-key" class="input-field" placeholder="Chave PIX (Ex: 81995005317)" style="margin-bottom:5px; font-size:12px;">
+                            <input id="adm-cfg-pix-name" class="input-field uppercase-input" placeholder="Nome do Recebedor" style="font-size:12px;">
+                        </div>
+
+                        <div style="margin-top:15px; background:#f0fdf4; padding:10px; border:1px solid #bbf7d0; border-radius:6px;">
+
                         <div style="margin-top:15px; background:#f0fdf4; padding:10px; border:1px solid #bbf7d0; border-radius:6px;">
                             <label style="color:#15803d; margin-bottom:5px;">REGRA GLOBAL</label>
                             <div style="display:flex; align-items:center; gap:10px;"><input type="checkbox" id="adm-cfg-allow-ids" style="width:auto; transform:scale(1.5);"><span style="font-size:12px; font-weight:bold;">LIBERAR GERAL (TODOS)</span></div>
@@ -822,16 +830,16 @@
 
 <div class="modal-overlay" id="modal-taxa-x1">
     <div class="modal-box">
-        <h3 style="color:var(--pe-blue);">PAGAMENTO DO COMBATE</h3>
-        <p style="font-size:12px; color:#666; margin-bottom:15px;">Pague o valor total (Sua Aposta + Taxa R$5) via PIX e envie o comprovante no WhatsApp.</p>
+        <h3 style="color:var(--pe-blue);">PAGAMENTO DO X1</h3>
+        <p style="font-size:12px; color:#666; margin-bottom:15px;">Pague o valor total (<b>Aposta + R$ 5 de Taxa</b>) via PIX e envie o comprovante no WhatsApp.</p>
         
         <div style="background:#f8fafc; padding:15px; border-radius:8px; border:1px solid #cbd5e1; margin-bottom:15px;">
             <b style="font-size:10px; color:#64748b; display:block;">VALOR TOTAL A TRANSFERIR:</b>
             <div id="x1-total-pagar" style="font-size:24px; font-weight:900; color:var(--pe-green); margin:5px 0;">R$ 0,00</div>
             
-            <b style="font-size:10px; color:#64748b; display:block; margin-top:15px;">CHAVE PIX:</b>
-            <div id="x1-pix-admin-key" style="font-family:monospace; font-size:14px; font-weight:900; color:#1e293b; margin:5px 0;">81995074007</div>
-            <div id="x1-pix-admin-name" style="font-size:12px; font-weight:bold; color:#333; margin-bottom:10px; text-transform:uppercase;">SEU NOME AQUI</div>
+            <b style="font-size:10px; color:#64748b; display:block; margin-top:15px;">DADOS DO PIX:</b>
+            <div id="x1-pix-admin-key" style="font-family:monospace; font-size:14px; font-weight:900; color:#1e293b; margin:5px 0;">...</div>
+            <div id="x1-pix-admin-name" style="font-size:12px; font-weight:bold; color:#333; margin-bottom:10px; text-transform:uppercase;">...</div>
             
             <button class="btn-mini-adm" style="background:#334155; color:white; width:100%; margin-top:5px;" onclick="navigator.clipboard.writeText(document.getElementById('x1-pix-admin-key').innerText); toast('PIX COPIADO!');">COPIAR CHAVE PIX</button>
         </div>
@@ -841,6 +849,7 @@
         <button class="btn" style="background:#ccc; color:#333; margin:0;" onclick="fecharModal('modal-taxa-x1')">DEPOIS EU PAGO</button>
     </div>
 </div>
+        
 <!-- FIM MODAIS X1 -->
     
 <template id="template-live-timing">
