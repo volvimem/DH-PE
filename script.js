@@ -1678,8 +1678,21 @@ window.openAdmSection = function(sec) {
         document.getElementById('adm-cfg-list').style.display = 'none';
     }
     if(sec === 'audit') { renderAuditLog(); }
-    // ABRE A TELA DO ADM DO X1
-    if(sec === 'x1-admin') window.renderAdmX1List();
+
+    // ABRE A TELA DO ADM DO X1 E PUXA OS DADOS DO PIX
+    if(sec === 'x1-admin') {
+        if(document.getElementById('adm-x1-pix-key')) document.getElementById('adm-x1-pix-key').value = db.config.pixKeyX1 || '81995005317';
+        if(document.getElementById('adm-x1-pix-name')) document.getElementById('adm-x1-pix-name').value = db.config.pixNameX1 || '';
+        window.renderAdmX1List();
+    }
+};
+
+window.salvarPixX1 = function() {
+    if(!isSuperAdmin(loggedUser)) return toast("APENAS ADMIN", "error");
+    db.config.pixKeyX1 = document.getElementById('adm-x1-pix-key').value;
+    db.config.pixNameX1 = document.getElementById('adm-x1-pix-name').value;
+    saveDB('config');
+    toast("PIX DO X1 SALVO COM SUCESSO!", "success");
 };
 
 window.checkAdmPass = function() { const inputPass = document.getElementById('adm-pass-check').value;
@@ -4136,32 +4149,55 @@ window.confirmarEnvioTaxaX1 = function() {
             window.enviarNotificacao(`Ambos pagaram a taxa do X1 (${db.x1_duels[idx].challengerName} vs ${db.x1_duels[idx].challengedName}). Aprove no painel.`, 'ADMIN', null, null);
         }
 
-        // Abre direto no WhatsApp com a mensagem pronta
-        const adminPhone = (db.config && db.config.phone) ? db.config.phone : "81995005317";
+        // Vai direto para o seu WhatsApp fixo
         const msg = `Olá! Segue o comprovante do meu pagamento para o X1.\n\n*Combate:* ${duel.challengerName} VS ${duel.challengedName}\n*Valor Transferido:* R$ ${totalPagar.toFixed(2).replace('.', ',')}\n\n[Envie a foto do comprovante logo abaixo]`;
-        openWhatsApp(adminPhone, msg);
+        openWhatsApp("81995005317", msg);
     }
 };
 
 window.renderAdmX1List = function() {
     const container = document.getElementById('adm-x1-approval-list');
+    const filter = document.getElementById('adm-x1-filter') ? document.getElementById('adm-x1-filter').value : 'AGUARDANDO';
     if(!container) return;
     
-    const duels = db.x1_duels.filter(d => d.status === 'AGUARDANDO_TAXAS' && d.feeChallengerPaid && d.feeChallengedPaid);
+    let duels = db.x1_duels || [];
+    
+    // Filtro para mostrar apenas aguardando ou todos
+    if(filter === 'AGUARDANDO') {
+        duels = duels.filter(d => d.status === 'AGUARDANDO_TAXAS' && d.feeChallengerPaid && d.feeChallengedPaid);
+    }
+    
+    duels.sort((a,b) => new Date(b.date) - new Date(a.date));
     
     if(duels.length === 0) {
-        container.innerHTML = '<p style="text-align:center; color:#999; font-size:11px;">Nenhum X1 aguardando aprovação no momento.</p>';
+        container.innerHTML = '<p style="text-align:center; color:#999; font-size:11px;">Nenhum X1 encontrado para este filtro.</p>';
         return;
     }
     
     container.innerHTML = duels.map(d => {
+        let btnAprovar = '';
+        if (d.status === 'AGUARDANDO_TAXAS' && d.feeChallengerPaid && d.feeChallengedPaid) {
+            btnAprovar = `<button class="btn-mini-adm" style="background:#009b3a; flex:1; font-size:12px; padding:8px;" onclick="aprovarX1Admin('${d.id}')"><i class="fas fa-check"></i> APROVAR</button>`;
+        }
+        
+        let statusLabel = d.status;
+        if(d.status === 'AGUARDANDO_TAXAS') statusLabel = 'AGUARDANDO PGTO/APROVAÇÃO';
+        if(d.status === 'PENDENTE_RESPOSTA') statusLabel = 'AGUARDANDO ACEITE';
+        
         return `
         <div class="adm-card" style="border:2px solid #cbd5e1; padding:10px; border-radius:8px;">
-            <b style="color:var(--pe-blue); font-size:14px;">${d.challengerName} VS ${d.challengedName}</b>
-            <div style="font-size:11px; margin-top:5px; color:#666;">Aposta: R$ ${d.betValue.toFixed(2)} | Ambos enviaram comprovante de R$5.</div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <b style="color:var(--pe-blue); font-size:14px;">${d.challengerName} VS ${d.challengedName}</b>
+                <span style="font-size:9px; background:#e2e8f0; padding:2px 6px; border-radius:4px; font-weight:bold;">${statusLabel}</span>
+            </div>
+            <div style="font-size:11px; margin-top:5px; color:#666;">Aposta: R$ ${d.betValue.toFixed(2)} | Total transferido: R$ ${(d.betValue + 5).toFixed(2)} por atleta.</div>
+            <div style="font-size:10px; margin-top:4px; font-weight:bold;">
+                Pgto Desafiante: ${d.feeChallengerPaid ? '<span style="color:green">SIM</span>' : '<span style="color:red">NÃO</span>'} | 
+                Pgto Desafiado: ${d.feeChallengedPaid ? '<span style="color:green">SIM</span>' : '<span style="color:red">NÃO</span>'}
+            </div>
             <div style="display:flex; gap:5px; margin-top:10px;">
-                <button class="btn-mini-adm" style="background:#009b3a; flex:1; font-size:12px; padding:8px;" onclick="aprovarX1Admin('${d.id}')">APROVAR COMBATE</button>
-                <button class="btn-mini-adm" style="background:#d50000; padding:8px;" onclick="cancelarX1Admin('${d.id}')"><i class="fas fa-times"></i></button>
+                ${btnAprovar}
+                <button class="btn-mini-adm" style="background:#d50000; padding:8px; flex:${btnAprovar ? 'none' : '1'};" onclick="deletarX1Geral('${d.id}')"><i class="fas fa-trash-alt"></i> APAGAR</button>
             </div>
         </div>`;
     }).join('');
