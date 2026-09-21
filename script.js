@@ -3945,6 +3945,8 @@ window.abrirModalCriarX1 = function() {
     document.getElementById('x1-opponent-cpf').value = '';
     document.getElementById('x1-opponent-display').value = '';
     document.getElementById('x1-bet-value').value = '';
+    document.getElementById('x1-adv-seconds').value = '';
+    document.getElementById('x1-adv-to').value = 'OPPONENT';
     openModal('modal-criar-x1');
 };
 
@@ -3975,6 +3977,11 @@ window.enviarDesafioX1 = function() {
     const oppCpf = document.getElementById('x1-opponent-cpf').value;
     const betVal = parseFloat(document.getElementById('x1-bet-value').value);
     
+    // Captura Vantagem
+    const advSec = parseInt(document.getElementById('x1-adv-seconds').value) || 0;
+    const advTo = document.getElementById('x1-adv-to').value;
+    const advCpf = advSec > 0 ? (advTo === 'ME' ? loggedUser.cpf : oppCpf) : null;
+    
     if(!evtId || !oppCpf || isNaN(betVal) || betVal <= 0) return toast("PREENCHA TODOS OS CAMPOS CORRETAMENTE", "error");
     
     const opp = db.users.find(u => u.cpf === oppCpf);
@@ -3984,7 +3991,9 @@ window.enviarDesafioX1 = function() {
         id: 'x1_' + Date.now(), evtId: evtId,
         challengerCpf: loggedUser.cpf, challengerName: loggedUser.nome,
         challengedCpf: oppCpf, challengedName: opp.nome,
-        betValue: betVal, status: 'PENDENTE_RESPOSTA', 
+        betValue: betVal, 
+        advantageSec: advSec, advantageCpf: advCpf,
+        status: 'PENDENTE_RESPOSTA', 
         feeChallengerPaid: false, feeChallengedPaid: false,
         winnerCpf: null, date: new Date().toISOString()
     };
@@ -3992,8 +4001,9 @@ window.enviarDesafioX1 = function() {
     db.x1_duels.push(duel);
     saveDB('x1_duels');
     
-    window.enviarNotificacao(`🔥 VOCÊ FOI DESAFIADO PARA UM X1! ${loggedUser.nome} apostou R$ ${betVal} na etapa ${evt.t}. Vai arregar?`, 'USER', oppCpf, evtId);
-    if(typeof dispararPushAtleta === 'function') dispararPushAtleta(oppCpf, "🔥 DESAFIO X1 RECEBIDO!", `${loggedUser.nome} te chamou pro X1 valendo R$ ${betVal}! Abra o app para responder.`);
+    let textPush = `🔥 DESAFIO X1! ${loggedUser.nome} apostou R$ ${betVal} na etapa ${evt.t}. Vai arregar?`;
+    window.enviarNotificacao(textPush, 'USER', oppCpf, evtId);
+    if(typeof dispararPushAtleta === 'function') dispararPushAtleta(oppCpf, "🔥 DESAFIO X1 RECEBIDO!", textPush);
     
     fecharModal('modal-criar-x1');
     toast("🔥 DESAFIO LANÇADO COM SUCESSO!", "success");
@@ -4040,6 +4050,12 @@ window.renderX1List = function(filterStatus = 'ALL') {
             const tObj2 = db.tempos.find(t => String(t.evtId) === String(d.evtId) && t.cpf === d.challengedCpf && (t.runType === '1st' || !t.runType));
             if(tObj2) t2 = tObj2.val;
         }
+        
+        // Exibição do Tempo com a Vantagem Visualmente
+        if(d.advantageSec > 0) {
+            if(d.advantageCpf === d.challengerCpf) t1 += ` <br><span style="color:#10b981; font-size:10px;">(-${d.advantageSec}s vantagem)</span>`;
+            if(d.advantageCpf === d.challengedCpf) t2 += ` <br><span style="color:#10b981; font-size:10px;">(-${d.advantageSec}s vantagem)</span>`;
+        }
 
         let winner1 = (d.status === 'CONCLUIDO' && d.winnerCpf === d.challengerCpf) ? `<i class="fas fa-crown x1-winner-crown"></i>` : '';
         let winner2 = (d.status === 'CONCLUIDO' && d.winnerCpf === d.challengedCpf) ? `<i class="fas fa-crown x1-winner-crown"></i>` : '';
@@ -4060,7 +4076,6 @@ window.renderX1List = function(filterStatus = 'ALL') {
             }
         }
         
-        // NOVO: Botão apagar para Super Admins
         let admDeleteBtn = '';
         if(isSuperAdmin(loggedUser)) {
             admDeleteBtn = `<button class="btn-mini-adm" style="background:#d50000; width:100%; padding:8px; margin-top:10px; font-size:10px;" onclick="deletarX1Geral('${d.id}')"><i class="fas fa-trash-alt"></i> APAGAR COMBATE (ADMIN)</button>`;
@@ -4114,7 +4129,6 @@ window.abrirModalTaxaX1 = function(id, role) {
     document.getElementById('x1-taxa-id').value = id;
     currentTaxRole = role;
     
-    // Soma o valor do X1 com a taxa de R$5,00
     const duel = db.x1_duels.find(d => d.id === id);
     if(duel) {
         const totalPagar = duel.betValue + 5.00;
@@ -4149,7 +4163,7 @@ window.confirmarEnvioTaxaX1 = function() {
             window.enviarNotificacao(`Ambos pagaram a taxa do X1 (${db.x1_duels[idx].challengerName} vs ${db.x1_duels[idx].challengedName}). Aprove no painel.`, 'ADMIN', null, null);
         }
 
-        // Vai direto para o seu WhatsApp fixo
+        const adminPhone = (db.config && db.config.phone) ? db.config.phone : "81995005317";
         const msg = `Olá! Segue o comprovante do meu pagamento para o X1.\n\n*Combate:* ${duel.challengerName} VS ${duel.challengedName}\n*Valor Transferido:* R$ ${totalPagar.toFixed(2).replace('.', ',')}\n\n[Envie a foto do comprovante logo abaixo]`;
         openWhatsApp("81995005317", msg);
     }
@@ -4162,7 +4176,6 @@ window.renderAdmX1List = function() {
     
     let duels = db.x1_duels || [];
     
-    // Filtro para mostrar apenas aguardando ou todos
     if(filter === 'AGUARDANDO') {
         duels = duels.filter(d => d.status === 'AGUARDANDO_TAXAS' && d.feeChallengerPaid && d.feeChallengedPaid);
     }
@@ -4181,7 +4194,7 @@ window.renderAdmX1List = function() {
         }
         
         let statusLabel = d.status;
-        if(d.status === 'AGUARDANDO_TAXAS') statusLabel = 'AGUARDANDO PGTO/APROVAÇÃO';
+        if(d.status === 'AGUARDANDO_TAXAS') statusLabel = 'AGUARDANDO APROVAÇÃO/PGTO';
         if(d.status === 'PENDENTE_RESPOSTA') statusLabel = 'AGUARDANDO ACEITE';
         
         return `
@@ -4216,13 +4229,8 @@ window.aprovarX1Admin = function(id) {
 };
 
 window.cancelarX1Admin = function(id) {
-    const idx = db.x1_duels.findIndex(d => d.id === id);
-    if(idx > -1) {
-        db.x1_duels.splice(idx, 1);
-        saveDB('x1_duels');
-        toast("Combate cancelado/excluído.");
-        renderAdmX1List();
-    }
+    // Redireciona para a mesma exclusão global
+    deletarX1Geral(id);
 };
 
 window.calcularVencedoresX1 = function() {
@@ -4238,8 +4246,14 @@ window.calcularVencedoresX1 = function() {
                 d.status = 'CONCLUIDO';
                 hasChanges = true;
                 
-                const ms1 = tempoParaMilissegundos(tObj1.val);
-                const ms2 = tempoParaMilissegundos(tObj2.val);
+                let ms1 = tempoParaMilissegundos(tObj1.val);
+                let ms2 = tempoParaMilissegundos(tObj2.val);
+                
+                // Aplica a Vantagem em milissegundos
+                if(d.advantageSec > 0 && d.advantageCpf) {
+                    if(d.advantageCpf === d.challengerCpf) ms1 -= (d.advantageSec * 1000);
+                    if(d.advantageCpf === d.challengedCpf) ms2 -= (d.advantageSec * 1000);
+                }
                 
                 if(ms1 < ms2) d.winnerCpf = d.challengerCpf;
                 else if(ms2 < ms1) d.winnerCpf = d.challengedCpf;
@@ -4267,7 +4281,14 @@ window.abrirAcaoX1 = function(id) {
     const duel = db.x1_duels.find(d => d.id === id);
     if(!duel) return;
     document.getElementById('x1-acao-id').value = id;
-    document.getElementById('x1-acao-texto').innerText = `${duel.challengerName} apostou R$ ${duel.betValue.toFixed(2)} contra você!`;
+    
+    let advText = '';
+    if(duel.advantageSec > 0) {
+        if(duel.advantageCpf === duel.challengedCpf) advText = ` e te deu ${duel.advantageSec}s de vantagem`;
+        else advText = ` e pediu ${duel.advantageSec}s de vantagem`;
+    }
+    
+    document.getElementById('x1-acao-texto').innerText = `${duel.challengerName} apostou R$ ${duel.betValue.toFixed(2)}${advText} contra você!`;
     document.getElementById('x1-contra-proposta-area').style.display = 'none';
     document.getElementById('x1-acao-botoes').style.display = 'flex';
     openModal('modal-acao-x1');
@@ -4301,6 +4322,12 @@ window.arregarX1 = function() {
 window.mostrarContraPropostaX1 = function() {
     document.getElementById('x1-acao-botoes').style.display = 'none';
     document.getElementById('x1-contra-proposta-area').style.display = 'block';
+    
+    const id = document.getElementById('x1-acao-id').value;
+    const duel = db.x1_duels.find(d => d.id === id);
+    if(duel) {
+        document.getElementById('x1-new-bet').value = duel.betValue;
+    }
 };
 
 window.enviarContraPropostaX1 = function() {
@@ -4308,17 +4335,32 @@ window.enviarContraPropostaX1 = function() {
     const novoValor = parseFloat(document.getElementById('x1-new-bet').value);
     if(isNaN(novoValor) || novoValor <= 0) return toast("Valor inválido!", "error");
     
+    const newAdvSec = parseInt(document.getElementById('x1-new-adv-seconds').value) || 0;
+    const newAdvTo = document.getElementById('x1-new-adv-to').value; // 'ME' (quem responde) ou 'OPPONENT' (o antigo desafiante)
+    
     const idx = db.x1_duels.findIndex(d => d.id === id);
     if(idx > -1) {
         const oldChallenger = db.x1_duels[idx].challengerCpf;
         const oldChallengerName = db.x1_duels[idx].challengerName;
+        const oldChallenged = db.x1_duels[idx].challengedCpf;
+        const oldChallengedName = db.x1_duels[idx].challengedName;
         
-        db.x1_duels[idx].challengerCpf = db.x1_duels[idx].challengedCpf;
-        db.x1_duels[idx].challengerName = db.x1_duels[idx].challengedName;
+        // Quem está fazendo a contra-proposta agora vira o desafiante.
+        db.x1_duels[idx].challengerCpf = oldChallenged;
+        db.x1_duels[idx].challengerName = oldChallengedName;
         db.x1_duels[idx].challengedCpf = oldChallenger;
         db.x1_duels[idx].challengedName = oldChallengerName;
         
+        // Calcula quem recebe a vantagem na contra-proposta
+        let newAdvCpf = null;
+        if(newAdvSec > 0) {
+            if(newAdvTo === 'ME') newAdvCpf = oldChallenged;
+            if(newAdvTo === 'OPPONENT') newAdvCpf = oldChallenger;
+        }
+        
         db.x1_duels[idx].betValue = novoValor;
+        db.x1_duels[idx].advantageSec = newAdvSec;
+        db.x1_duels[idx].advantageCpf = newAdvCpf;
         db.x1_duels[idx].status = 'PENDENTE_RESPOSTA';
         
         saveDB('x1_duels');
