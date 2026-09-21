@@ -180,6 +180,32 @@
         </div>
 
         <div id="cont-ranking" class="c-sec" style="display:none; overflow-y:auto; height:100vh; padding-bottom:120px;">
+            <!-- TELA DO X1 -->
+        <div id="cont-x1" class="c-sec" style="display:none; overflow-y:auto; height:100vh; padding-bottom:120px; background:#f1f5f9;">
+            <div class="section-header-area" style="background: linear-gradient(135deg, #0f172a, #1e293b); color: white;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="font-size: 18px; font-weight: 900; display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-bolt" style="color:#ffe500;"></i> COMBATES X1
+                    </div>
+                    <button class="btn-mini-adm" style="background:var(--pe-green); font-size:11px; padding:8px 12px; margin:0;" onclick="abrirModalCriarX1()">
+                        + LANÇAR DESAFIO
+                    </button>
+                </div>
+                <p style="font-size:10px; color:#94a3b8; margin-top:5px;">Desafie atletas, aposte e prove quem é o mais rápido na pista!</p>
+            </div>
+            
+            <div style="padding:15px;">
+                <div style="display:flex; gap:5px; margin-bottom:15px; overflow-x:auto;">
+                    <button class="btn-mini-adm" style="background:#1e293b; color:white; flex-shrink:0;" onclick="renderX1List('ALL')">TODOS</button>
+                    <button class="btn-mini-adm" style="background:#ff9800; color:white; flex-shrink:0;" onclick="renderX1List('PENDENTES')">MEUS PENDENTES</button>
+                    <button class="btn-mini-adm" style="background:#009b3a; color:white; flex-shrink:0;" onclick="renderX1List('ATIVOS')">COMBATES ATIVOS</button>
+                    <button class="btn-mini-adm" style="background:#64748b; color:white; flex-shrink:0;" onclick="renderX1List('CONCLUIDOS')">HISTÓRICO</button>
+                </div>
+                
+                <div id="list-x1-duels" style="display:flex; flex-direction:column; gap:10px;"></div>
+            </div>
+        </div>
+        <!-- FIM TELA X1 -->
             <div class="section-header-area">
                 <div class="section-title-row">
                     <div class="section-title">RANKING</div>
@@ -301,6 +327,7 @@
                     <div class="adm-dash-btn" id="btn-adm-cats" onclick="openAdmSection('cats')"><i class="fas fa-list-ul"></i><span>CATEGORIAS</span></div>
                     <div class="adm-dash-btn" id="btn-adm-fin" onclick="openAdmSection('financial')"><i class="fas fa-file-invoice-dollar"></i><span>STATUS DOS ATLETAS</span></div>
                     <div class="adm-dash-btn" id="btn-adm-users" onclick="openAdmSection('users-edit')"><i class="fas fa-user-edit"></i><span>GERENCIAR ATLETAS</span></div>
+                    <div class="adm-dash-btn" id="btn-adm-x1" onclick="openAdmSection('x1-admin')"><i class="fas fa-bolt" style="color:#d50000;"></i><span>APROVAR X1</span></div>
                     <div class="adm-dash-btn" id="btn-adm-org" onclick="openAdmSection('organizer')"><i class="fas fa-users-cog"></i><span>EQUIPE</span></div>
                     <div class="adm-dash-btn" id="btn-adm-cfg" onclick="openAdmSection('config-global')"><i class="fas fa-cogs"></i><span>CONFIGURAÇÕES</span></div>
                     <div class="adm-dash-btn" id="btn-adm-backup" onclick="downloadBackup()" style="border-color: #333;"><i class="fas fa-download" style="color:#333"></i><span>BAIXAR BACKUP</span></div>
@@ -314,6 +341,32 @@
                     </div>
                     <button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
                 </div>
+                <div id="adm-sec-cats" class="adm-section" style="display:none">
+                    <div style="background:white; padding:10px; border-radius:8px;">
+                        <b style="color:var(--pe-blue); font-size:12px">GERENCIAR CATEGORIAS ATIVAS</b>
+                        <div id="adm-cats-list" style="margin-top:10px; display:grid; gap:5px;"></div>
+                    </div>
+                    <button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
+                </div>
+
+                <!-- ============================================== -->
+                <!-- COMEÇO DO PAINEL ADMIN DO X1 (COLE ESTA PARTE) -->
+                <!-- ============================================== -->
+                <div id="adm-sec-x1-admin" class="adm-section" style="display:none">
+                    <div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;">
+                        <b style="color:var(--pe-blue); font-size:12px"><i class="fas fa-bolt"></i> APROVAÇÃO DE COMBATES X1</b>
+                        <p style="font-size:10px; color:#666; margin-bottom:10px;">Aqui aparecem os duelos onde ambos os atletas já clicaram que pagaram a taxa de R$5. Verifique o PIX e aprove.</p>
+                        <div id="adm-x1-approval-list" style="display:flex; flex-direction:column; gap:10px; max-height:400px; overflow-y:auto;"></div>
+                    </div>
+                    <button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
+                </div>
+                <!-- ============================================== -->
+                <!-- FIM DO PAINEL ADMIN DO X1                      -->
+                <!-- ============================================== -->
+
+                <div id="adm-sec-events" class="adm-section" style="display:none">
+                    <div style="background:white; padding:10px; border-radius:8px;">
+                        <b style="color:var(--pe-blue); font-size:12px">CRIAR/EDITAR EVENTO</b>
 
                 <div id="adm-sec-events" class="adm-section" style="display:none">
                     <div style="background:white; padding:10px; border-radius:8px;">
@@ -619,7 +672,8 @@
         <div class="bar-item active" id="btn-calendar" onclick="nav('calendar')"><i class="far fa-calendar-alt"></i><span id="nav-lbl-calendar">CAL</span></div>
         <div class="bar-item" id="btn-tempos" onclick="nav('tempos')"><i class="fas fa-stopwatch"></i><span id="nav-lbl-tempos">TEMPO</span></div>
         <div class="bar-item" id="btn-ranking" onclick="nav('ranking')"><i class="fas fa-trophy"></i><span id="nav-lbl-ranking">RANK</span></div>
-        <div class="bar-item" id="btn-profile" onclick="nav('profile')"><i class="fas fa-user-circle"></i><span>PERFIL</span></div>
+        <!-- BOTAO MENU X1 -->
+        <div class="bar-item" id="btn-x1" onclick="nav('x1')"><i class="fas fa-bolt" style="color:#d50000;"></i><span id="nav-lbl-x1">X1</span></div><div class="bar-item" id="btn-profile" onclick="nav('profile')"><i class="fas fa-user-circle"></i><span>PERFIL</span></div>
         <div class="bar-item" id="btn-adm" onclick="tryOpenAdmin()" style="display:none"><i class="fas fa-user-shield"></i><span>ADM</span></div>
         <div class="bar-item" onclick="fazerLogout()"><i class="fas fa-sign-out-alt"></i><span>SAIR</span></div>
     </div>
@@ -741,6 +795,68 @@
     </div>
 </div>
 
+    <!-- MODAIS DO X1 -->
+<div class="modal-overlay" id="modal-criar-x1">
+    <div class="modal-box">
+        <h3 style="color:var(--pe-blue); margin-bottom:15px;"><i class="fas fa-bolt" style="color:#ffe500;"></i> LANÇAR DESAFIO X1</h3>
+        <p style="font-size:10px; color:#666; margin-bottom:10px;">Escolha a etapa, seu adversário e o valor da aposta. Se aceito, ambos pagam R$ 5 de taxa ao sistema.</p>
+        
+        <select id="x1-evt-select" class="input-field" style="margin-bottom:10px;"><option value="">1º SELECIONE A ETAPA...</option></select>
+        <div class="smart-search-container" style="margin-bottom:10px;">
+            <input type="text" id="x1-search-opponent" placeholder="2º BUSQUE O ADVERSÁRIO..." class="input-field uppercase-input" oninput="buscarAdversarioX1()">
+            <div id="x1-opponent-list" class="smart-list" style="display:none; max-height:150px; overflow-y:auto; border:1px solid #ccc; text-align:left;"></div>
+        </div>
+        <input type="hidden" id="x1-opponent-cpf">
+        <input type="text" id="x1-opponent-display" disabled class="input-field" style="background:#eee; font-weight:bold; margin-bottom:10px;" placeholder="Adversário Selecionado">
+        
+        <label style="font-size:11px; font-weight:bold; color:var(--pe-blue); display:block; text-align:left; margin-bottom:5px;">VALOR DA APOSTA (R$)</label>
+        <input type="number" id="x1-bet-value" class="input-field" placeholder="Ex: 50" style="margin-bottom:15px; font-size:20px; font-weight:900; color:var(--pe-green); text-align:center;">
+        
+        <button class="btn" style="background:#d50000;" onclick="enviarDesafioX1()">ENVIAR DESAFIO</button>
+        <button class="btn" style="background:#ccc; color:#333; margin-top:10px;" onclick="fecharModal('modal-criar-x1')">CANCELAR</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modal-acao-x1">
+    <div class="modal-box">
+        <h3 style="color:#d50000; margin-bottom:10px;">VOCÊ FOI DESAFIADO!</h3>
+        <p id="x1-acao-texto" style="font-size:14px; font-weight:bold; color:#333; margin-bottom:15px;"></p>
+        <input type="hidden" id="x1-acao-id">
+        
+        <div id="x1-acao-botoes" style="display:flex; flex-direction:column; gap:8px;">
+            <button class="btn" style="background:var(--pe-green); margin:0;" onclick="aceitarX1()">🔥 ACEITAR (Pagar Taxa)</button>
+            <button class="btn" style="background:#ff9800; margin:0;" onclick="mostrarContraPropostaX1()">💰 SUGERIR OUTRO VALOR</button>
+            <button class="btn" style="background:#1e293b; margin:0;" onclick="arregarX1()">🐔 ARREGAR (Recusar)</button>
+        </div>
+        
+        <div id="x1-contra-proposta-area" style="display:none; margin-top:15px; border-top:1px dashed #ccc; padding-top:15px;">
+            <label style="font-size:10px; font-weight:bold;">NOVO VALOR (R$):</label>
+            <input type="number" id="x1-new-bet" class="input-field" style="margin-bottom:10px; text-align:center;">
+            <button class="btn" style="background:var(--pe-blue); margin:0;" onclick="enviarContraPropostaX1()">ENVIAR PROPOSTA</button>
+        </div>
+        
+        <button class="btn" style="background:#ccc; color:#333; margin-top:10px;" onclick="fecharModal('modal-acao-x1')">FECHAR</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modal-taxa-x1">
+    <div class="modal-box">
+        <h3 style="color:var(--pe-blue);">TAXA DO COMBATE</h3>
+        <p style="font-size:12px; color:#666; margin-bottom:15px;">Para o combate ser validado, pague a taxa administrativa de <b>R$ 5,00</b> via PIX e envie o comprovante.</p>
+        
+        <div style="background:#f8fafc; padding:15px; border-radius:8px; border:1px solid #cbd5e1; margin-bottom:15px;">
+            <b style="font-size:10px; color:#64748b; display:block;">CHAVE PIX DO ADMINISTRADOR:</b>
+            <div id="x1-pix-admin-key" style="font-family:monospace; font-size:14px; font-weight:900; color:#1e293b; margin:5px 0;">81995074007</div>
+            <button class="btn-mini-adm" style="background:#334155; color:white; width:100%; margin-top:5px;" onclick="navigator.clipboard.writeText(document.getElementById('x1-pix-admin-key').innerText); toast('PIX COPIADO!');">COPIAR CHAVE</button>
+        </div>
+        
+        <input type="hidden" id="x1-taxa-id">
+        <button class="btn" style="background:#25D366; margin-bottom:10px;" onclick="confirmarEnvioTaxaX1()">✅ ENVIEI O COMPROVANTE</button>
+        <button class="btn" style="background:#ccc; color:#333; margin:0;" onclick="fecharModal('modal-taxa-x1')">DEPOIS EU PAGO</button>
+    </div>
+</div>
+<!-- FIM MODAIS X1 -->
+    
 <template id="template-live-timing">
 <!DOCTYPE html>
 <html lang="pt-BR">
