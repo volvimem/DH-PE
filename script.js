@@ -1191,13 +1191,44 @@ window.populatePublicFilters = function(tab) {
             const evtObj = db.events.find(e => String(e.id) === String(currentEvtId));
             if (evtObj && evtObj.type === 'NON_OFFICIAL' && evtObj.extraVals) {
                 catsToShow = Object.keys(evtObj.extraVals).filter(k => evtObj.extraVals[k] && String(evtObj.extraVals[k]).trim() !== "");
-                catsToShow.sort((a,b) => a.localeCompare(b));
             }
         }
         
         if (catsToShow.length === 0 && db.config && db.config.categories) {
-            catsToShow = db.config.categories.filter(c => c.active).map(c => c.name).sort((a,b) => a.localeCompare(b));
+            catsToShow = db.config.categories.filter(c => c.active).map(c => c.name);
         }
+        
+        // --- NOVA ORDENAÇÃO PADRONIZADA (ORDEM DE LARGADA) ---
+        const ordemDesejada = [
+            "ESTREANTE", "ESTREANTE (EXTRA)",
+            "RIGIDA", "RÍGIDA", "RÍGIDA (EXTRA)",
+            "OPEN", "OPEN (EXTRA)",
+            "ELITE FEMININA", "FEMININO ELITE", "FEMININO",
+            "INFANTO-JUVENIL",
+            "JUVENIL",
+            "PCD", "PCD (EXTRA)",
+            "MASTER D",
+            "MASTER C2",
+            "MASTER C1", "MASTER C",
+            "MASTER B2",
+            "MASTER B1", "MASTER B",
+            "MASTER A2",
+            "MASTER A1", "MASTER A",
+            "E-BIKE", "E-BIKE (EXTRA)",
+            "JUNIOR",
+            "SUB-30",
+            "ELITE"
+        ];
+
+        catsToShow.sort((a, b) => {
+            let indexA = ordemDesejada.indexOf(a.toUpperCase());
+            let indexB = ordemDesejada.indexOf(b.toUpperCase());
+            if (indexA === -1) indexA = 999; // Se não achar na lista, vai pro final
+            if (indexB === -1) indexB = 999;
+            if (indexA !== indexB) return indexA - indexB;
+            return a.localeCompare(b); // Desempate alfabético
+        });
+        // -----------------------------------------------------
         
         catsToShow.forEach(c => {
             catHtml += `<option value="${c}">${c}</option>`;
