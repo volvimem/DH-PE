@@ -267,3 +267,21 @@ body.archive-mode { border-top: 5px solid var(--pe-red); }
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     .print-header { margin-top: 0 !important; padding: 10px !important; }
 }
+
+/* --- ESTILOS DO X1 --- */
+.x1-card { background: white; border-radius: 12px; border: 2px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; }
+.x1-header { background: #0f172a; padding: 10px; display: flex; justify-content: space-between; align-items: center; color: white; }
+.x1-header-evt { font-size: 11px; font-weight: 900; color: #cbd5e1; text-transform: uppercase; }
+.x1-header-bet { background: var(--pe-green); padding: 4px 8px; border-radius: 4px; font-size: 14px; font-weight: 900; color: white; border: 1px solid #86efac; }
+.x1-body { padding: 15px; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; }
+.x1-athlete { flex: 1; text-align: center; }
+.x1-athlete-name { font-size: 14px; font-weight: 900; color: var(--pe-blue); display: block; text-transform: uppercase; line-height: 1.1; margin-bottom: 5px; }
+.x1-athlete-time { font-family: monospace; font-size: 16px; font-weight: 900; color: #333; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; display: inline-block; }
+.x1-vs-badge { background: #d50000; color: white; font-weight: 900; font-size: 18px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.2); z-index: 2; margin: 0 10px; flex-shrink: 0; font-style: italic; }
+.x1-footer { padding: 10px; background: white; border-top: 1px dashed #cbd5e1; text-align: center; }
+.x1-status-badge { font-size: 10px; font-weight: bold; padding: 4px 10px; border-radius: 50px; text-transform: uppercase; display: inline-block; }
+.x1-status-pendente { background: #fef08a; color: #854d0e; border: 1px solid #fde047; }
+.x1-status-ativo { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+.x1-status-concluido { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+.x1-status-arregou { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+.x1-winner-crown { color: #eab308; font-size: 18px; display: block; margin-bottom: 5px; animation: jump-btn 1.5s infinite; }
