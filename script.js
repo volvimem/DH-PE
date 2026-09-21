@@ -30,7 +30,7 @@ const DEFAULT_CATS = [
     {name: "OPEN", active: true}, {name: "RÍGIDA", active: true}, {name: "ESTREANTE", active: true},
     {name: "E-BIKE", active: true}, {name: "PCD", active: true}
 ];
-const DEFAULT_DB = { users: [], events: [], tempos: [], ranking: [], notifications: [], auditLog: [], config: { phone: '', rerunPass: 'admin123', allowAllIDs: false, categories: DEFAULT_CATS } };
+const DEFAULT_DB = { users: [], events: [], tempos: [], ranking: [], notifications: [], auditLog: [], x1_duels: [], config: { phone: '', rerunPass: 'admin123', allowAllIDs: false, categories: DEFAULT_CATS } };
 var db = DEFAULT_DB;
 
 let currentTab = 'calendar'; let loggedUser = null; let currentAdmSection = null;
@@ -315,6 +315,7 @@ function checkDbIntegrity() {
     if(!db.ranking || !Array.isArray(db.ranking)) db.ranking = db.ranking ? Object.values(db.ranking) : [];
     if(!db.notifications || !Array.isArray(db.notifications)) db.notifications = db.notifications ? Object.values(db.notifications) : [];
     if(!db.auditLog || !Array.isArray(db.auditLog)) db.auditLog = db.auditLog ? Object.values(db.auditLog) : [];
+    if(!db.x1_duels || !Array.isArray(db.x1_duels)) db.x1_duels = db.x1_duels ? Object.values(db.x1_duels) : [];
     // PROTEÇÃO 2: Limpa novamente sempre que o Firebase enviar atualização
     db.users = db.users.filter(x => x !== null && x !== undefined);
     db.events = db.events.filter(x => x !== null && x !== undefined);
@@ -353,8 +354,7 @@ window.saveDB = function(moduleName = null) {
     if(!database) return;
     if (moduleName) { if (Array.isArray(moduleName)) moduleName.forEach(m => pendingSaves.add(m)); else pendingSaves.add(moduleName);
     } 
-    else { ['users', 'events', 'tempos', 'config', 'notifications', 'auditLog'].forEach(m => pendingSaves.add(m));
-    }
+    else { ['users', 'events', 'tempos', 'config', 'notifications', 'auditLog', 'x1_duels'].forEach(m => pendingSaves.add(m)); }
     if(saveTimeout) clearTimeout(saveTimeout);
     saveTimeout = setTimeout(() => { let updates = {}; pendingSaves.forEach(m => { if(db[m] !== undefined) updates['/' + DB_KEY + '/' + m] = db[m]; });
         if(Object.keys(updates).length > 0) database.ref().update(updates).catch(err => { console.error("Erro Firebase"); });
@@ -395,12 +395,19 @@ function refreshCurrentView() {
     if(currentTab === 'ranking') renderContent('ranking'); 
     if(currentTab === 'calendar') renderContent('calendar');
     if(currentTab === 'profile') { updateCardLive(); loadProfileData(); }
+    
+    // ATUALIZA A TELA DO X1
+    if(currentTab === 'x1') renderX1List('ALL');
+    
     if(currentTab === 'adm' && document.getElementById('adm-panel-real').style.display === 'block') {
         if(currentAdmSection === 'results') renderAdmResults();
         if(currentAdmSection === 'financial') renderInscriptions(); if(currentAdmSection === 'users-edit') filterPilots('edit-user', true);
         if(currentAdmSection === 'events') renderAdmEvents(); if(currentAdmSection === 'cats') renderAdmCategories();
         if(currentAdmSection === 'organizer') renderOrgList();
         if(currentAdmSection === 'config-global') filterPilots('cfg-search', true); if(currentAdmSection === 'audit') renderAuditLog();
+
+        // ATUALIZA O PAINEL DE APROVAÇÃO DO X1
+        if(currentAdmSection === 'x1-admin') window.renderAdmX1List();
     }
 }
 
@@ -1612,7 +1619,7 @@ function tryOpenAdmin(force = false) {
 
 window.openAdmSection = function(sec) { 
     currentAdmSection = sec; localStorage.setItem(LAST_ADM_KEY, sec);
-    if(!isSuperAdmin(loggedUser) && ['cats', 'events', 'users-edit', 'organizer', 'config-global', 'audit'].includes(sec)) { toast("ACESSO RESTRITO AO ADMINISTRADOR GERAL", "error"); sec = 'menu'; }
+   if(!isSuperAdmin(loggedUser) && ['cats', 'events', 'users-edit', 'organizer', 'config-global', 'audit', 'x1-admin'].includes(sec)) { toast("ACESSO RESTRITO AO ADMINISTRADOR GERAL", "error"); sec = 'menu'; }
     document.querySelectorAll('.adm-section').forEach(el => el.style.display = 'none'); document.getElementById('adm-menu').style.display = 'none';
     if(sec === 'menu') { document.getElementById('adm-menu').style.display = 'grid'; return; } 
     const secEl = document.getElementById('adm-sec-' + sec); if(secEl) secEl.style.display = 'block';
@@ -1659,6 +1666,8 @@ window.openAdmSection = function(sec) {
     'admin123'; document.getElementById('adm-cfg-allow-ids').checked = db.config.allowAllIDs || false; document.getElementById('adm-cfg-search').value = ''; document.getElementById('adm-cfg-list').style.display = 'none';
     }
     if(sec === 'audit') { renderAuditLog(); }
+    // ABRE A TELA DO ADM DO X1
+    if(sec === 'x1-admin') window.renderAdmX1List();
 };
 
 window.checkAdmPass = function() { const inputPass = document.getElementById('adm-pass-check').value;
@@ -3882,5 +3891,347 @@ window.dispararPushParaEquipe = function(evtId, titulo, mensagem) {
         }
     } catch (e) {
         console.log("Erro ao disparar push para a equipe:", e);
+    }
+};
+
+
+// ==========================================================
+// MÓDULO X1 (DUELOS E APOSTAS)
+// ==========================================================
+
+window.abrirModalCriarX1 = function() {
+    if(!loggedUser) return toast("FAÇA LOGIN PARA DESAFIAR", "error");
+    const select = document.getElementById('x1-evt-select');
+    let html = '<option value="">1º SELECIONE A ETAPA...</option>';
+    db.events.forEach(e => { if(e.status === 'OPEN' || e.status === 'CLOSED') html += `<option value="${e.id}">${e.t}</option>`; });
+    select.innerHTML = html;
+    document.getElementById('x1-search-opponent').value = '';
+    document.getElementById('x1-opponent-list').style.display = 'none';
+    document.getElementById('x1-opponent-cpf').value = '';
+    document.getElementById('x1-opponent-display').value = '';
+    document.getElementById('x1-bet-value').value = '';
+    openModal('modal-criar-x1');
+};
+
+window.buscarAdversarioX1 = function() {
+    const term = document.getElementById('x1-search-opponent').value.toUpperCase();
+    const list = document.getElementById('x1-opponent-list');
+    if(term.length < 3) { list.style.display = 'none'; return; }
+    
+    let found = db.users.filter(u => u.cpf !== loggedUser.cpf && ((u.nome && u.nome.includes(term)) || (u.city && u.city.toUpperCase().includes(term))));
+    
+    if(found.length > 0) {
+        list.style.display = 'block';
+        list.innerHTML = found.map(u => `<div class="smart-item" style="padding:10px; border-bottom:1px solid #eee; cursor:pointer;" onclick="selecionarAdversarioX1('${u.cpf}', '${u.nome}')"><b>${u.nome}</b> <span class="badge-city">${u.city}</span><br><span style="font-size:9px; color:#666">${u.cat}</span></div>`).join('');
+    } else {
+        list.style.display = 'none';
+    }
+};
+
+window.selecionarAdversarioX1 = function(cpf, nome) {
+    document.getElementById('x1-opponent-cpf').value = cpf;
+    document.getElementById('x1-opponent-display').value = nome;
+    document.getElementById('x1-opponent-list').style.display = 'none';
+    document.getElementById('x1-search-opponent').value = '';
+};
+
+window.enviarDesafioX1 = function() {
+    const evtId = document.getElementById('x1-evt-select').value;
+    const oppCpf = document.getElementById('x1-opponent-cpf').value;
+    const betVal = parseFloat(document.getElementById('x1-bet-value').value);
+    
+    if(!evtId || !oppCpf || isNaN(betVal) || betVal <= 0) return toast("PREENCHA TODOS OS CAMPOS CORRETAMENTE", "error");
+    
+    const opp = db.users.find(u => u.cpf === oppCpf);
+    const evt = db.events.find(e => String(e.id) === String(evtId));
+    
+    const duel = {
+        id: 'x1_' + Date.now(), evtId: evtId,
+        challengerCpf: loggedUser.cpf, challengerName: loggedUser.nome,
+        challengedCpf: oppCpf, challengedName: opp.nome,
+        betValue: betVal, status: 'PENDENTE_RESPOSTA', 
+        feeChallengerPaid: false, feeChallengedPaid: false,
+        winnerCpf: null, date: new Date().toISOString()
+    };
+    
+    db.x1_duels.push(duel);
+    saveDB('x1_duels');
+    
+    window.enviarNotificacao(`🔥 VOCÊ FOI DESAFIADO PARA UM X1! ${loggedUser.nome} apostou R$ ${betVal} na etapa ${evt.t}. Vai arregar?`, 'USER', oppCpf, evtId);
+    if(typeof dispararPushAtleta === 'function') dispararPushAtleta(oppCpf, "🔥 DESAFIO X1 RECEBIDO!", `${loggedUser.nome} te chamou pro X1 valendo R$ ${betVal}! Abra o app para responder.`);
+    
+    fecharModal('modal-criar-x1');
+    toast("🔥 DESAFIO LANÇADO COM SUCESSO!", "success");
+    renderContent('x1');
+};
+
+window.renderX1List = function(filterStatus = 'ALL') {
+    const container = document.getElementById('list-x1-duels');
+    if(!container) return;
+    
+    window.calcularVencedoresX1();
+    
+    let duels = db.x1_duels || [];
+    
+    if(filterStatus === 'PENDENTES') {
+        duels = duels.filter(d => (d.challengerCpf === loggedUser?.cpf || d.challengedCpf === loggedUser?.cpf) && (d.status === 'PENDENTE_RESPOSTA' || d.status === 'AGUARDANDO_TAXAS'));
+    } else if(filterStatus === 'ATIVOS') {
+        duels = duels.filter(d => d.status === 'ATIVO');
+    } else if(filterStatus === 'CONCLUIDOS') {
+        duels = duels.filter(d => d.status === 'CONCLUIDO' || d.status === 'ARREGOU');
+    }
+    
+    duels.sort((a,b) => new Date(b.date) - new Date(a.date));
+    
+    if(duels.length === 0) {
+        container.innerHTML = '<div style="padding:20px; text-align:center; color:#94a3b8; font-weight:bold;">Nenhum combate encontrado.</div>';
+        return;
+    }
+    
+    container.innerHTML = duels.map(d => {
+        const evt = db.events.find(e => String(e.id) === String(d.evtId));
+        const evtName = evt ? evt.t : 'Etapa Desconhecida';
+        
+        let statusBadge = '';
+        if(d.status === 'PENDENTE_RESPOSTA' || d.status === 'AGUARDANDO_TAXAS') statusBadge = `<span class="x1-status-badge x1-status-pendente">PENDENTE</span>`;
+        if(d.status === 'ATIVO') statusBadge = `<span class="x1-status-badge x1-status-ativo"><i class="fas fa-fire"></i> ATIVO (PAGOS)</span>`;
+        if(d.status === 'CONCLUIDO') statusBadge = `<span class="x1-status-badge x1-status-concluido"><i class="fas fa-trophy"></i> CONCLUÍDO</span>`;
+        if(d.status === 'ARREGOU') statusBadge = `<span class="x1-status-badge x1-status-arregou"><i class="fas fa-chicken"></i> ARREGOU</span>`;
+        
+        let t1 = '--:--.---'; let t2 = '--:--.---';
+        if(d.status === 'CONCLUIDO' || d.status === 'ATIVO') {
+            const tObj1 = db.tempos.find(t => String(t.evtId) === String(d.evtId) && t.cpf === d.challengerCpf && (t.runType === '1st' || !t.runType));
+            if(tObj1) t1 = tObj1.val;
+            const tObj2 = db.tempos.find(t => String(t.evtId) === String(d.evtId) && t.cpf === d.challengedCpf && (t.runType === '1st' || !t.runType));
+            if(tObj2) t2 = tObj2.val;
+        }
+
+        let winner1 = (d.status === 'CONCLUIDO' && d.winnerCpf === d.challengerCpf) ? `<i class="fas fa-crown x1-winner-crown"></i>` : '';
+        let winner2 = (d.status === 'CONCLUIDO' && d.winnerCpf === d.challengedCpf) ? `<i class="fas fa-crown x1-winner-crown"></i>` : '';
+        
+        let actionBtn = '';
+        if(loggedUser) {
+            if(d.status === 'PENDENTE_RESPOSTA' && d.challengedCpf === loggedUser.cpf) {
+                actionBtn = `<button class="btn-mini-adm" style="background:var(--pe-blue); width:100%; padding:10px; margin-top:10px; font-size:12px;" onclick="abrirAcaoX1('${d.id}')">RESPONDER DESAFIO</button>`;
+            }
+            if(d.status === 'AGUARDANDO_TAXAS') {
+                if(d.challengerCpf === loggedUser.cpf && !d.feeChallengerPaid) {
+                    actionBtn = `<button class="btn-mini-adm" style="background:#25D366; width:100%; padding:10px; margin-top:10px; font-size:12px;" onclick="abrirModalTaxaX1('${d.id}', 'challenger')">PAGAR TAXA (R$5)</button>`;
+                } else if(d.challengedCpf === loggedUser.cpf && !d.feeChallengedPaid) {
+                    actionBtn = `<button class="btn-mini-adm" style="background:#25D366; width:100%; padding:10px; margin-top:10px; font-size:12px;" onclick="abrirModalTaxaX1('${d.id}', 'challenged')">PAGAR TAXA (R$5)</button>`;
+                } else if((d.challengerCpf === loggedUser.cpf && d.feeChallengerPaid) || (d.challengedCpf === loggedUser.cpf && d.feeChallengedPaid)) {
+                    actionBtn = `<div style="text-align:center; color:#f59e0b; font-size:10px; font-weight:bold; margin-top:10px;">AGUARDANDO ADM APROVAR TAXA</div>`;
+                }
+            }
+        }
+
+        return `
+        <div class="x1-card">
+            <div class="x1-header">
+                <span class="x1-header-evt"><i class="fas fa-flag-checkered"></i> ${evtName}</span>
+                <span class="x1-header-bet">R$ ${d.betValue.toFixed(2)}</span>
+            </div>
+            <div class="x1-body">
+                <div class="x1-athlete">
+                    ${winner1}
+                    <span class="x1-athlete-name">${d.challengerName}</span>
+                    <span class="x1-athlete-time">${t1}</span>
+                </div>
+                <div class="x1-vs-badge">VS</div>
+                <div class="x1-athlete">
+                    ${winner2}
+                    <span class="x1-athlete-name">${d.challengedName}</span>
+                    <span class="x1-athlete-time">${t2}</span>
+                </div>
+            </div>
+            <div class="x1-footer">
+                ${statusBadge}
+                ${actionBtn}
+            </div>
+        </div>`;
+    }).join('');
+};
+
+window.abrirAcaoX1 = function(id) {
+    const duel = db.x1_duels.find(d => d.id === id);
+    if(!duel) return;
+    document.getElementById('x1-acao-id').value = id;
+    document.getElementById('x1-acao-texto').innerText = `${duel.challengerName} apostou R$ ${duel.betValue.toFixed(2)} contra você!`;
+    document.getElementById('x1-contra-proposta-area').style.display = 'none';
+    document.getElementById('x1-acao-botoes').style.display = 'flex';
+    openModal('modal-acao-x1');
+};
+
+window.aceitarX1 = function() {
+    const id = document.getElementById('x1-acao-id').value;
+    const idx = db.x1_duels.findIndex(d => d.id === id);
+    if(idx > -1) {
+        db.x1_duels[idx].status = 'AGUARDANDO_TAXAS';
+        saveDB('x1_duels');
+        toast("🔥 DESAFIO ACEITO! Pague a taxa para validar.");
+        fecharModal('modal-acao-x1');
+        renderContent('x1');
+        window.enviarNotificacao(`Seu desafio X1 contra ${db.x1_duels[idx].challengedName} foi ACEITO! Pague a taxa de R$5.`, 'USER', db.x1_duels[idx].challengerCpf, db.x1_duels[idx].evtId);
+    }
+};
+
+window.arregarX1 = function() {
+    const id = document.getElementById('x1-acao-id').value;
+    const idx = db.x1_duels.findIndex(d => d.id === id);
+    if(idx > -1) {
+        db.x1_duels[idx].status = 'ARREGOU';
+        saveDB('x1_duels');
+        toast("Você arregou do combate.", "error");
+        fecharModal('modal-acao-x1');
+        renderContent('x1');
+    }
+};
+
+window.mostrarContraPropostaX1 = function() {
+    document.getElementById('x1-acao-botoes').style.display = 'none';
+    document.getElementById('x1-contra-proposta-area').style.display = 'block';
+};
+
+window.enviarContraPropostaX1 = function() {
+    const id = document.getElementById('x1-acao-id').value;
+    const novoValor = parseFloat(document.getElementById('x1-new-bet').value);
+    if(isNaN(novoValor) || novoValor <= 0) return toast("Valor inválido!", "error");
+    
+    const idx = db.x1_duels.findIndex(d => d.id === id);
+    if(idx > -1) {
+        const oldChallenger = db.x1_duels[idx].challengerCpf;
+        const oldChallengerName = db.x1_duels[idx].challengerName;
+        
+        db.x1_duels[idx].challengerCpf = db.x1_duels[idx].challengedCpf;
+        db.x1_duels[idx].challengerName = db.x1_duels[idx].challengedName;
+        db.x1_duels[idx].challengedCpf = oldChallenger;
+        db.x1_duels[idx].challengedName = oldChallengerName;
+        
+        db.x1_duels[idx].betValue = novoValor;
+        db.x1_duels[idx].status = 'PENDENTE_RESPOSTA';
+        
+        saveDB('x1_duels');
+        toast("CONTRA-PROPOSTA ENVIADA!");
+        fecharModal('modal-acao-x1');
+        renderContent('x1');
+        window.enviarNotificacao(`Contra-proposta no X1! O valor mudou para R$ ${novoValor}. Aceita?`, 'USER', oldChallenger, db.x1_duels[idx].evtId);
+    }
+};
+
+let currentTaxRole = '';
+window.abrirModalTaxaX1 = function(id, role) {
+    document.getElementById('x1-taxa-id').value = id;
+    currentTaxRole = role;
+    openModal('modal-taxa-x1');
+};
+
+window.confirmarEnvioTaxaX1 = function() {
+    const id = document.getElementById('x1-taxa-id').value;
+    const idx = db.x1_duels.findIndex(d => d.id === id);
+    if(idx > -1) {
+        if(currentTaxRole === 'challenger') db.x1_duels[idx].feeChallengerPaid = true;
+        if(currentTaxRole === 'challenged') db.x1_duels[idx].feeChallengedPaid = true;
+        saveDB('x1_duels');
+        toast("Comprovante registrado! Aguardando ADM.");
+        fecharModal('modal-taxa-x1');
+        renderContent('x1');
+        
+        if(db.x1_duels[idx].feeChallengerPaid && db.x1_duels[idx].feeChallengedPaid) {
+            window.enviarNotificacao(`Ambos pagaram a taxa do X1 (${db.x1_duels[idx].challengerName} vs ${db.x1_duels[idx].challengedName}). Aprove no painel.`, 'ADMIN', null, null);
+        }
+    }
+};
+
+window.renderAdmX1List = function() {
+    const container = document.getElementById('adm-x1-approval-list');
+    if(!container) return;
+    
+    const duels = db.x1_duels.filter(d => d.status === 'AGUARDANDO_TAXAS' && d.feeChallengerPaid && d.feeChallengedPaid);
+    
+    if(duels.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color:#999; font-size:11px;">Nenhum X1 aguardando aprovação no momento.</p>';
+        return;
+    }
+    
+    container.innerHTML = duels.map(d => {
+        return `
+        <div class="adm-card" style="border:2px solid #cbd5e1; padding:10px; border-radius:8px;">
+            <b style="color:var(--pe-blue); font-size:14px;">${d.challengerName} VS ${d.challengedName}</b>
+            <div style="font-size:11px; margin-top:5px; color:#666;">Aposta: R$ ${d.betValue.toFixed(2)} | Ambos enviaram comprovante de R$5.</div>
+            <div style="display:flex; gap:5px; margin-top:10px;">
+                <button class="btn-mini-adm" style="background:#009b3a; flex:1; font-size:12px; padding:8px;" onclick="aprovarX1Admin('${d.id}')">APROVAR COMBATE</button>
+                <button class="btn-mini-adm" style="background:#d50000; padding:8px;" onclick="cancelarX1Admin('${d.id}')"><i class="fas fa-times"></i></button>
+            </div>
+        </div>`;
+    }).join('');
+};
+
+window.aprovarX1Admin = function(id) {
+    const idx = db.x1_duels.findIndex(d => d.id === id);
+    if(idx > -1) {
+        db.x1_duels[idx].status = 'ATIVO';
+        saveDB('x1_duels');
+        toast("🔥 COMBATE ATIVO!");
+        renderAdmX1List();
+        window.enviarNotificacao(`Seu combate X1 foi APROVADO! Acelere!`, 'USER', db.x1_duels[idx].challengerCpf, null);
+        window.enviarNotificacao(`Seu combate X1 foi APROVADO! Acelere!`, 'USER', db.x1_duels[idx].challengedCpf, null);
+    }
+};
+
+window.cancelarX1Admin = function(id) {
+    const idx = db.x1_duels.findIndex(d => d.id === id);
+    if(idx > -1) {
+        db.x1_duels.splice(idx, 1);
+        saveDB('x1_duels');
+        toast("Combate cancelado/excluído.");
+        renderAdmX1List();
+    }
+};
+
+window.calcularVencedoresX1 = function() {
+    let hasChanges = false;
+    if(!db.x1_duels) return;
+    
+    db.x1_duels.forEach(d => {
+        if(d.status === 'ATIVO') {
+            const tObj1 = db.tempos.find(t => String(t.evtId) === String(d.evtId) && t.cpf === d.challengerCpf && (t.runType === '1st' || !t.runType));
+            const tObj2 = db.tempos.find(t => String(t.evtId) === String(d.evtId) && t.cpf === d.challengedCpf && (t.runType === '1st' || !t.runType));
+            
+            if(tObj1 && tObj1.val !== '--:--.---' && tObj2 && tObj2.val !== '--:--.---') {
+                d.status = 'CONCLUIDO';
+                hasChanges = true;
+                
+                const ms1 = tempoParaMilissegundos(tObj1.val);
+                const ms2 = tempoParaMilissegundos(tObj2.val);
+                
+                if(ms1 < ms2) d.winnerCpf = d.challengerCpf;
+                else if(ms2 < ms1) d.winnerCpf = d.challengedCpf;
+                else d.winnerCpf = "EMPATE";
+                
+                if(d.winnerCpf === d.challengerCpf) {
+                    if(typeof dispararPushAtleta === 'function') {
+                        dispararPushAtleta(d.challengerCpf, "🏆 VOCÊ GANHOU O X1!", `Você venceu ${d.challengedName} e faturou a aposta!`);
+                        dispararPushAtleta(d.challengedCpf, "❌ VOCÊ PERDEU O X1", `${d.challengerName} foi mais rápido.`);
+                    }
+                } else if(d.winnerCpf === d.challengedCpf) {
+                    if(typeof dispararPushAtleta === 'function') {
+                        dispararPushAtleta(d.challengedCpf, "🏆 VOCÊ GANHOU O X1!", `Você venceu ${d.challengerName} e faturou a aposta!`);
+                        dispararPushAtleta(d.challengerCpf, "❌ VOCÊ PERDEU O X1", `${d.challengedName} foi mais rápido.`);
+                    }
+                }
+            }
+        }
+    });
+    
+    if(hasChanges) saveDB('x1_duels');
+};
+
+// Modificação extra para que nav('x1') chame o renderContent correto.
+const oldRenderContent = window.renderContent;
+window.renderContent = function(t) {
+    if(t === 'x1') {
+        window.renderX1List('ALL');
+    } else {
+        oldRenderContent(t);
     }
 };
