@@ -4149,13 +4149,16 @@ window.renderX1List = function(filterStatus = 'ALL') {
         let actionBtn = '';
         if(loggedUser) {
             if(d.status === 'PENDENTE_RESPOSTA' && d.challengedCpf === loggedUser.cpf) {
-                actionBtn = `<button class="btn-mini-adm" style="background:var(--pe-blue); width:100%; padding:10px; margin-top:10px; font-size:12px;" onclick="abrirAcaoX1('${d.id}')">RESPONDER DESAFIO</button>`;
+                // Anima o botão para o atleta que foi desafiado
+                actionBtn = `<button class="btn-mini-adm btn-jump" style="background:var(--pe-blue); width:100%; padding:10px; margin-top:10px; font-size:12px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" onclick="abrirAcaoX1('${d.id}')">🔥 RESPONDER DESAFIO</button>`;
             }
             if(d.status === 'AGUARDANDO_TAXAS') {
                 if(d.challengerCpf === loggedUser.cpf && !d.feeChallengerPaid) {
-                    actionBtn = `<button class="btn-mini-adm" style="background:#25D366; width:100%; padding:10px; margin-top:10px; font-size:12px;" onclick="abrirModalTaxaX1('${d.id}', 'challenger')"><i class="fab fa-whatsapp"></i> PAGAR (Aposta + R$5)</button>`;
+                    // Anima o botão PIX para o Desafiante
+                    actionBtn = `<button class="btn-mini-adm btn-jump" style="background:#25D366; width:100%; padding:10px; margin-top:10px; font-size:12px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" onclick="abrirModalTaxaX1('${d.id}', 'challenger')"><i class="fab fa-whatsapp"></i> PAGAR (Aposta + R$5)</button>`;
                 } else if(d.challengedCpf === loggedUser.cpf && !d.feeChallengedPaid) {
-                    actionBtn = `<button class="btn-mini-adm" style="background:#25D366; width:100%; padding:10px; margin-top:10px; font-size:12px;" onclick="abrirModalTaxaX1('${d.id}', 'challenged')"><i class="fab fa-whatsapp"></i> PAGAR (Aposta + R$5)</button>`;
+                    // Anima o botão PIX para o Desafiado
+                    actionBtn = `<button class="btn-mini-adm btn-jump" style="background:#25D366; width:100%; padding:10px; margin-top:10px; font-size:12px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" onclick="abrirModalTaxaX1('${d.id}', 'challenged')"><i class="fab fa-whatsapp"></i> PAGAR (Aposta + R$5)</button>`;
                 } else if((d.challengerCpf === loggedUser.cpf && d.feeChallengerPaid) || (d.challengedCpf === loggedUser.cpf && d.feeChallengedPaid)) {
                     actionBtn = `<div style="text-align:center; color:#f59e0b; font-size:10px; font-weight:bold; margin-top:10px;">AGUARDANDO ADM APROVAR PAGAMENTO</div>`;
                 }
