@@ -4192,32 +4192,45 @@ window.renderX1List = function(filterStatus = 'ALL') {
         let actionP1 = '';
         let actionP2 = '';
         
-        if(loggedUser) {
-            if(d.status === 'PENDENTE_RESPOSTA') {
-                if(d.challengerCpf === loggedUser.cpf) {
-                    actionP1 = `<div style="margin-top:10px; font-size:10px; color:#f59e0b; font-weight:bold;">AGUARDA RESPOSTA</div>`;
+        if(loggedUser && (d.status === 'PENDENTE_RESPOSTA' || d.status === 'AGUARDANDO_TAXAS')) {
+            
+            // LADO P1 (DESAFIANTE) - Pode pagar a qualquer momento (botão verde saltando)
+            if (d.challengerCpf === loggedUser.cpf) {
+                if (!d.feeChallengerPaid) {
+                    actionP1 = `<button class="btn-mini-adm btn-jump" style="background:#25D366; width:100%; padding:10px 4px; font-size:11px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" onclick="abrirModalTaxaX1('${d.id}', 'challenger')"><i class="fab fa-whatsapp"></i> PAGAR PIX</button>`;
+                } else {
+                    actionP1 = `<div style="margin-top:10px; font-size:11px; color:#15803d; font-weight:bold;"><i class="fas fa-check-circle"></i> PAGO</div>`;
                 }
-                if(d.challengedCpf === loggedUser.cpf) {
-                    actionP2 = `<button class="btn-mini-adm btn-jump" style="background:var(--pe-blue); width:100%; padding:10px 4px; font-size:11px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" onclick="abrirAcaoX1('${d.id}')">🔥 RESPONDER</button>`;
+            } else {
+                // Visão do P2 olhando para o P1
+                if (!d.feeChallengerPaid) {
+                    actionP1 = `<div style="margin-top:10px; font-size:10px; color:#f59e0b; font-weight:bold;">AGUARDA PGTO</div>`;
+                } else {
+                    actionP1 = `<div style="margin-top:10px; font-size:11px; color:#15803d; font-weight:bold;"><i class="fas fa-check-circle"></i> PAGO</div>`;
                 }
             }
-            if(d.status === 'AGUARDANDO_TAXAS') {
-                // Lado P1 (Desafiante)
-                if(d.challengerCpf === loggedUser.cpf && !d.feeChallengerPaid) {
-                    actionP1 = `<button class="btn-mini-adm btn-jump" style="background:#25D366; width:100%; padding:10px 4px; font-size:11px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" onclick="abrirModalTaxaX1('${d.id}', 'challenger')"><i class="fab fa-whatsapp"></i> PAGAR PIX</button>`;
-                } else if (d.feeChallengerPaid) {
-                    actionP1 = `<div style="margin-top:10px; font-size:11px; color:#15803d; font-weight:bold;"><i class="fas fa-check-circle"></i> PAGO</div>`;
-                } else if (!d.feeChallengerPaid && d.challengedCpf === loggedUser.cpf) {
-                    actionP1 = `<div style="margin-top:10px; font-size:10px; color:#f59e0b; font-weight:bold;">AGUARDA PGTO</div>`;
-                }
 
-                // Lado P2 (Desafiado)
-                if(d.challengedCpf === loggedUser.cpf && !d.feeChallengedPaid) {
-                    actionP2 = `<button class="btn-mini-adm btn-jump" style="background:#25D366; width:100%; padding:10px 4px; font-size:11px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" onclick="abrirModalTaxaX1('${d.id}', 'challenged')"><i class="fab fa-whatsapp"></i> PAGAR PIX</button>`;
-                } else if (d.feeChallengedPaid) {
-                    actionP2 = `<div style="margin-top:10px; font-size:11px; color:#15803d; font-weight:bold;"><i class="fas fa-check-circle"></i> PAGO</div>`;
-                } else if (!d.feeChallengedPaid && d.challengerCpf === loggedUser.cpf) {
-                    actionP2 = `<div style="margin-top:10px; font-size:10px; color:#f59e0b; font-weight:bold;">AGUARDA PGTO</div>`;
+            // LADO P2 (DESAFIADO) - Responde primeiro. Se já aceitou, pode pagar.
+            if (d.challengedCpf === loggedUser.cpf) {
+                if (d.status === 'PENDENTE_RESPOSTA') {
+                    actionP2 = `<button class="btn-mini-adm btn-jump" style="background:var(--pe-blue); width:100%; padding:10px 4px; font-size:11px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" onclick="abrirAcaoX1('${d.id}')">🔥 RESPONDER</button>`;
+                } else if (d.status === 'AGUARDANDO_TAXAS') {
+                    if (!d.feeChallengedPaid) {
+                        actionP2 = `<button class="btn-mini-adm btn-jump" style="background:#25D366; width:100%; padding:10px 4px; font-size:11px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" onclick="abrirModalTaxaX1('${d.id}', 'challenged')"><i class="fab fa-whatsapp"></i> PAGAR PIX</button>`;
+                    } else {
+                        actionP2 = `<div style="margin-top:10px; font-size:11px; color:#15803d; font-weight:bold;"><i class="fas fa-check-circle"></i> PAGO</div>`;
+                    }
+                }
+            } else {
+                // Visão do P1 olhando para o P2
+                if (d.status === 'PENDENTE_RESPOSTA') {
+                    actionP2 = `<div style="margin-top:10px; font-size:10px; color:#f59e0b; font-weight:bold;">AGUARDA RESPOSTA</div>`;
+                } else if (d.status === 'AGUARDANDO_TAXAS') {
+                    if (!d.feeChallengedPaid) {
+                        actionP2 = `<div style="margin-top:10px; font-size:10px; color:#f59e0b; font-weight:bold;">AGUARDA PGTO</div>`;
+                    } else {
+                        actionP2 = `<div style="margin-top:10px; font-size:11px; color:#15803d; font-weight:bold;"><i class="fas fa-check-circle"></i> PAGO</div>`;
+                    }
                 }
             }
         }
