@@ -658,9 +658,9 @@ document.addEventListener("DOMContentLoaded", function() {
     }
     if(DB_KEY.includes('archive')) { document.body.classList.add('archive-mode'); const badge = document.getElementById('archive-badge-display'); if(badge) badge.style.display = 'block'; }
     
-    const uiElementsToSave = ['filter-region-tempos', 'filter-evt-tempos', 'filter-type-tempos', 'filter-cat-tempos', 'filter-region-ranking', 'filter-evt-ranking', 'filter-cat-ranking', 'adm-res-evt', 'adm-res-runtype', 'adm-res-filter-cat', 'adm-res-filter-type', 'adm-user-filter-cat', 'fin-evt-select', 'adm-edit-user-search', 'adm-cfg-search', 'adm-org-search'];
+   const uiElementsToSave = ['filter-region-tempos', 'filter-evt-tempos', 'filter-type-tempos', 'filter-cat-tempos', 'filter-region-ranking', 'filter-mode-ranking', 'filter-evt-ranking', 'filter-cat-ranking', 'adm-res-evt', 'adm-res-runtype', 'adm-res-filter-cat', 'adm-res-filter-type', 'adm-user-filter-cat', 'fin-evt-select', 'adm-edit-user-search', 'adm-cfg-search', 'adm-org-search'];
     uiElementsToSave.forEach(id => { const el = document.getElementById(id); if(el) { el.addEventListener('change', () => localStorage.setItem('ui_'+id, el.value)); if(el.tagName === 'INPUT') el.addEventListener('input', () => localStorage.setItem('ui_'+id, el.value)); } });
-    ['filter-region-tempos', 'filter-type-tempos', 'filter-region-ranking', 'adm-res-runtype', 'adm-res-filter-type', 'adm-edit-user-search', 'adm-cfg-search', 'adm-org-search'].forEach(id => { const el = document.getElementById(id); const val = localStorage.getItem('ui_'+id); if(el && val !== null) el.value = val; });
+    uiElementsToSave.forEach(id => { const el = document.getElementById(id); const val = localStorage.getItem('ui_'+id); if(el && val !== null) el.value = val; });
     currentFilterStatus = localStorage.getItem('ui_fin-status') || 'ALL'; setupAutoSave();
     
     let savedSession = localStorage.getItem(SESS_KEY) || sessionStorage.getItem(SESS_KEY);
@@ -1167,7 +1167,9 @@ window.populatePublicFilters = function(tab) {
     const selEvt = document.getElementById('filter-evt-' + tab);
     let currentEvtId = 'ALL';
     if (selEvt) {
-        currentEvtId = selEvt.value;
+        let savedEvtId = localStorage.getItem('ui_filter-evt-' + tab);
+        currentEvtId = savedEvtId !== null ? savedEvtId : (selEvt.value || 'ALL');
+        
         let evtHtml = tab === 'ranking' ? '<option value="ALL">GERAL (SOMA)</option>' : '<option value="ALL">TODAS AS ETAPAS</option>';
         
         if (db.events && db.events.length > 0) {
@@ -1188,8 +1190,9 @@ window.populatePublicFilters = function(tab) {
 
     const selCat = document.getElementById('filter-cat-' + tab);
     if (selCat) {
-        const currentCat = selCat.value;
-        // ---> TEXTO ALTERADO AQUI <---
+        let savedCat = localStorage.getItem('ui_filter-cat-' + tab);
+        let currentCat = savedCat !== null ? savedCat : (selCat.value || 'ALL');
+        
         let catHtml = '<option value="ALL">GERAL / MELHOR TEMPO DA PISTA</option>';
         catHtml += '<option value="ALL_SEP">TODAS (SEPARADAS POR CAT)</option>';
         
@@ -1205,44 +1208,36 @@ window.populatePublicFilters = function(tab) {
             catsToShow = db.config.categories.filter(c => c.active).map(c => c.name);
         }
         
-        // --- NOVA ORDENAÇÃO PADRONIZADA (ORDEM DE LARGADA) ---
         const ordemDesejada = [
             "ESTREANTE", "ESTREANTE (EXTRA)",
             "RIGIDA", "RÍGIDA", "RÍGIDA (EXTRA)",
             "OPEN", "OPEN (EXTRA)",
             "ELITE FEMININA", "FEMININO ELITE", "FEMININO",
-            "INFANTO-JUVENIL",
-            "JUVENIL",
-            "PCD", "PCD (EXTRA)",
-            "MASTER D",
-            "MASTER C2",
-            "MASTER C1", "MASTER C",
-            "MASTER B2",
-            "MASTER B1", "MASTER B",
-            "MASTER A2",
-            "MASTER A1", "MASTER A",
-            "E-BIKE", "E-BIKE (EXTRA)",
-            "JUNIOR",
-            "SUB-30",
-            "ELITE"
+            "INFANTO-JUVENIL", "JUVENIL", "PCD", "PCD (EXTRA)",
+            "MASTER D", "MASTER C2", "MASTER C1", "MASTER C",
+            "MASTER B2", "MASTER B1", "MASTER B",
+            "MASTER A2", "MASTER A1", "MASTER A",
+            "E-BIKE", "E-BIKE (EXTRA)", "JUNIOR", "SUB-30", "ELITE"
         ];
 
         catsToShow.sort((a, b) => {
             let indexA = ordemDesejada.indexOf(a.toUpperCase());
             let indexB = ordemDesejada.indexOf(b.toUpperCase());
-            if (indexA === -1) indexA = 999; // Se não achar na lista, vai pro final
+            if (indexA === -1) indexA = 999; 
             if (indexB === -1) indexB = 999;
             if (indexA !== indexB) return indexA - indexB;
-            return a.localeCompare(b); // Desempate alfabético
+            return a.localeCompare(b);
         });
-        // -----------------------------------------------------
         
         catsToShow.forEach(c => {
             catHtml += `<option value="${c}">${c}</option>`;
         });
         selCat.innerHTML = catHtml;
+        
         if (currentCat && selCat.querySelector(`option[value="${currentCat}"]`)) {
             selCat.value = currentCat;
+        } else {
+            selCat.value = 'ALL';
         }
     }
 };
