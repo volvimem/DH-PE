@@ -4148,16 +4148,14 @@ window.renderX1List = function(filterStatus = 'ALL') {
             let formattedAdv = `${m}:${s}.${ms}`;
 
             if(t1 === '--:--.---' && t2 === '--:--.---') {
-                // Tempo ainda não lançado: Mostra a vantagem colorida no lugar dos traços
                 if(d.advantageCpf === d.challengerCpf) {
-                    t1 = `-${formattedAdv}`; color1 = 'color: #10b981;'; // Verde (Bônus p/ quem desafiou)
-                    t2 = `+${formattedAdv}`; color2 = 'color: #ef4444;'; // Vermelho (Punição p/ quem foi desafiado)
+                    t1 = `-${formattedAdv}`; color1 = 'color: #10b981;';
+                    t2 = `+${formattedAdv}`; color2 = 'color: #ef4444;';
                 } else if(d.advantageCpf === d.challengedCpf) {
-                    t2 = `-${formattedAdv}`; color2 = 'color: #10b981;'; // Verde (Bônus p/ quem foi desafiado)
-                    t1 = `+${formattedAdv}`; color1 = 'color: #ef4444;'; // Vermelho (Punição p/ quem desafiou)
+                    t2 = `-${formattedAdv}`; color2 = 'color: #10b981;';
+                    t1 = `+${formattedAdv}`; color1 = 'color: #ef4444;';
                 }
             } else {
-                // Tempo já lançado: Mostra o tempo real e a tag pequena embaixo
                 if(d.advantageCpf === d.challengerCpf) t1 += ` <br><span style="color:#10b981; font-size:10px;">(-${d.advantageSec}s vantagem)</span>`;
                 if(d.advantageCpf === d.challengedCpf) t2 += ` <br><span style="color:#10b981; font-size:10px;">(-${d.advantageSec}s vantagem)</span>`;
             }
@@ -4166,21 +4164,36 @@ window.renderX1List = function(filterStatus = 'ALL') {
         let winner1 = (d.status === 'CONCLUIDO' && d.winnerCpf === d.challengerCpf) ? `<i class="fas fa-crown x1-winner-crown"></i>` : '';
         let winner2 = (d.status === 'CONCLUIDO' && d.winnerCpf === d.challengedCpf) ? `<i class="fas fa-crown x1-winner-crown"></i>` : '';
         
-        let actionBtn = '';
+        // --- BOTÕES DE AÇÃO SEPARADOS POR LADO ---
+        let actionP1 = '';
+        let actionP2 = '';
+        
         if(loggedUser) {
-            if(d.status === 'PENDENTE_RESPOSTA' && d.challengedCpf === loggedUser.cpf) {
-                // Anima o botão para o atleta que foi desafiado
-                actionBtn = `<button class="btn-mini-adm btn-jump" style="background:var(--pe-blue); width:100%; padding:10px; margin-top:10px; font-size:12px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" onclick="abrirAcaoX1('${d.id}')">🔥 RESPONDER DESAFIO</button>`;
+            if(d.status === 'PENDENTE_RESPOSTA') {
+                if(d.challengerCpf === loggedUser.cpf) {
+                    actionP1 = `<div style="margin-top:10px; font-size:10px; color:#f59e0b; font-weight:bold;">AGUARDA RESPOSTA</div>`;
+                }
+                if(d.challengedCpf === loggedUser.cpf) {
+                    actionP2 = `<button class="btn-mini-adm btn-jump" style="background:var(--pe-blue); width:100%; padding:10px 4px; font-size:11px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" onclick="abrirAcaoX1('${d.id}')">🔥 RESPONDER</button>`;
+                }
             }
             if(d.status === 'AGUARDANDO_TAXAS') {
+                // Lado P1 (Desafiante)
                 if(d.challengerCpf === loggedUser.cpf && !d.feeChallengerPaid) {
-                    // Anima o botão PIX para o Desafiante
-                    actionBtn = `<button class="btn-mini-adm btn-jump" style="background:#25D366; width:100%; padding:10px; margin-top:10px; font-size:12px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" onclick="abrirModalTaxaX1('${d.id}', 'challenger')"><i class="fab fa-whatsapp"></i> PAGAR (Aposta + R$5)</button>`;
-                } else if(d.challengedCpf === loggedUser.cpf && !d.feeChallengedPaid) {
-                    // Anima o botão PIX para o Desafiado
-                    actionBtn = `<button class="btn-mini-adm btn-jump" style="background:#25D366; width:100%; padding:10px; margin-top:10px; font-size:12px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" onclick="abrirModalTaxaX1('${d.id}', 'challenged')"><i class="fab fa-whatsapp"></i> PAGAR (Aposta + R$5)</button>`;
-                } else if((d.challengerCpf === loggedUser.cpf && d.feeChallengerPaid) || (d.challengedCpf === loggedUser.cpf && d.feeChallengedPaid)) {
-                    actionBtn = `<div style="text-align:center; color:#f59e0b; font-size:10px; font-weight:bold; margin-top:10px;">AGUARDANDO ADM APROVAR PAGAMENTO</div>`;
+                    actionP1 = `<button class="btn-mini-adm btn-jump" style="background:#25D366; width:100%; padding:10px 4px; font-size:11px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" onclick="abrirModalTaxaX1('${d.id}', 'challenger')"><i class="fab fa-whatsapp"></i> PAGAR PIX</button>`;
+                } else if (d.feeChallengerPaid) {
+                    actionP1 = `<div style="margin-top:10px; font-size:11px; color:#15803d; font-weight:bold;"><i class="fas fa-check-circle"></i> PAGO</div>`;
+                } else if (!d.feeChallengerPaid && d.challengedCpf === loggedUser.cpf) {
+                    actionP1 = `<div style="margin-top:10px; font-size:10px; color:#f59e0b; font-weight:bold;">AGUARDA PGTO</div>`;
+                }
+
+                // Lado P2 (Desafiado)
+                if(d.challengedCpf === loggedUser.cpf && !d.feeChallengedPaid) {
+                    actionP2 = `<button class="btn-mini-adm btn-jump" style="background:#25D366; width:100%; padding:10px 4px; font-size:11px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" onclick="abrirModalTaxaX1('${d.id}', 'challenged')"><i class="fab fa-whatsapp"></i> PAGAR PIX</button>`;
+                } else if (d.feeChallengedPaid) {
+                    actionP2 = `<div style="margin-top:10px; font-size:11px; color:#15803d; font-weight:bold;"><i class="fas fa-check-circle"></i> PAGO</div>`;
+                } else if (!d.feeChallengedPaid && d.challengerCpf === loggedUser.cpf) {
+                    actionP2 = `<div style="margin-top:10px; font-size:10px; color:#f59e0b; font-weight:bold;">AGUARDA PGTO</div>`;
                 }
             }
         }
@@ -4190,28 +4203,30 @@ window.renderX1List = function(filterStatus = 'ALL') {
             admDeleteBtn = `<button class="btn-mini-adm" style="background:#d50000; width:100%; padding:8px; margin-top:10px; font-size:10px;" onclick="deletarX1Geral('${d.id}')"><i class="fas fa-trash-alt"></i> APAGAR COMBATE (ADMIN)</button>`;
         }
 
+        // Layout estruturado com Flexbox para forçar alinhamento perfeito na base
         return `
-        <div class="x1-card">
+        <div class="x1-card" style="display: flex; flex-direction: column; height: 100%;">
             <div class="x1-header">
                 <span class="x1-header-evt"><i class="fas fa-flag-checkered"></i> ${evtName}</span>
                 <span class="x1-header-bet">R$ ${d.betValue.toFixed(2)}</span>
             </div>
-            <div class="x1-body">
-                <div class="x1-athlete">
+            <div class="x1-body" style="flex: 1; align-items: stretch;">
+                <div class="x1-athlete" style="display: flex; flex-direction: column; justify-content: flex-start; height: 100%;">
                     ${winner1}
                     <span class="x1-athlete-name">${d.challengerName}</span>
                     <span class="x1-athlete-time" style="${color1}">${t1}</span>
+                    <div style="margin-top: auto; padding-top: 15px;">${actionP1}</div>
                 </div>
-                <div class="x1-vs-badge">VS</div>
-                <div class="x1-athlete">
+                <div class="x1-vs-badge" style="align-self: center;">VS</div>
+                <div class="x1-athlete" style="display: flex; flex-direction: column; justify-content: flex-start; height: 100%;">
                     ${winner2}
                     <span class="x1-athlete-name">${d.challengedName}</span>
                     <span class="x1-athlete-time" style="${color2}">${t2}</span>
+                    <div style="margin-top: auto; padding-top: 15px;">${actionP2}</div>
                 </div>
             </div>
             <div class="x1-footer">
                 ${statusBadge}
-                ${actionBtn}
                 ${admDeleteBtn}
             </div>
         </div>`;
