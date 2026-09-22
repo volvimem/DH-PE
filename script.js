@@ -1561,21 +1561,65 @@ function renderContent(t) {
              }
              
              // ==========================================================
-             // LÓGICA ORIGINAL DO RANKING POR ATLETAS
+             // LÓGICA ORIGINAL DO RANKING POR ATLETAS E PÓDIO MATEMÁTICO
              // ==========================================================
              filteredList.sort((a,b) => {
                  if (fCat === 'ALL_SEP' && a.cat !== b.cat) return a.cat.localeCompare(b.cat);
                  return b.totalPts - a.totalPts;
              });
-             const evtObjH = db.events.find(e => String(e.id) === String(fEvt)); const evtNameHeader = fEvt === 'ALL' ? 'GERAL (SOMA DAS ETAPAS)' : (evtObjH ? evtObjH.t : 'ETAPA'); const catNameHeader = fCat === 'ALL' ? 'MELHORES DA PISTA' : (fCat === 'ALL_SEP' ? 'GERAL SEPARADA (POR CATEGORIA)' : fCat);
+             
+             // --- INTELIGÊNCIA ARTIFICIAL: PÓDIO MATEMÁTICO ---
+             let maxRemainingPts = 0;
+             if (fEvt === 'ALL') {
+                 // Soma todos os pontos das etapas que ainda não acabaram
+                 db.events.forEach(e => {
+                     if (e.status === 'OPEN' || e.status === 'POSTPONED') {
+                         let p1 = (e.points && e.points.length > 0) ? parseInt(e.points[0], 10) || 0 : 0;
+                         let q1 = (e.hasQualify && e.qPoints && e.qPoints.length > 0) ? parseInt(e.qPoints[0], 10) || 0 : 0;
+                         maxRemainingPts += (p1 + q1);
+                     }
+                 });
+                 
+                 // Agrupa os atletas por categoria para analisarmos as posições reais
+                 let catGroups = {};
+                 filteredList.forEach(r => { if (!catGroups[r.cat]) catGroups[r.cat] = []; catGroups[r.cat].push(r); });
+                 
+                 // Atribui os selos de conquista
+                 filteredList.forEach(r => {
+                     r.podiumTag = '';
+                     let group = catGroups[r.cat];
+                     let myIndex = group.indexOf(r);
+                     
+                     // Pontos exatos dos adversários perseguidores
+                     let pts2 = group.length > 1 ? group[1].totalPts : 0;
+                     let pts3 = group.length > 2 ? group[2].totalPts : 0;
+                     let pts4 = group.length > 3 ? group[3].totalPts : 0;
+                     
+                     if (maxRemainingPts === 0 && r.totalPts > 0) {
+                         // Campeonato Encerrado - Define o Pódio Final
+                         if (myIndex === 0) r.podiumTag = '<span style="background:#ffd700; color:#000; padding:3px 6px; border-radius:4px; font-size:9px; font-weight:900; display:inline-block;"><i class="fas fa-trophy"></i> CAMPEÃO</span>';
+                         else if (myIndex === 1) r.podiumTag = '<span style="background:#c0c0c0; color:#000; padding:3px 6px; border-radius:4px; font-size:9px; font-weight:900; display:inline-block;"><i class="fas fa-medal"></i> VICE-CAMPEÃO</span>';
+                         else if (myIndex === 2) r.podiumTag = '<span style="background:#cd7f32; color:#fff; padding:3px 6px; border-radius:4px; font-size:9px; font-weight:900; display:inline-block;"><i class="fas fa-medal"></i> 3º LUGAR</span>';
+                     } else if (maxRemainingPts > 0 && r.totalPts > 0) {
+                         // Campeonato em andamento - Previsão Matemática
+                         if (myIndex === 0 && r.totalPts > pts2 + maxRemainingPts) r.podiumTag = '<span style="background:#ffd700; color:#000; padding:3px 6px; border-radius:4px; font-size:9px; font-weight:900; display:inline-block; box-shadow:0 0 5px rgba(255,215,0,0.5);"><i class="fas fa-crown"></i> CAMPEÃO ANTECIPADO</span>';
+                         else if (myIndex <= 1 && r.totalPts > pts3 + maxRemainingPts) r.podiumTag = '<span style="background:#e2e8f0; color:#475569; padding:3px 6px; border-radius:4px; font-size:9px; font-weight:900; display:inline-block; border:1px solid #cbd5e1;"><i class="fas fa-lock"></i> TOP 2 GARANTIDO</span>';
+                         else if (myIndex <= 2 && r.totalPts > pts4 + maxRemainingPts) r.podiumTag = '<span style="background:#ffedd5; color:#c2410c; padding:3px 6px; border-radius:4px; font-size:9px; font-weight:900; display:inline-block; border:1px solid #fdba74;"><i class="fas fa-lock"></i> PÓDIO GARANTIDO</span>';
+                     }
+                 });
+             }
+             // ----------------------------------------------------------
+
+             const evtObjH = db.events.find(e => String(e.id) === String(fEvt)); const evtNameHeader = fEvt === 'ALL' ? 'GERAL DA TEMPORADA (SOMA DAS ETAPAS)' : (evtObjH ? evtObjH.t : 'ETAPA'); const catNameHeader = fCat === 'ALL' ? 'MELHORES DA PISTA' : (fCat === 'ALL_SEP' ? 'GERAL SEPARADA (POR CATEGORIA)' : fCat);
              const regionNameHeader = fRegion === 'PE' ? 'RANKING PERNAMBUCO' : 'RANKING NORDESTE (OPEN)';
              const headerTag = `<div class="print-header" style="background: linear-gradient(135deg, #d50000, #990000); color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center;"><h2 style="margin: 0; font-size: 18px; font-weight: 900; text-transform: uppercase;">RANKING OFICIAL</h2><div style="font-size: 11px; margin-top: 5px; opacity: 0.9; font-weight: bold;"><i class="fas fa-map-marker-alt"></i> ${regionNameHeader} &nbsp;|&nbsp; <i class="fas fa-bicycle"></i> ${catNameHeader}</div><div style="font-size: 12px; margin-top: 5px; color: #ffe500; font-weight: bold;">${evtNameHeader}</div></div>`;
+             
              if(filteredList.length === 0) div.innerHTML = headerTag + '<div style="padding:20px; text-align:center; color:#999; font-size:11px">Nenhum ponto registrado.</div>';
              else {
                  const listHtml = filteredList.map((r, i) => {
                     let pNameFull = getPilotName(r.cpf, r.name); let _pts = pNameFull.split(' '); let _lim = ['DE','DA','DO','DOS','DAS'].includes(_pts[1]) ? 3 : 2; const pName = _pts.slice(0, _lim).join(' '); const pCityUF = getPilotCityUF(r.cpf, r.city); const cClass = getCatClass(r.cat);
                     let evtsHtml = '';
-                    if (fEvt === 'ALL' && r.evts && r.evts.length > 0) { evtsHtml = `<div style="margin-top:4px; display:flex; gap:4px; flex-wrap:wrap;">` + r.evts.map(en => `<span style="background:#eef2ff; color:#3730a3; font-size:8px; padding:2px 4px; border-radius:4px; font-weight:bold; border:1px solid #c7d2fe;">${en}</span>`).join('') + `</div>`; }
+                    if (fEvt === 'ALL' && r.evts && r.evts.length > 0) { evtsHtml = `<div style="margin-top:5px; display:flex; gap:4px; flex-wrap:wrap;">` + r.evts.map(en => `<span style="background:#eef2ff; color:#3730a3; font-size:8px; padding:2px 4px; border-radius:4px; font-weight:bold; border:1px solid #c7d2fe;">${en}</span>`).join('') + `</div>`; }
 
                      let catHeader = '';
                      let posDisplay = (i + 1) + 'º';
@@ -1589,7 +1633,25 @@ function renderContent(t) {
                          posDisplay = (catIndex + 1) + 'º';
                      }
 
-                    let rowHtml = `<div class="rank-row" style="flex-direction:column; align-items:flex-start; gap:0; padding:0; margin-bottom:${fCat==='ALL_SEP'?'0':'10px'}; border:1px solid #e2e8f0; border-radius:6px; overflow:hidden; background:white;"><div style="display:flex; justify-content:space-between; width:100%; align-items:center; padding:10px; background:#f8fafc; border-bottom:1px solid #e2e8f0;"><div style="display:flex; align-items:flex-start; gap:10px;"><div class="rank-pos" style="background:#333; color:#fff; width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:50%; font-size:12px; margin-top:2px;">${posDisplay}</div><div><div style="font-weight:bold; font-size:14px; color:#0f172a; display:flex; align-items:center; flex-wrap:wrap;">${pName} <span class="badge-city" style="margin-left:5px">${pCityUF}</span></div><span class="${cClass}">${r.cat}</span>${evtsHtml}</div></div><div style="text-align:right"><div style="font-size:20px; font-weight:900; color:var(--pe-blue); line-height:1">${r.totalPts}</div><div style="font-size:9px; color:#666; font-weight:bold; margin-top:2px; display:flex; gap:5px; justify-content:flex-end;"><span>Q: <span style="color:#d65a00">${r.qPts || 0}</span></span><span>| O: <span style="color:#15803d">${r.oPts || 0}</span></span></div></div></div></div>`;
+                    let rowHtml = `<div class="rank-row" style="flex-direction:column; align-items:flex-start; gap:0; padding:0; margin-bottom:${fCat==='ALL_SEP'?'0':'10px'}; border:1px solid #e2e8f0; border-radius:6px; overflow:hidden; background:white;">
+                        <div style="display:flex; justify-content:space-between; width:100%; align-items:center; padding:10px; background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+                            <div style="display:flex; align-items:flex-start; gap:10px;">
+                                <div class="rank-pos" style="background:#333; color:#fff; width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:50%; font-size:12px; margin-top:2px;">${posDisplay}</div>
+                                <div>
+                                    <div style="font-weight:bold; font-size:14px; color:#0f172a; display:flex; align-items:center; flex-wrap:wrap;">${pName} <span class="badge-city" style="margin-left:5px">${pCityUF}</span></div>
+                                    <div style="display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin-top:4px;">
+                                        <span class="${cClass}" style="margin:0;">${r.cat}</span>
+                                        ${r.podiumTag || ''}
+                                    </div>
+                                    ${evtsHtml}
+                                </div>
+                            </div>
+                            <div style="text-align:right">
+                                <div style="font-size:20px; font-weight:900; color:var(--pe-blue); line-height:1">${r.totalPts}</div>
+                                <div style="font-size:9px; color:#666; font-weight:bold; margin-top:2px; display:flex; gap:5px; justify-content:flex-end;"><span>Q: <span style="color:#d65a00">${r.qPts || 0}</span></span><span>| O: <span style="color:#15803d">${r.oPts || 0}</span></span></div>
+                            </div>
+                        </div>
+                    </div>`;
                     
                     return catHeader + rowHtml;
                  }).join('');
