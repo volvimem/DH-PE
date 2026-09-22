@@ -1563,8 +1563,28 @@ function renderContent(t) {
              // ==========================================================
              // LÓGICA ORIGINAL DO RANKING POR ATLETAS E PÓDIO MATEMÁTICO
              // ==========================================================
+             const ordemDesejada = [
+                 "ESTREANTE", "ESTREANTE (EXTRA)", "RIGIDA", "RÍGIDA", "RÍGIDA (EXTRA)",
+                 "OPEN", "OPEN (EXTRA)", "ELITE FEMININA", "FEMININO ELITE", "FEMININO",
+                 "INFANTO-JUVENIL", "JUVENIL", "PCD", "PCD (EXTRA)", "MASTER D",
+                 "MASTER C2", "MASTER C1", "MASTER C", "MASTER B2", "MASTER B1", "MASTER B",
+                 "MASTER A2", "MASTER A1", "MASTER A", "E-BIKE", "E-BIKE (EXTRA)",
+                 "JUNIOR", "SUB-30", "ELITE"
+             ];
+
              filteredList.sort((a,b) => {
-                 if (fCat === 'ALL_SEP' && a.cat !== b.cat) return a.cat.localeCompare(b.cat);
+                 if (fCat === 'ALL_SEP') {
+                     // Ordena por categoria primeiro respeitando a Ordem de Largada
+                     if (a.cat !== b.cat) {
+                         let indexA = ordemDesejada.indexOf(a.cat.toUpperCase().trim());
+                         let indexB = ordemDesejada.indexOf(b.cat.toUpperCase().trim());
+                         if (indexA === -1) indexA = 999;
+                         if (indexB === -1) indexB = 999;
+                         if (indexA !== indexB) return indexA - indexB;
+                         return a.cat.localeCompare(b.cat);
+                     }
+                 }
+                 // Em seguida, ordena por pontos (do maior para o menor) dentro da categoria
                  return b.totalPts - a.totalPts;
              });
              
