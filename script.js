@@ -1357,17 +1357,40 @@ function renderContent(t) {
              });
              let sortedList = Object.values(grouped);
              
+             const ordemDesejadaTempos = [
+                 "ESTREANTE", "ESTREANTE (EXTRA)", "RIGIDA", "RÍGIDA", "RÍGIDA (EXTRA)",
+                 "OPEN", "OPEN (EXTRA)", "ELITE FEMININA", "FEMININO ELITE", "FEMININO",
+                 "INFANTO-JUVENIL", "JUVENIL", "PCD", "PCD (EXTRA)", "MASTER D",
+                 "MASTER C2", "MASTER C1", "MASTER C", "MASTER B2", "MASTER B1", "MASTER B",
+                 "MASTER A2", "MASTER A1", "MASTER A", "E-BIKE", "E-BIKE (EXTRA)",
+                 "JUNIOR", "SUB-30", "ELITE"
+             ];
+
              if(fType !== 'ALL') { 
                  sortedList = sortedList.filter(item => { if(fType === 'qualify') return item.q !== '--:--.---'; if(fType === '1st') return item.o !== '--:--.---'; if(fType === '2nd') return item.s !== '--:--.---'; return true; });
                  sortedList.sort((a,b) => { 
-                     if (fCat === 'ALL_SEP' && a.cat !== b.cat) return a.cat.localeCompare(b.cat);
+                     if (fCat === 'ALL_SEP' && a.cat !== b.cat) {
+                         let indexA = ordemDesejadaTempos.indexOf(a.cat.toUpperCase().trim());
+                         let indexB = ordemDesejadaTempos.indexOf(b.cat.toUpperCase().trim());
+                         if (indexA === -1) indexA = 999;
+                         if (indexB === -1) indexB = 999;
+                         if (indexA !== indexB) return indexA - indexB;
+                         return a.cat.localeCompare(b.cat);
+                     }
                      let tA = (fType === 'qualify') ? a.q : (fType === '1st' ? a.o : a.s); 
                      let tB = (fType === 'qualify') ? b.q : (fType === '1st' ? b.o : b.s); 
                      return tA.localeCompare(tB); 
                  });
              } else { 
                  sortedList.sort((a,b) => { 
-                     if (fCat === 'ALL_SEP' && a.cat !== b.cat) return a.cat.localeCompare(b.cat);
+                     if (fCat === 'ALL_SEP' && a.cat !== b.cat) {
+                         let indexA = ordemDesejadaTempos.indexOf(a.cat.toUpperCase().trim());
+                         let indexB = ordemDesejadaTempos.indexOf(b.cat.toUpperCase().trim());
+                         if (indexA === -1) indexA = 999;
+                         if (indexB === -1) indexB = 999;
+                         if (indexA !== indexB) return indexA - indexB;
+                         return a.cat.localeCompare(b.cat);
+                     }
                      const tA = a.o !== '--:--.---' ? a.o : (a.q !== '--:--.---' ? a.q : a.s); 
                      const tB = b.o !== '--:--.---' ? b.o : (b.q !== '--:--.---' ? b.q : b.s); 
                      return tA.localeCompare(tB); 
@@ -1643,6 +1666,7 @@ function renderContent(t) {
 
                      let catHeader = '';
                      let posDisplay = (i + 1) + 'º';
+                     
                      if (fCat === 'ALL_SEP') {
                          if (i === 0 || filteredList[i-1].cat !== r.cat) {
                              let closeTag = i > 0 ? '</div></div>' : '';
@@ -1677,7 +1701,7 @@ function renderContent(t) {
                  }).join('');
                  
                  let finalHtml = headerTag + listHtml;
-                 if (fCat === 'ALL_SEP' && sortedList.length > 0) finalHtml += '</div></div>';
+                 if (fCat === 'ALL_SEP' && filteredList.length > 0) finalHtml += '</div></div>';
                  div.innerHTML = finalHtml;
              }
          }
