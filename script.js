@@ -1164,34 +1164,45 @@ window.renderPilotHistoryModal = function(cpf, name) {
 // ==========================================================
 window.populatePublicFilters = function(tab) {
     if (!db) return;
+    
+    // 1. FILTRO DE ETAPAS
     const selEvt = document.getElementById('filter-evt-' + tab);
     let currentEvtId = 'ALL';
     if (selEvt) {
-        let savedEvtId = localStorage.getItem('ui_filter-evt-' + tab);
-        currentEvtId = savedEvtId !== null ? savedEvtId : (selEvt.value || 'ALL');
+        // Mágica da Memória: Se a página acabou de carregar, lê do Cache. Senão, lê o que o utilizador clicou.
+        if (selEvt.getAttribute('data-loaded') !== 'true') {
+            currentEvtId = localStorage.getItem('ui_filter-evt-' + tab) || 'ALL';
+            selEvt.setAttribute('data-loaded', 'true');
+        } else {
+            currentEvtId = selEvt.value;
+        }
         
         let evtHtml = tab === 'ranking' ? '<option value="ALL">GERAL (SOMA)</option>' : '<option value="ALL">TODAS AS ETAPAS</option>';
-        
         if (db.events && db.events.length > 0) {
             db.events.forEach(e => {
-                if (e.status !== 'CANCELLED') {
-                    evtHtml += `<option value="${e.id}">${e.t}</option>`;
-                }
+                if (e.status !== 'CANCELLED') evtHtml += `<option value="${e.id}">${e.t}</option>`;
             });
         }
         selEvt.innerHTML = evtHtml;
+        
         if (currentEvtId && selEvt.querySelector(`option[value="${currentEvtId}"]`)) {
             selEvt.value = currentEvtId;
         } else {
-            currentEvtId = 'ALL';
             selEvt.value = 'ALL';
+            currentEvtId = 'ALL';
         }
     }
 
+    // 2. FILTRO DE CATEGORIAS
     const selCat = document.getElementById('filter-cat-' + tab);
     if (selCat) {
-        let savedCat = localStorage.getItem('ui_filter-cat-' + tab);
-        let currentCat = savedCat !== null ? savedCat : (selCat.value || 'ALL');
+        let currentCat = 'ALL';
+        if (selCat.getAttribute('data-loaded') !== 'true') {
+            currentCat = localStorage.getItem('ui_filter-cat-' + tab) || 'ALL';
+            selCat.setAttribute('data-loaded', 'true');
+        } else {
+            currentCat = selCat.value;
+        }
         
         let catHtml = '<option value="ALL">GERAL / MELHOR TEMPO DA PISTA</option>';
         catHtml += '<option value="ALL_SEP">TODAS (SEPARADAS POR CAT)</option>';
@@ -1209,15 +1220,12 @@ window.populatePublicFilters = function(tab) {
         }
         
         const ordemDesejada = [
-            "ESTREANTE", "ESTREANTE (EXTRA)",
-            "RIGIDA", "RÍGIDA", "RÍGIDA (EXTRA)",
-            "OPEN", "OPEN (EXTRA)",
-            "ELITE FEMININA", "FEMININO ELITE", "FEMININO",
-            "INFANTO-JUVENIL", "JUVENIL", "PCD", "PCD (EXTRA)",
-            "MASTER D", "MASTER C2", "MASTER C1", "MASTER C",
-            "MASTER B2", "MASTER B1", "MASTER B",
-            "MASTER A2", "MASTER A1", "MASTER A",
-            "E-BIKE", "E-BIKE (EXTRA)", "JUNIOR", "SUB-30", "ELITE"
+            "ESTREANTE", "ESTREANTE (EXTRA)", "RIGIDA", "RÍGIDA", "RÍGIDA (EXTRA)",
+            "OPEN", "OPEN (EXTRA)", "ELITE FEMININA", "FEMININO ELITE", "FEMININO",
+            "INFANTO-JUVENIL", "JUVENIL", "PCD", "PCD (EXTRA)", "MASTER D",
+            "MASTER C2", "MASTER C1", "MASTER C", "MASTER B2", "MASTER B1", "MASTER B",
+            "MASTER A2", "MASTER A1", "MASTER A", "E-BIKE", "E-BIKE (EXTRA)",
+            "JUNIOR", "SUB-30", "ELITE"
         ];
 
         catsToShow.sort((a, b) => {
@@ -1229,16 +1237,11 @@ window.populatePublicFilters = function(tab) {
             return a.localeCompare(b);
         });
         
-        catsToShow.forEach(c => {
-            catHtml += `<option value="${c}">${c}</option>`;
-        });
+        catsToShow.forEach(c => { catHtml += `<option value="${c}">${c}</option>`; });
         selCat.innerHTML = catHtml;
         
-        if (currentCat && selCat.querySelector(`option[value="${currentCat}"]`)) {
-            selCat.value = currentCat;
-        } else {
-            selCat.value = 'ALL';
-        }
+        if (currentCat && selCat.querySelector(`option[value="${currentCat}"]`)) selCat.value = currentCat;
+        else selCat.value = 'ALL';
     }
 };
 
