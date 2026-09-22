@@ -26,7 +26,7 @@ messaging.onBackgroundMessage((payload) => {
 // ==========================================================
 // PARTE 2: PWA E CACHE
 // ==========================================================
-const CACHE_NAME = 'dhpe-v8-estavel';
+const CACHE_NAME = 'dhpe-v9-x1';
 
 self.addEventListener('install', (event) => {
     self.skipWaiting(); 
