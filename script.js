@@ -4111,6 +4111,8 @@ window.renderX1List = function(filterStatus = 'ALL') {
         if(d.status === 'ARREGOU') statusBadge = `<span class="x1-status-badge x1-status-arregou"><i class="fas fa-chicken"></i> ARREGOU</span>`;
         
         let t1 = '--:--.---'; let t2 = '--:--.---';
+        let color1 = ''; let color2 = '';
+        
         if(d.status === 'CONCLUIDO' || d.status === 'ATIVO') {
             const tObj1 = db.tempos.find(t => String(t.evtId) === String(d.evtId) && t.cpf === d.challengerCpf && (t.runType === '1st' || !t.runType));
             if(tObj1) t1 = tObj1.val;
@@ -4118,10 +4120,27 @@ window.renderX1List = function(filterStatus = 'ALL') {
             if(tObj2) t2 = tObj2.val;
         }
         
-        // Exibição do Tempo com a Vantagem Visualmente
+        // LÓGICA VISUAL DA VANTAGEM NO CRONÔMETRO
         if(d.advantageSec > 0) {
-            if(d.advantageCpf === d.challengerCpf) t1 += ` <br><span style="color:#10b981; font-size:10px;">(-${d.advantageSec}s de vantagem)</span>`;
-            if(d.advantageCpf === d.challengedCpf) t2 += ` <br><span style="color:#10b981; font-size:10px;">(-${d.advantageSec}s de vantagem)</span>`;
+            let m = Math.floor(d.advantageSec / 60).toString().padStart(2, '0');
+            let s = Math.floor(d.advantageSec % 60).toString().padStart(2, '0');
+            let ms = Math.round((d.advantageSec % 1) * 1000).toString().padStart(3, '0');
+            let formattedAdv = `${m}:${s}.${ms}`;
+
+            if(t1 === '--:--.---' && t2 === '--:--.---') {
+                // Tempo ainda não lançado: Mostra a vantagem colorida no lugar dos traços
+                if(d.advantageCpf === d.challengerCpf) {
+                    t1 = `-${formattedAdv}`; color1 = 'color: #10b981;'; // Verde (Bônus p/ quem desafiou)
+                    t2 = `+${formattedAdv}`; color2 = 'color: #ef4444;'; // Vermelho (Punição p/ quem foi desafiado)
+                } else if(d.advantageCpf === d.challengedCpf) {
+                    t2 = `-${formattedAdv}`; color2 = 'color: #10b981;'; // Verde (Bônus p/ quem foi desafiado)
+                    t1 = `+${formattedAdv}`; color1 = 'color: #ef4444;'; // Vermelho (Punição p/ quem desafiou)
+                }
+            } else {
+                // Tempo já lançado: Mostra o tempo real e a tag pequena embaixo
+                if(d.advantageCpf === d.challengerCpf) t1 += ` <br><span style="color:#10b981; font-size:10px;">(-${d.advantageSec}s vantagem)</span>`;
+                if(d.advantageCpf === d.challengedCpf) t2 += ` <br><span style="color:#10b981; font-size:10px;">(-${d.advantageSec}s vantagem)</span>`;
+            }
         }
 
         let winner1 = (d.status === 'CONCLUIDO' && d.winnerCpf === d.challengerCpf) ? `<i class="fas fa-crown x1-winner-crown"></i>` : '';
@@ -4158,13 +4177,13 @@ window.renderX1List = function(filterStatus = 'ALL') {
                 <div class="x1-athlete">
                     ${winner1}
                     <span class="x1-athlete-name">${d.challengerName}</span>
-                    <span class="x1-athlete-time">${t1}</span>
+                    <span class="x1-athlete-time" style="${color1}">${t1}</span>
                 </div>
                 <div class="x1-vs-badge">VS</div>
                 <div class="x1-athlete">
                     ${winner2}
                     <span class="x1-athlete-name">${d.challengedName}</span>
-                    <span class="x1-athlete-time">${t2}</span>
+                    <span class="x1-athlete-time" style="${color2}">${t2}</span>
                 </div>
             </div>
             <div class="x1-footer">
