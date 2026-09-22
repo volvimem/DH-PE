@@ -4000,7 +4000,12 @@ window.abrirModalCriarX1 = function() {
     if(!loggedUser) return toast("FAÇA LOGIN PARA DESAFIAR", "error");
     const select = document.getElementById('x1-evt-select');
     let html = '<option value="">1º SELECIONE A ETAPA...</option>';
-    db.events.forEach(e => { if(e.status === 'OPEN' || e.status === 'CLOSED') html += `<option value="${e.id}">${e.t}</option>`; });
+    
+    // Mostra apenas etapas com status ABERTO ('OPEN')
+    db.events.forEach(e => { 
+        if(e.status === 'OPEN') html += `<option value="${e.id}">${e.t}</option>`; 
+    });
+    
     select.innerHTML = html;
     document.getElementById('x1-search-opponent').value = '';
     document.getElementById('x1-opponent-list').style.display = 'none';
