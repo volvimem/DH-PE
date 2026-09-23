@@ -3877,82 +3877,174 @@ window.imprimirOrdemLargadaGeral = function() {
     setTimeout(() => { printWin.focus(); }, 250);
 };
 
-// ==========================================================
-// FUNÇÕES DE PUSH NOTIFICATION (FCM)
-// ==========================================================
 window.solicitarPermissaoPush = async function() {
-    console.log("1. Iniciando setup do Push...");
+
+    console.log("[PUSH] Iniciando sistema de notificações...");
+
     try {
-        if (!('Notification' in window)) {
-            console.log("AVISO: Este navegador não suporta notificações.");
-            return;
+
+        // 1. Verifica compatibilidade
+        if (!("Notification" in window)) {
+            console.warn("[PUSH] Navegador não suporta Notification API.");
+            return false;
         }
 
-        if (typeof firebase === 'undefined' || !firebase.messaging) {
-            console.log("AVISO: Firebase Messaging não está carregado.");
-            return;
+        if (!("serviceWorker" in navigator)) {
+            console.warn("[PUSH] Navegador não suporta Service Worker.");
+            return false;
         }
 
-        let messaging;
-        try {
-            messaging = firebase.messaging();
-            console.log("2. Motor de Push iniciado com sucesso.");
-        } catch(e) {
-            console.log("AVISO ao inicializar firebase.messaging():", e);
-            return;
+        if (typeof firebase === "undefined" || !firebase.messaging) {
+            console.warn("[PUSH] Firebase Messaging não foi carregado.");
+            return false;
         }
 
-        console.log("3. Pedindo permissão ao usuário...");
-        const permission = await Notification.requestPermission();
-        if (permission !== 'granted') {
-            console.log("AVISO: Permissão negada pelo usuário.");
-            return;
+        // 2. Verifica / solicita permissão
+        let permission = Notification.permission;
+
+        if (permission === "default") {
+            console.log("[PUSH] Solicitando permissão...");
+            permission = await Notification.requestPermission();
         }
 
-        console.log("4. Registrando Service Worker...");
-        const registration = await navigator.serviceWorker.register('./sw.js');
-        console.log("5. SW Registrado com sucesso!");
+        if (permission !== "granted") {
+            console.warn("[PUSH] Permissão não concedida:", permission);
+            return false;
+        }
 
-        console.log("6. Buscando Token FCM...");
+        console.log("[PUSH] Permissão concedida.");
+
+        // 3. Registra o MESMO service worker usado pelo PWA e pelo FCM
+        const registration =
+            await navigator.serviceWorker.register("./sw.js");
+
+        await navigator.serviceWorker.ready;
+
+        console.log("[PUSH] Service Worker pronto:", registration.scope);
+
+        // 4. Inicializa Firebase Messaging
+        const messaging = firebase.messaging();
+
+        // 5. Obtém token FCM
         const token = await messaging.getToken({
-            vapidKey: "BOyOBCDy_sTvkuUE18CsXv7juuSuRMsC02NdKKve4KpQBSXqfQKjjyOVhSWYxeQ9KheuBahkbTOu_DfQYXH_PfE",
+            vapidKey:
+                "BOyOBCDy_sTvkuUE18CsXv7juuSuRMsC02NdKKve4KpQBSXqfQKjjyOVhSWYxeQ9KheuBahkbTOu_DfQYXH_PfE",
             serviceWorkerRegistration: registration
         });
 
-        if (token) {
-            console.log("7. ✅ TOKEN RECEBIDO:", token);
-            if (loggedUser && loggedUser.fcmToken !== token) {
-                const uIdx = db.users.findIndex(u => u.cpf === loggedUser.cpf);
-                if (uIdx > -1) {
-                    db.users[uIdx].fcmToken = token;
-                    loggedUser.fcmToken = token;
-                    saveDB('users');
-                    updateSessionStorage();
-                    console.log("8. ✅ Token salvo no banco de dados com sucesso!");
-                }
-            } else {
-                console.log("8. Token já estava salvo corretamente no banco de dados.");
-            }
-        } else {
-            console.log("AVISO: Nenhum token foi retornado pelo Firebase.");
+        if (!token) {
+            console.warn("[PUSH] Firebase não retornou token.");
+            return false;
         }
 
-        // Escuta notificações recebidas enquanto o app está aberto na tela
-        messaging.onMessage((payload) => {
-            console.log("🔔 Push recebido com o app aberto:", payload);
-            try { 
-                new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play(); 
-            } catch(e){}
+        console.log("[PUSH] Token FCM recebido.");
 
-            if (typeof toast === 'function') {
-                toast(`🔔 ${payload.notification.title}`);
+        // 6. Salva token no cadastro do usuário
+        if (loggedUser) {
+
+            const cpfAtual = cleanCPF(loggedUser.cpf);
+
+            const uIdx = db.users.findIndex(
+                u => u && cleanCPF(u.cpf) === cpfAtual
+            );
+
+            if (uIdx > -1) {
+
+                if (db.users[uIdx].fcmToken !== token) {
+
+                    db.users[uIdx].fcmToken = token;
+                    loggedUser.fcmToken = token;
+
+                    saveDB("users");
+                    updateSessionStorage();
+
+                    console.log("[PUSH] Token salvo no usuário.");
+                }
             }
-        });
+        }
+
+        // ==================================================
+        // 7. NOTIFICAÇÃO COM O APP ABERTO
+        // ==================================================
+
+        if (!window.__dhpeForegroundPushConfigured) {
+
+            window.__dhpeForegroundPushConfigured = true;
+
+            messaging.onMessage(async (payload) => {
+
+                console.log(
+                    "[PUSH] Mensagem recebida com app aberto:",
+                    payload
+                );
+
+                const titulo =
+                    payload?.notification?.title ||
+                    payload?.data?.title ||
+                    "DH-PE";
+
+                const corpo =
+                    payload?.notification?.body ||
+                    payload?.data?.body ||
+                    "Você recebeu uma nova notificação.";
+
+                // Sininho/toast interno
+                if (typeof toast === "function") {
+                    toast(`🔔 ${titulo}`);
+                }
+
+                // Atualiza o selo interno
+                if (typeof window.atualizarBadgeNotificacoes === "function") {
+                    window.atualizarBadgeNotificacoes();
+                }
+
+                // POPUP NATIVO mesmo com o site aberto
+                try {
+
+                    const reg =
+                        await navigator.serviceWorker.ready;
+
+                    await reg.showNotification(titulo, {
+                        body: corpo,
+                        icon: "./logo.png",
+                        badge: "./logo.png",
+                        tag: "dhpe-" + Date.now(),
+                        renotify: true,
+                        vibrate: [200, 100, 200],
+                        data: {
+                            url: window.location.origin + window.location.pathname
+                        }
+                    });
+
+                    console.log(
+                        "[PUSH] Popup exibido com o app aberto."
+                    );
+
+                } catch (popupError) {
+
+                    console.error(
+                        "[PUSH] Erro ao mostrar popup:",
+                        popupError
+                    );
+                }
+            });
+        }
+
+        console.log("[PUSH] Sistema configurado com sucesso.");
+
+        return true;
 
     } catch (err) {
-        console.log("🚨 Erro tolerado no setup do Push:", err);
+
+        console.error(
+            "[PUSH] ERRO NA CONFIGURAÇÃO:",
+            err
+        );
+
+        return false;
     }
 };
+
 // ==========================================
 // MOTOR DE NOTIFICAÇÕES PREMIUM E LIMPEZA
 // ==========================================
