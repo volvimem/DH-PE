@@ -1286,9 +1286,18 @@ function renderContent(t) {
                 extraBtnHtml = '';
             } else {
                 const oficialInsc = subs.find(i => !i.extraCat);
-                if (!oficialInsc) { mainBtnHtml = `<button class="btn" style="${btnBaseStyle} background:var(--pe-blue);" onclick="window.iniciarInscricao(${e.id}, 'MAIN')">INSCRIÇÃO OFICIAL</button>`; } 
-                else { if (oficialInsc.status === 'PENDENTE') mainBtnHtml = `<button class="btn" style="${btnBaseStyle} background:orange;" onclick="window.iniciarInscricao(${e.id}, 'MAIN')">PENDENTE / PAGAR</button>`; else if (oficialInsc.status === 'CONFIRMADO' || oficialInsc.status === 'ISENTO') mainBtnHtml = \ style="${btnBaseStyle} background:green;" onclick="window.abrirTicket(${e.id})">COMPROVANTE DE INSCRIÇÃO</button>`; }
-            }
+                if (!oficialInsc) {
+    mainBtnHtml = `<button class="btn" style="${btnBaseStyle} background:var(--pe-blue);" onclick="window.iniciarInscricao(${e.id}, 'MAIN')">INSCRIÇÃO OFICIAL</button>`;
+} else {
+    if (oficialInsc.status === 'PENDENTE') {
+        mainBtnHtml = `<button class="btn" style="${btnBaseStyle} background:orange;" onclick="window.iniciarInscricao(${e.id}, 'MAIN')">PENDENTE / PAGAR</button>`;
+    } else if (
+        oficialInsc.status === 'CONFIRMADO' ||
+        oficialInsc.status === 'ISENTO'
+    ) {
+        mainBtnHtml = `<button class="btn" style="${btnBaseStyle} background:green;" onclick="window.abrirTicket(${e.id})">COMPROVANTE DE INSCRIÇÃO</button>`;
+    }
+}
 
             let imgHtml = e.img ? `<img src="${e.img}" class="evt-img-standard">` : `<div class="evt-img-placeholder">SEM FOTO</div>`; let html = `${getBadgeHtml(e)}${imgHtml}<div class="event-body">`;
             let wppBtn = e.wpp ? `<button onclick="openWhatsApp('${e.wpp}', 'Dúvida ${e.t}')" style="border:none; background:none; color:#25D366; font-size:18px; cursor:pointer;"><i class="fab fa-whatsapp"></i></button>` : '';
