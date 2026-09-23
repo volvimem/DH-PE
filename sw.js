@@ -17,10 +17,87 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  console.log('[sw.js] Notificação recebida. O navegador exibirá nativamente!', payload);
-  // 🔥 A SOLUÇÃO ESTÁ AQUI: 
-  // O Firebase já mostra a notificação nativamente porque o servidor envia o bloco "notification".
-  // Se chamássemos o comando showNotification aqui, ele mostraria duplicado.
+
+    console.log(
+        "[SW] Push recebido em segundo plano:",
+        payload
+    );
+
+    const titulo =
+        payload?.notification?.title ||
+        payload?.data?.title ||
+        "DH-PE";
+
+    const corpo =
+        payload?.notification?.body ||
+        payload?.data?.body ||
+        "Você recebeu uma nova notificação.";
+
+    const options = {
+
+        body: corpo,
+
+        icon: "./logo.png",
+        badge: "./logo.png",
+
+        vibrate: [200, 100, 200],
+
+        tag: "dhpe-" + Date.now(),
+
+        renotify: true,
+
+        data: {
+            url: "./"
+        }
+    };
+
+    return self.registration.showNotification(
+        titulo,
+        options
+    );
+});
+
+// ==========================================================
+// CLIQUE NA NOTIFICAÇÃO
+// ==========================================================
+
+self.addEventListener("notificationclick", (event) => {
+
+    console.log(
+        "[SW] Usuário clicou na notificação."
+    );
+
+    event.notification.close();
+
+    const url =
+        event.notification.data &&
+        event.notification.data.url
+            ? event.notification.data.url
+            : "./";
+
+    event.waitUntil(
+
+        clients.matchAll({
+            type: "window",
+            includeUncontrolled: true
+        }).then((clientList) => {
+
+            for (const client of clientList) {
+
+                if ("focus" in client) {
+
+                    client.navigate(url);
+
+                    return client.focus();
+                }
+            }
+
+            if (clients.openWindow) {
+
+                return clients.openWindow(url);
+            }
+        })
+    );
 });
 
 // ==========================================================
