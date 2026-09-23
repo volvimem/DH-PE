@@ -1126,7 +1126,7 @@ window.verOrdemLargada = function() {
     return; }
     let hasConfirmed = false;
     loggedUser.inscricoes.forEach(insc => {
-        if (insc.status !== 'CONFIRMADO') return;
+        if (insc.status !== 'CONFIRMADO' && insc.status !== 'ISENTO') return;
         const evt = db.events.find(e => String(e.id) === String(insc.id)); 
         if (!evt || evt.status === 'CLOSED' || evt.status === 'CANCELLED') return; 
         hasConfirmed = true;
@@ -1134,7 +1134,7 @@ window.verOrdemLargada = function() {
         let isReleased = false; if (evt.startListDate) { const releaseDate = new Date(evt.startListDate); const now = new Date(); if (now >= releaseDate) isReleased = true; }
         if (!isReleased) { listDiv.innerHTML += `<div style="background:#fff8e1; border:1px solid #ffe082; padding:10px; border-radius:8px; margin-bottom:10px;"><b style="color:var(--pe-blue); font-size:12px;">${evt.t}</b><br><span class="badge-cat" style="margin-top:5px;">${catToSearch}</span><br><div style="color:#d65a00; font-size:11px; font-weight:bold; margin-top:8px;"><i class="fas fa-clock"></i> Lista será revelada em:<br>${evt.startListDate ? new Date(evt.startListDate).toLocaleString('pt-BR') : 'Data não definida'}</div></div>`; return; }
         let competitors = [];
-        db.users.forEach(u => { if (u.inscricoes) { const uInsc = u.inscricoes.find(i => String(i.id) === String(evt.id) && window.normalizeCatName(i.extraCat || u.cat) === catToSearch && i.status === 'CONFIRMADO'); if (uInsc) { competitors.push({ cpf: u.cpf, name: u.nome, city: u.city, uf: u.uf || 'PE', date: new Date(uInsc.date || 0).getTime() }); } } });
+        db.users.forEach(u => { if (u.inscricoes) { const uInsc = u.inscricoes.find(i => String(i.id) === String(evt.id) && window.normalizeCatName(i.extraCat || u.cat) === catToSearch && (i.status === 'CONFIRMADO' || i.status === 'ISENTO')); if (uInsc) { competitors.push({ cpf: u.cpf, name: u.nome, city: u.city, uf: u.uf || 'PE', date: new Date(uInsc.date || 0).getTime() }); } } });
         competitors.sort((a, b) => a.date - b.date);
         let listHtml = `<div style="background:white; border:1px solid #ddd; border-radius:8px; overflow:hidden; margin-bottom:15px;"><div style="background:var(--pe-blue); color:white; padding:10px; font-weight:bold; font-size:12px; text-align:center;">${evt.t}<br><span style="font-size:10px; color:#ffe500; font-weight:900;">${catToSearch}</span></div>`;
         competitors.forEach((c, index) => { const isMe = c.cpf === loggedUser.cpf; const bgColor = isMe ? '#fffbeb' : (index % 2 === 0 ? '#f8fafc' : 'white'); const borderColor = isMe ? 'border-left: 4px solid var(--pe-yellow);' : ''; const nameColor = isMe ? 'var(--pe-blue)' : '#333'; const meBadge = isMe ? `<span style="background:var(--pe-yellow); color:black; font-size:8px; padding:2px 5px; border-radius:4px; font-weight:900; margin-left:5px;">VOCÊ</span>` : ''; listHtml += `<div style="padding:10px; border-bottom:1px solid #eee; background:${bgColor}; display:flex; align-items:center; ${borderColor}"><div style="width:30px; font-size:14px; font-weight:900; color:#64748b; text-align:center;">${index + 1}º</div><div style="flex:1; padding-left:10px;"><div style="font-size:12px; font-weight:bold; color:${nameColor};">${c.name} ${meBadge}</div><div style="font-size:9px; color:#94a3b8; margin-top:2px;">${c.city}-${c.uf}</div></div></div>`; });
@@ -1287,7 +1287,7 @@ function renderContent(t) {
             } else {
                 const oficialInsc = subs.find(i => !i.extraCat);
                 if (!oficialInsc) { mainBtnHtml = `<button class="btn" style="${btnBaseStyle} background:var(--pe-blue);" onclick="window.iniciarInscricao(${e.id}, 'MAIN')">INSCRIÇÃO OFICIAL</button>`; } 
-                else { if (oficialInsc.status === 'PENDENTE') mainBtnHtml = `<button class="btn" style="${btnBaseStyle} background:orange;" onclick="window.iniciarInscricao(${e.id}, 'MAIN')">PENDENTE / PAGAR</button>`; else if (oficialInsc.status === 'CONFIRMADO') mainBtnHtml = `<button class="btn" style="${btnBaseStyle} background:green;" onclick="window.abrirTicket(${e.id})">COMPROVANTE DE INSCRIÇÃO</button>`; }
+                else { if (oficialInsc.status === 'PENDENTE') mainBtnHtml = `<button class="btn" style="${btnBaseStyle} background:orange;" onclick="window.iniciarInscricao(${e.id}, 'MAIN')">PENDENTE / PAGAR</button>`; else if (oficialInsc.status === 'CONFIRMADO' || oficialInsc.status === 'ISENTO') mainBtnHtml = \ style="${btnBaseStyle} background:green;" onclick="window.abrirTicket(${e.id})">COMPROVANTE DE INSCRIÇÃO</button>`; }
             }
 
             let imgHtml = e.img ? `<img src="${e.img}" class="evt-img-standard">` : `<div class="evt-img-placeholder">SEM FOTO</div>`; let html = `${getBadgeHtml(e)}${imgHtml}<div class="event-body">`;
@@ -2370,7 +2370,7 @@ window.compartilListaInscritos = function() {
     });
     if (totalInscritos === 0) return toast("NENHUM ATLETA INSCRITO NESTE EVENTO", "error");
     let printWin = window.open('', '_blank');
-    let html = `<html><head><title>Lista de Inscritos - ${evt.t}</title><style>body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333; } h1 { text-align: center; color: #0038a8; margin-bottom: 5px; text-transform: uppercase; font-size: 22px; } h2 { text-align: center; color: #666; margin-top: 0; margin-bottom: 20px; font-size: 14px; text-transform: uppercase; } .resumo-box { border: 2px solid #0038a8; padding: 15px; border-radius: 8px; margin-bottom: 20px; background: #f8fafc; } .resumo-title { font-weight: bold; color: #0038a8; font-size: 16px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px; } table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; } th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; font-size: 12px; text-transform: uppercase; } th { background-color: #f0f0f0; color: #333; font-weight: bold; } .status-CONFIRMADO { color: #15803d; font-weight: bold; } .status-PENDENTE { color: #d65a00; font-weight: bold; } .pos { width: 30px; text-align: center; font-weight: bold; color: #666; } .cat-title { background: #0038a8; color: white; padding: 8px; font-weight: bold; font-size: 14px; border-radius: 4px 4px 0 0; margin-bottom: 0; margin-top: 20px; } .footer { text-align: center; margin-top: 30px; font-size: 10px; color: #999; } @media print { @page { margin: 1cm; size: A4 portrait; } button { display: none !important; } body { padding: 0; } .cat-title { background-color: #0038a8 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .resumo-box { background-color: #f8fafc !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }</style></head><body><div style="text-align:center; margin-bottom: 20px; display: flex; justify-content: center; gap: 15px;"><button onclick="window.print()" style="padding:12px 24px; font-size:14px; font-weight:bold; background:#009b3a; color:white; border:none; border-radius:6px; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🖨️ SALVAR COMO PDF / IMPRIMIR</button><button onclick="window.close()" style="padding:12px 24px; font-size:14px; font-weight:bold; background:#d50000; color:white; border:none; border-radius:6px; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">❌ FECHAR</button></div><h1>${evt.t}</h1><h2>RELAÇÃO OFICIAL DE INSCRITOS</h2><div class="resumo-box"><div class="resumo-title">RESUMO DO EVENTO</div><p style="margin: 5px 0;"><b>TOTAL GERAL DE INSCRITOS:</b> ${totalInscritos} atleta(s)</p><p style="margin: 5px 0;"><b>VALOR ARRECADADO (APENAS PAGOS):</b> R$ ${totalArrecadado.toFixed(2).replace('.', ',')}</p><div style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;"><b style="font-size: 12px; color: #666; display: block; margin-bottom: 8px;">INSCRITOS POR CATEGORIA:</b><div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px;">`;
+    let html = `<html><head><title>Lista de Inscritos - ${evt.t}</title><style>body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333; } h1 { text-align: center; color: #0038a8; margin-bottom: 5px; text-transform: uppercase; font-size: 22px; } h2 { text-align: center; color: #666; margin-top: 0; margin-bottom: 20px; font-size: 14px; text-transform: uppercase; } .resumo-box { border: 2px solid #0038a8; padding: 15px; border-radius: 8px; margin-bottom: 20px; background: #f8fafc; } .resumo-title { font-weight: bold; color: #0038a8; font-size: 16px; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px; } table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; } th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; font-size: 12px; text-transform: uppercase; } th { background-color: #f0f0f0; color: #333; font-weight: bold; } .status-CONFIRMADO { color: #15803d; font-weight: bold; } .status-ISENTO { color: #0284c7; font-weight: bold; } .status-PENDENTE { color: #d65a00; font-weight: bold; } .pos { width: 30px; text-align: center; font-weight: bold; color: #666; } .cat-title { background: #0038a8; color: white; padding: 8px; font-weight: bold; font-size: 14px; border-radius: 4px 4px 0 0; margin-bottom: 0; margin-top: 20px; } .footer { text-align: center; margin-top: 30px; font-size: 10px; color: #999; } @media print { @page { margin: 1cm; size: A4 portrait; } button { display: none !important; } body { padding: 0; } .cat-title { background-color: #0038a8 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .resumo-box { background-color: #f8fafc !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }</style></head><body><div style="text-align:center; margin-bottom: 20px; display: flex; justify-content: center; gap: 15px;"><button onclick="window.print()" style="padding:12px 24px; font-size:14px; font-weight:bold; background:#009b3a; color:white; border:none; border-radius:6px; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🖨️ SALVAR COMO PDF / IMPRIMIR</button><button onclick="window.close()" style="padding:12px 24px; font-size:14px; font-weight:bold; background:#d50000; color:white; border:none; border-radius:6px; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">❌ FECHAR</button></div><h1>${evt.t}</h1><h2>RELAÇÃO OFICIAL DE INSCRITOS</h2><div class="resumo-box"><div class="resumo-title">RESUMO DO EVENTO</div><p style="margin: 5px 0;"><b>TOTAL GERAL DE INSCRITOS:</b> ${totalInscritos} atleta(s)</p><p style="margin: 5px 0;"><b>VALOR ARRECADADO (APENAS PAGOS):</b> R$ ${totalArrecadado.toFixed(2).replace('.', ',')}</p><div style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;"><b style="font-size: 12px; color: #666; display: block; margin-bottom: 8px;">INSCRITOS POR CATEGORIA:</b><div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px;">`;
     let catKeys = Object.keys(contagemPorCategoria).sort();
     catKeys.forEach(cat => { html += `<div style="font-size: 11px; background: white; padding: 5px 8px; border: 1px solid #ddd; border-radius: 4px;"><b>${cat}:</b> ${contagemPorCategoria[cat]}</div>`; });
     html += `</div></div></div>`; 
@@ -2467,7 +2467,7 @@ window.gerarExcelLargada = function() {
             db.users.forEach(u => {
                 if (u.inscricoes) {
                     u.inscricoes.forEach(i => {
-                        if (String(i.id) === String(evtId) && i.status === 'CONFIRMADO') {
+                        if (String(i.id) === String(evtId) && (i.status === 'CONFIRMADO' || i.status === 'ISENTO')) {
                             let cat = window.normalizeCatName(i.extraCat || u.cat);
                             
                             // Busca o tempo de Qualify se já existir no banco
@@ -3367,7 +3367,7 @@ function gatherAndPushData(win) {
             
             if(nome && u.inscricoes) { 
                 u.inscricoes.forEach(insc => { 
-                    if(String(insc.id) === String(evtId) && insc.status === 'CONFIRMADO') { 
+                    if(String(insc.id) === String(evtId) && (insc.status === 'CONFIRMADO' || insc.status === 'ISENTO')) { 
                         let cat = window.normalizeCatName ? window.normalizeCatName(insc.extraCat ? insc.extraCat : (u.cat || "GERAL")) : (insc.extraCat || u.cat).toUpperCase(); 
                         
                         if (evtObj && evtObj.type === 'NON_OFFICIAL') {
@@ -3395,7 +3395,7 @@ function gatherAndPushData(win) {
                                 } 
                             }); 
                         } 
-                        liveDataArray.push({ id: u.cpf + '||' + cat, originalCpf: u.cpf, name: nome, city: cityUF, region: uf, number: u.numero || u.numPlaca || u.placa || "S/N", category: cat, status: 'CONFIRMADO', times: times, startClocks: startClocks, isRerun: false });
+                        liveDataArray.push({ id: u.cpf + '||' + cat, originalCpf: u.cpf, name: nome, city: cityUF, region: uf, number: u.numero || u.numPlaca || u.placa || "S/N", category: cat, status: insc.status, times: times, startClocks: startClocks, isRerun: false });
                     } 
                 });
             } 
@@ -3466,14 +3466,16 @@ window.renderInscriptions = function() {
     if (!evtId || evtId === "") {
         listContainer.innerHTML = '<div style="padding:15px; text-align:center; color:#999;">Selecione um evento acima.</div>';
         document.getElementById('fin-total-val').innerText = 'Total: 0';
-        document.getElementById('fin-paid-val').innerText = 'Pagos: 0';
+        document.getElementById('fin-paid-val').innerText = 'Pagos: 0 | Isentos: 0';
         return;
     }
 
     let inscritos = [];
     let totalArrecadado = 0;
     let totalPagos = 0;
+    let totalIsentos = 0; // CONTADOR DE ISENTOS
     const isGeral = (evtId === 'ALL');
+    
     db.users.forEach(u => {
         if (u.inscricoes && u.inscricoes.length > 0) {
             u.inscricoes.forEach(i => {
@@ -3499,9 +3501,12 @@ window.renderInscriptions = function() {
                         
                         let valNum = parseFloat(valStr.replace(',', '.')) || 0;
                         
+                        // LÓGICA DE CAIXA: Soma o valor APENAS se estiver PAGO
                         if (i.status === 'CONFIRMADO') {
                             totalArrecadado += valNum;
                             totalPagos++;
+                        } else if (i.status === 'ISENTO') {
+                            totalIsentos++;
                         }
 
                         inscritos.push({
@@ -3516,7 +3521,8 @@ window.renderInscriptions = function() {
     });
 
     document.getElementById('fin-total-val').innerText = `Total: ${inscritos.length}`;
-    document.getElementById('fin-paid-val').innerHTML = `Pagos: ${totalPagos} <span style="font-size:9px; margin-left:5px; opacity:0.8;">(R$ ${totalArrecadado.toFixed(2).replace('.', ',')})</span>`;
+    document.getElementById('fin-paid-val').innerHTML = `Pagos: ${totalPagos} | Isentos: ${totalIsentos} <span style="font-size:9px; margin-left:5px; opacity:0.8;">(R$ ${totalArrecadado.toFixed(2).replace('.', ',')})</span>`;
+    
     if (currentFilterStatus !== 'ALL') {
         inscritos = inscritos.filter(a => a.status === currentFilterStatus);
     }
@@ -3540,24 +3546,30 @@ window.renderInscriptions = function() {
 
     listContainer.innerHTML = inscritos.map(a => {
         const isPago = a.status === 'CONFIRMADO';
-        const bgStatus = isPago ? '#dcfce7' : '#fff7ed';
-        const colorStatus = isPago ? '#15803d' : '#c2410c';
-        const borderStatus = isPago ? '#86efac' : '#fdba74';
-        const iconStatus = isPago ? 'fa-check-circle' : 'fa-clock';
+        const isIsento = a.status === 'ISENTO';
+        const isApproved = isPago || isIsento; // Se estiver PAGO ou ISENTO, ele está APROVADO
         
-        const btnAcao = !isPago 
-            ? `<button class="btn-mini-adm" style="background:#009b3a; flex:1; font-weight:bold; padding:8px 0; margin:0;" onclick="aprovarInscricao('${a.cpf}', '${a.evtIdInsc}', '${a.cat}')"><i class="fas fa-check"></i> APROVAR</button>` 
-            : `<button class="btn-mini-adm" style="background:#d65a00; flex:1; font-weight:bold; padding:8px 0; margin:0;" onclick="estornarInscricao('${a.cpf}', '${a.evtIdInsc}', '${a.cat}')"><i class="fas fa-undo"></i> ESTORNAR</button>`;
+        let bgStatus = '#fff7ed'; let colorStatus = '#c2410c'; let borderStatus = '#fdba74'; let iconStatus = 'fa-clock'; let lblStatus = 'PENDENTE';
+        if (isPago) { bgStatus = '#dcfce7'; colorStatus = '#15803d'; borderStatus = '#86efac'; iconStatus = 'fa-check-circle'; lblStatus = 'PAGO'; }
+        else if (isIsento) { bgStatus = '#e0f2fe'; colorStatus = '#0369a1'; borderStatus = '#bae6fd'; iconStatus = 'fa-handshake'; lblStatus = 'ISENTO'; }
+        
+        let btnAcao = '';
+        if (!isApproved) {
+            btnAcao = `<button class="btn-mini-adm" style="background:#009b3a; flex:1; font-weight:bold; padding:8px 0; margin:0;" onclick="aprovarInscricao('${a.cpf}', '${a.evtIdInsc}', '${a.cat}')"><i class="fas fa-check"></i> APROVAR</button>
+                       <button class="btn-mini-adm" style="background:#0284c7; flex:1; font-weight:bold; padding:8px 0; margin:0;" onclick="isentarInscricao('${a.cpf}', '${a.evtIdInsc}', '${a.cat}')"><i class="fas fa-handshake"></i> ISENTAR</button>`;
+        } else {
+            btnAcao = `<button class="btn-mini-adm" style="background:#d65a00; flex:1; font-weight:bold; padding:8px 0; margin:0;" onclick="estornarInscricao('${a.cpf}', '${a.evtIdInsc}', '${a.cat}')"><i class="fas fa-undo"></i> ESTORNAR</button>`;
+        }
             
         const wppBtn = a.tel ? `<button class="btn-mini-adm" style="background:#25D366; width:45px; margin:0;" onclick="openWhatsApp('${a.tel}', 'Olá ${a.nome}, vimos sua inscrição na etapa...')"><i class="fab fa-whatsapp" style="font-size:14px;"></i></button>` : '';
 
         return `
-        <div class="adm-card" style="display:flex; flex-direction:column; gap:8px; border: 2px solid ${isPago ? '#bbf7d0' : '#cbd5e1'}; padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); background: ${isPago ? '#f0fdf4' : '#ffffff'};">
+        <div class="adm-card" style="display:flex; flex-direction:column; gap:8px; border: 2px solid ${isApproved ? (isIsento ? '#bae6fd' : '#bbf7d0') : '#cbd5e1'}; padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); background: ${isApproved ? (isIsento ? '#f0f9ff' : '#f0fdf4') : '#ffffff'};">
             <div style="display:flex; justify-content:space-between; align-items:start;">
                 <div>
                     <div style="font-weight:900; font-size:14px; color:var(--pe-blue); text-transform:uppercase;">${a.nome} <span class="badge-city" style="vertical-align:middle;">${a.city}-${a.uf}</span></div>
                     <div style="margin-top:6px; display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
-                        <span style="background:${bgStatus}; color:${colorStatus}; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:bold; border:1px solid ${borderStatus};"><i class="fas ${iconStatus}"></i> ${isPago ? 'PAGO' : 'PENDENTE'}</span>
+                        <span style="background:${bgStatus}; color:${colorStatus}; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:bold; border:1px solid ${borderStatus};"><i class="fas ${iconStatus}"></i> ${lblStatus}</span>
                         <span class="badge-cat" style="margin:0; ${a.cat.includes('EXTRA') ? 'background:#fffbeb; color:#b45309; border-color:#fde68a;' : ''}">${a.cat}</span>
                         ${isGeral ? `<span style="background:#e2e8f0; color:#334155; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:bold; border:1px solid #cbd5e1;"><i class="fas fa-flag-checkered"></i> ${a.evtName}</span>` : ''}
                     </div>
@@ -3574,6 +3586,42 @@ window.renderInscriptions = function() {
             </div>
         </div>`;
     }).join('');
+};
+
+window.isentarInscricao = function(cpf, evtId, cat) {
+    if(!isSuperAdmin(loggedUser) && loggedUser.role !== 'ORGANIZER') return toast("SEM PERMISSÃO", "error");
+    showConfirm("ISENTAR INSCRIÇÃO?", "Deseja isentar o pagamento e aprovar este atleta?", '<i class="fas fa-handshake" style="color:#0284c7"></i>', function(res) {
+        if(res) {
+            const uIdx = db.users.findIndex(u => u.cpf === cpf);
+            if(uIdx > -1 && db.users[uIdx].inscricoes) {
+                const iIdx = db.users[uIdx].inscricoes.findIndex(i => String(i.id) === String(evtId) && window.normalizeCatName(i.extraCat || db.users[uIdx].cat).replace(" (EXTRA)", "") === cat.replace(" (EXTRA)", ""));
+                
+                if(iIdx > -1) {
+                    db.users[uIdx].inscricoes[iIdx].status = 'ISENTO';
+                    saveDB('users');
+                    window.logAction(`Isentou a inscrição de ${db.users[uIdx].nome} (Cat: ${cat}) no evento ID: ${evtId}`);
+                    window.enviarNotificacao(`Sua inscrição foi ISENTA na categoria ${cat}. Acelera!`, 'USER', cpf, evtId);
+                    
+                    try {
+                        if (database && db.users[uIdx].fcmToken) {
+                            database.ref('push_queue').push({
+                                token: db.users[uIdx].fcmToken,
+                                title: "Inscrição Isenta! 🤝",
+                                body: `Sua inscrição na categoria ${cat} foi isenta pela organização.`,
+                                status: "pending",
+                                timestamp: Date.now()
+                            });
+                        }
+                    } catch (pushError) {}
+                    
+                    toast("INSCRIÇÃO ISENTA!", "success");
+                    renderInscriptions();
+                } else {
+                    toast("ERRO: Inscrição não encontrada.", "error");
+                }
+            }
+        }
+    });
 };
 
 window.filterFinList = function(status) {
