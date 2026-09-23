@@ -537,7 +537,26 @@ function injectNotificationUI() {
         const notifBtn = document.createElement('div'); notifBtn.id = 'btn-notifications';
         notifBtn.style.cssText = 'position:relative; margin-right:15px; cursor:pointer; padding-top:2px;'; 
         notifBtn.innerHTML = '<i class="fas fa-bell" style="font-size:22px; color:var(--pe-blue)"></i><span id="notif-badge" style="display:none; position:absolute; top:-2px; right:-8px; background:var(--pe-red); color:white; border-radius:50%; font-size:10px; padding:2px 6px; font-weight:bold; border:1px solid white; box-shadow:0 2px 4px rgba(0,0,0,0.2);">0</span>';
-        notifBtn.onclick = window.abrirNotificacoes; 
+        notifBtn.onclick = async function() {
+
+    // O toque no sino serve como interação direta do usuário.
+    // Isso é importante principalmente no iPhone/iPad.
+    if ("Notification" in window && Notification.permission !== "denied") {
+
+        if (
+            Notification.permission === "default" ||
+            (
+                Notification.permission === "granted" &&
+                loggedUser &&
+                !loggedUser.fcmToken
+            )
+        ) {
+            await window.solicitarPermissaoPush();
+        }
+    }
+
+    window.abrirNotificacoes();
+}; 
         headerRight.insertBefore(notifBtn, headerRight.firstChild); 
     }
     
@@ -889,7 +908,19 @@ function initApp(isRestoring = false) {
     document.getElementById('lbl-season-year').innerText = SYSTEM_YEAR; recalcRanking(); nav(savedTab); 
     if (isRestoring && savedTab === 'adm') { setTimeout(() => { document.getElementById('adm-login-box').style.display = 'none'; document.getElementById('adm-panel-real').style.display = 'block'; applyAdminPermissions(); let lastAdm = localStorage.getItem(LAST_ADM_KEY) || 'menu'; openAdmSection(lastAdm); }, 100);
     }
-    updateSupportLink(); atualizarBadgeNotificacoes(); window.solicitarPermissaoPush();
+    updateSupportLink();
+atualizarBadgeNotificacoes();
+
+// Se a permissão já foi concedida anteriormente,
+// atualiza/recupera o token automaticamente.
+// Se ainda não foi concedida, o sistema espera
+// o usuário tocar no sino.
+if (
+    "Notification" in window &&
+    Notification.permission === "granted"
+) {
+    window.solicitarPermissaoPush();
+}
 }
 
 function nav(t) { currentTab = t; localStorage.setItem(LAST_TAB_KEY, t); document.querySelectorAll('.bar-item').forEach(b => b.classList.remove('active')); if(document.getElementById('btn-'+t)) document.getElementById('btn-'+t).classList.add('active');
