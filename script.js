@@ -909,99 +909,58 @@ function initApp(isRestoring = false) {
     document.getElementById('lbl-season-year').innerText = SYSTEM_YEAR; recalcRanking(); nav(savedTab); 
     if (isRestoring && savedTab === 'adm') { setTimeout(() => { document.getElementById('adm-login-box').style.display = 'none'; document.getElementById('adm-panel-real').style.display = 'block'; applyAdminPermissions(); let lastAdm = localStorage.getItem(LAST_ADM_KEY) || 'menu'; openAdmSection(lastAdm); }, 100);
     }
-    updateSupportLink();
-atualizarBadgeNotificacoes();
+        updateSupportLink();
+    atualizarBadgeNotificacoes();
 
-if ("Notification" in window) {
+    if ("Notification" in window) {
 
-    // Já permitiu anteriormente:
-    // apenas registra/atualiza o token.
-    if (Notification.permission === "granted") {
+        // Já permitiu anteriormente:
+        // apenas registra/atualiza o token.
+        if (Notification.permission === "granted") {
 
-        window.solicitarPermissaoPush();
-    }
+            window.solicitarPermissaoPush();
+        }
 
-    // Nunca respondeu à permissão:
-    // primeiro pergunta dentro do próprio DH-PE.
-    else if (Notification.permission === "default") {
+        // Nunca respondeu à permissão:
+        // primeiro pergunta dentro do próprio DH-PE.
+        else if (Notification.permission === "default") {
 
-        setTimeout(() => {
+            setTimeout(() => {
 
-            showConfirm(
-                "ATIVAR NOTIFICAÇÕES?",
-                "Deseja receber no celular avisos de inscrições, pagamentos, resultados e atualizações do DH-PE?",
-                '<i class="fas fa-bell" style="color:var(--pe-blue)"></i>',
+                showConfirm(
+                    "ATIVAR NOTIFICAÇÕES?",
+                    "Deseja receber no celular avisos de inscrições, pagamentos, resultados e atualizações do DH-PE?",
+                    '<i class="fas fa-bell" style="color:var(--pe-blue)"></i>',
 
-                async function(res) {
+                    async function(res) {
 
-                    if (!res) return;
+                        if (!res) return;
 
-                    const ok =
-                        await window.solicitarPermissaoPush();
+                        const ok =
+                            await window.solicitarPermissaoPush();
 
-                    if (ok) {
+                        if (ok) {
 
-                        toast(
-                            "NOTIFICAÇÕES ATIVADAS!",
-                            "success"
-                        );
+                            toast(
+                                "NOTIFICAÇÕES ATIVADAS!",
+                                "success"
+                            );
 
-                    } else if (
-                        Notification.permission === "denied"
-                    ) {
+                        } else if (
+                            Notification.permission === "denied"
+                        ) {
 
-                        toast(
-                            "NOTIFICAÇÕES BLOQUEADAS. LIBERE NAS CONFIGURAÇÕES DO APARELHO.",
-                            "error"
-                        );
+                            toast(
+                                "NOTIFICAÇÕES BLOQUEADAS. LIBERE NAS CONFIGURAÇÕES DO APARELHO.",
+                                "error"
+                            );
+                        }
                     }
-                }
-            );
+                );
 
-        }, 800);
+            }, 800);
+        }
     }
-}
-
-    // Usuário ainda nunca respondeu:
-    // mostra primeiro a pergunta do próprio DH-PE.
-    else if (Notification.permission === "default") {
-
-        setTimeout(() => {
-
-            showConfirm(
-                "ATIVAR NOTIFICAÇÕES?",
-                "Deseja receber no celular avisos de inscrições, pagamentos, resultados e atualizações do DH-PE?",
-                '<i class="fas fa-bell" style="color:var(--pe-blue)"></i>',
-
-                async function(res) {
-
-                    if (!res) return;
-
-                    const ok =
-                        await window.solicitarPermissaoPush();
-
-                    if (ok) {
-
-                        toast(
-                            "NOTIFICAÇÕES ATIVADAS!",
-                            "success"
-                        );
-
-                    } else if (
-                        Notification.permission === "denied"
-                    ) {
-
-                        toast(
-                            "NOTIFICAÇÕES BLOQUEADAS. LIBERE NAS CONFIGURAÇÕES DO APARELHO.",
-                            "error"
-                        );
-                    }
-                }
-            );
-
-        }, 800);
-    }
-}
 }
 
 function nav(t) { currentTab = t; localStorage.setItem(LAST_TAB_KEY, t); document.querySelectorAll('.bar-item').forEach(b => b.classList.remove('active')); if(document.getElementById('btn-'+t)) document.getElementById('btn-'+t).classList.add('active');
