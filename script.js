@@ -552,7 +552,7 @@ function injectNotificationUI() {
             return;
         }
 
-        // Sempre verifica/atualiza o token deste aparelho.
+        // Sempre verifica e atualiza o token deste aparelho.
         await window.solicitarPermissaoPush();
     }
 
@@ -914,12 +914,53 @@ atualizarBadgeNotificacoes();
 
 if ("Notification" in window) {
 
-    // Usuário já permitiu anteriormente:
-    // atualiza o token automaticamente.
+    // Já permitiu anteriormente:
+    // apenas registra/atualiza o token.
     if (Notification.permission === "granted") {
 
         window.solicitarPermissaoPush();
     }
+
+    // Nunca respondeu à permissão:
+    // primeiro pergunta dentro do próprio DH-PE.
+    else if (Notification.permission === "default") {
+
+        setTimeout(() => {
+
+            showConfirm(
+                "ATIVAR NOTIFICAÇÕES?",
+                "Deseja receber no celular avisos de inscrições, pagamentos, resultados e atualizações do DH-PE?",
+                '<i class="fas fa-bell" style="color:var(--pe-blue)"></i>',
+
+                async function(res) {
+
+                    if (!res) return;
+
+                    const ok =
+                        await window.solicitarPermissaoPush();
+
+                    if (ok) {
+
+                        toast(
+                            "NOTIFICAÇÕES ATIVADAS!",
+                            "success"
+                        );
+
+                    } else if (
+                        Notification.permission === "denied"
+                    ) {
+
+                        toast(
+                            "NOTIFICAÇÕES BLOQUEADAS. LIBERE NAS CONFIGURAÇÕES DO APARELHO.",
+                            "error"
+                        );
+                    }
+                }
+            );
+
+        }, 800);
+    }
+}
 
     // Usuário ainda nunca respondeu:
     // mostra primeiro a pergunta do próprio DH-PE.
