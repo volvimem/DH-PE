@@ -308,6 +308,119 @@ try {
     } 
 } catch (e) { db = DEFAULT_DB; }
 
+// ==========================================================
+// CONTROLE DE PRAZOS DO EVENTO / INSCRIÇÕES
+// ==========================================================
+
+// Retorna a data/hora limite das inscrições.
+// Eventos antigos que possuem somente YYYY-MM-DD
+// continuam funcionando até 23:59 daquele dia.
+function getRegistrationDeadline(evt) {
+
+    if (!evt || !evt.closeDate) return null;
+
+    let valor = String(evt.closeDate).trim();
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(valor)) {
+        valor += "T23:59:59";
+    }
+
+    const data = new Date(valor);
+
+    if (isNaN(data.getTime())) return null;
+
+    return data;
+}
+
+
+// Diz se as inscrições daquele evento já encerraram.
+function inscricoesEstaoEncerradas(evt) {
+
+    if (!evt) return true;
+
+    // Status administrativo também pode impedir inscrição.
+    if (
+        evt.status === "CANCELLED" ||
+        evt.status === "CLOSED"
+    ) {
+        return true;
+    }
+
+    const limite = getRegistrationDeadline(evt);
+
+    if (!limite) return false;
+
+    return new Date() >= limite;
+}
+
+
+// Descobre o último dia do evento.
+// Exemplo:
+// d = "21/22", m = "OUT"
+// resultado = 22/10 do ano atual às 23:59:59.
+function getEventoEndDate(evt) {
+
+    if (!evt || !evt.d || !evt.m) return null;
+
+    const meses = {
+        JAN: 0,
+        FEV: 1,
+        MAR: 2,
+        ABR: 3,
+        MAI: 4,
+        JUN: 5,
+        JUL: 6,
+        AGO: 7,
+        SET: 8,
+        OUT: 9,
+        NOV: 10,
+        DEZ: 11
+    };
+
+    const mes = meses[String(evt.m).toUpperCase()];
+
+    if (mes === undefined) return null;
+
+    const partes =
+        String(evt.d)
+            .split("/")
+            .map(v => parseInt(v, 10))
+            .filter(v => !isNaN(v));
+
+    if (!partes.length) return null;
+
+    // Usa o último dia.
+    // "21/22" => 22
+    const ultimoDia = partes[partes.length - 1];
+
+    return new Date(
+        SYSTEM_YEAR,
+        mes,
+        ultimoDia,
+        23,
+        59,
+        59,
+        999
+    );
+}
+
+
+// Formatação bonita para mostrar no calendário.
+function formatarPrazoInscricao(evt) {
+
+    const limite = getRegistrationDeadline(evt);
+
+    if (!limite) return "---";
+
+    return limite.toLocaleString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+    });
+}
+
 function checkDbIntegrity() {
     if(!db.users || !Array.isArray(db.users)) db.users = db.users ? Object.values(db.users) : [];
     if(!db.events || !Array.isArray(db.events)) db.events = db.events ? Object.values(db.events) : [];
@@ -334,8 +447,22 @@ function checkDbIntegrity() {
         const dayB = parseInt((b.d || "0").split('/')[0], 10) || 0;
         return dayB - dayA; 
     });
-    const todayStr = new Date().toISOString().slice(0, 10);
-    db.events.forEach(e => { if (e && e.status === 'OPEN' && e.closeDate && e.closeDate < todayStr) { e.status = 'CLOSED'; } });
+    // O encerramento das INSCRIÇÕES não encerra mais o EVENTO.
+// O evento só passa automaticamente para CLOSED depois
+// que terminar o último dia da etapa.
+db.events.forEach(e => {
+
+    if (!e || e.status !== "OPEN") return;
+
+    const fimEvento = getEventoEndDate(e);
+
+    if (
+        fimEvento &&
+        new Date() > fimEvento
+    ) {
+        e.status = "CLOSED";
+    }
+});
     if(!db.config) db.config = { phone: '', rerunPass: 'admin123', allowAllIDs: false, categories: DEFAULT_CATS };
     if(!db.config.categories) db.config.categories = DEFAULT_CATS;
     if(!db.config.rerunPass) db.config.rerunPass = 'admin123';
@@ -1006,6 +1133,14 @@ btn.innerHTML = '<i class="fas fa-lock"></i> BLOQUEADO'; btn.style.background = 
 window.iniciarInscricao = function(evtId, mode = 'MAIN') {
     if(!loggedUser) return toast("FAÇA LOGIN PARA INSCREVER-SE", "error");
     const evt = db.events.find(e => e.id == evtId); if(!evt) return toast("EVENTO NÃO ENCONTRADO", "error"); if(!loggedUser.inscricoes) loggedUser.inscricoes = [];
+        // Bloqueia novas inscrições após a data/hora programada.
+    if (inscricoesEstaoEncerradas(evt)) {
+
+        return toast(
+            "INSCRIÇÕES ENCERRADAS PARA ESTE EVENTO",
+            "error"
+        );
+    }
     const minhasInscricoes = loggedUser.inscricoes.filter(i => String(i.id) === String(evtId)); if (minhasInscricoes.length >= 3) return toast("MÁXIMO DE 3 INSCRIÇÕES ATINGIDO!", "error");
     
     if(mode === 'EXTRA') { 
@@ -1199,7 +1334,18 @@ window.verOrdemLargada = function() {
     loggedUser.inscricoes.forEach(insc => {
         if (insc.status !== 'CONFIRMADO' && insc.status !== 'ISENTO') return;
         const evt = db.events.find(e => String(e.id) === String(insc.id)); 
-        if (!evt || evt.status === 'CLOSED' || evt.status === 'CANCELLED') return; 
+                if (!evt || evt.status === 'CANCELLED') return;
+
+        // A ordem permanece disponível até o fim
+        // do último dia do evento.
+        const fimEvento = getEventoEndDate(evt);
+
+        if (
+            fimEvento &&
+            new Date() > fimEvento
+        ) {
+            return;
+        }
         hasConfirmed = true;
         const catToSearch = window.normalizeCatName(insc.extraCat || loggedUser.cat);
         let isReleased = false; if (evt.startListDate) { const releaseDate = new Date(evt.startListDate); const now = new Date(); if (now >= releaseDate) isReleased = true; }
@@ -1347,7 +1493,18 @@ function renderContent(t) {
        const renderEvtCard = (e, isHighlight) => {
             let qualifyInfo = '';
             if (e.hasQualify && e.qDate) { const qDateDisplay = e.qDate.split('-').reverse().join('/'); qualifyInfo = `<div style="margin-top:5px; font-size:10px; color:#d65a00; font-weight:bold; background:#fff3e0; padding:4px; border-radius:4px; border:1px solid #ffe0b2;"><i class="fas fa-stopwatch"></i> QUALIFY: ${qDateDisplay} às ${e.qTime || '??:??'}</div>`; }
-            const limitDate = e.closeDate ? e.closeDate.split('-').reverse().join('/') : '---'; const subs = (loggedUser && loggedUser.inscricoes) ? loggedUser.inscricoes.filter(i => String(i.id) === String(e.id)) : [];
+            const limitDate = formatarPrazoInscricao(e);
+
+const inscricoesEncerradas =
+    inscricoesEstaoEncerradas(e);
+
+const subs =
+    (loggedUser && loggedUser.inscricoes)
+        ? loggedUser.inscricoes.filter(
+            i => String(i.id) === String(e.id)
+        )
+        : [];
+           
             const count = subs.length; const btnBaseStyle = "margin:0; width:100%; padding:10px 4px; font-weight:900; font-size:11px; white-space:normal; line-height:1.2; display:flex; align-items:center; justify-content:center; text-align:center;";
             let extraBtnHtml = (count < 3) ? `<button class="btn" style="${btnBaseStyle} background:var(--pe-yellow); color:black; border:1px solid #e6c200" onclick="window.iniciarInscricao(${e.id}, 'EXTRA')">INSCRIÇÕES NÃO OFICIAIS (+)</button>` : '';
             let viewBtnHtml = `<button class="btn" style="${btnBaseStyle} background:#1e293b;" onclick="window.verDetalhesEvento(${e.id})">VER DETALHES</button>`; 
@@ -1370,6 +1527,61 @@ function renderContent(t) {
             mainBtnHtml = `<button class="btn" style="${btnBaseStyle} background:green;" onclick="window.abrirTicket(${e.id})">COMPROVANTE DE INSCRIÇÃO</button>`;
         }
     }
+}
+
+           // ==========================================================
+// BLOQUEIA NOVAS INSCRIÇÕES APÓS A DATA/HORA LIMITE
+// ==========================================================
+if (inscricoesEncerradas) {
+
+    // Procura se o atleta já possui inscrição oficial.
+    const inscricaoOficialExistente =
+        subs.find(i => !i.extraCat);
+
+    // Se já estiver CONFIRMADO ou ISENTO,
+    // continua permitindo visualizar o comprovante.
+    if (
+        inscricaoOficialExistente &&
+        (
+            inscricaoOficialExistente.status === "CONFIRMADO" ||
+            inscricaoOficialExistente.status === "ISENTO"
+        )
+    ) {
+
+        mainBtnHtml = `
+            <button
+                class="btn"
+                style="${btnBaseStyle} background:green;"
+                onclick="window.abrirTicket(${e.id})"
+            >
+                COMPROVANTE DE INSCRIÇÃO
+            </button>
+        `;
+
+    } else {
+
+        // Para quem não está confirmado,
+        // não permite mais iniciar/pagar inscrição.
+        mainBtnHtml = `
+            <button
+                class="btn"
+                disabled
+                style="
+                    ${btnBaseStyle}
+                    background:#64748b;
+                    color:white;
+                    cursor:not-allowed;
+                    opacity:0.9;
+                "
+            >
+                <i class="fas fa-lock"></i>
+                &nbsp; INSCRIÇÕES ENCERRADAS
+            </button>
+        `;
+    }
+
+    // Remove completamente o botão de categoria extra.
+    extraBtnHtml = "";
 }
 
 let imgHtml = e.img ? `<img src="${e.img}" class="evt-img-standard">` : `<div class="evt-img-placeholder">SEM FOTO</div>`; let html = `${getBadgeHtml(e)}${imgHtml}<div class="event-body">`;
