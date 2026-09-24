@@ -539,20 +539,21 @@ function injectNotificationUI() {
         notifBtn.innerHTML = '<i class="fas fa-bell" style="font-size:22px; color:var(--pe-blue)"></i><span id="notif-badge" style="display:none; position:absolute; top:-2px; right:-8px; background:var(--pe-red); color:white; border-radius:50%; font-size:10px; padding:2px 6px; font-weight:bold; border:1px solid white; box-shadow:0 2px 4px rgba(0,0,0,0.2);">0</span>';
         notifBtn.onclick = async function() {
 
-    // O toque no sino serve como interação direta do usuário.
-    // Isso é importante principalmente no iPhone/iPad.
-    if ("Notification" in window && Notification.permission !== "denied") {
+    if ("Notification" in window) {
 
-        if (
-            Notification.permission === "default" ||
-            (
-                Notification.permission === "granted" &&
-                loggedUser &&
-                !loggedUser.fcmToken
-            )
-        ) {
-            await window.solicitarPermissaoPush();
+        if (Notification.permission === "denied") {
+
+            toast(
+                "AS NOTIFICAÇÕES ESTÃO BLOQUEADAS. LIBERE NAS CONFIGURAÇÕES DO APARELHO.",
+                "error"
+            );
+
+            window.abrirNotificacoes();
+            return;
         }
+
+        // Sempre verifica/atualiza o token deste aparelho.
+        await window.solicitarPermissaoPush();
     }
 
     window.abrirNotificacoes();
@@ -911,15 +912,54 @@ function initApp(isRestoring = false) {
     updateSupportLink();
 atualizarBadgeNotificacoes();
 
-// Se a permissão já foi concedida anteriormente,
-// atualiza/recupera o token automaticamente.
-// Se ainda não foi concedida, o sistema espera
-// o usuário tocar no sino.
-if (
-    "Notification" in window &&
-    Notification.permission === "granted"
-) {
-    window.solicitarPermissaoPush();
+if ("Notification" in window) {
+
+    // Usuário já permitiu anteriormente:
+    // atualiza o token automaticamente.
+    if (Notification.permission === "granted") {
+
+        window.solicitarPermissaoPush();
+    }
+
+    // Usuário ainda nunca respondeu:
+    // mostra primeiro a pergunta do próprio DH-PE.
+    else if (Notification.permission === "default") {
+
+        setTimeout(() => {
+
+            showConfirm(
+                "ATIVAR NOTIFICAÇÕES?",
+                "Deseja receber no celular avisos de inscrições, pagamentos, resultados e atualizações do DH-PE?",
+                '<i class="fas fa-bell" style="color:var(--pe-blue)"></i>',
+
+                async function(res) {
+
+                    if (!res) return;
+
+                    const ok =
+                        await window.solicitarPermissaoPush();
+
+                    if (ok) {
+
+                        toast(
+                            "NOTIFICAÇÕES ATIVADAS!",
+                            "success"
+                        );
+
+                    } else if (
+                        Notification.permission === "denied"
+                    ) {
+
+                        toast(
+                            "NOTIFICAÇÕES BLOQUEADAS. LIBERE NAS CONFIGURAÇÕES DO APARELHO.",
+                            "error"
+                        );
+                    }
+                }
+            );
+
+        }, 800);
+    }
 }
 }
 
