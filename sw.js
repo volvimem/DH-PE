@@ -23,13 +23,24 @@ messaging.onBackgroundMessage((payload) => {
         payload
     );
 
+    // Se a mensagem já possui "notification",
+    // o próprio Firebase/Chrome mostra o aviso.
+    // Não mostramos novamente para evitar duplicidade.
+    if (payload && payload.notification) {
+
+        console.log(
+            "[SW] Notificação visual será exibida pelo Firebase/Chrome."
+        );
+
+        return;
+    }
+
+    // Fallback para mensagens antigas enviadas somente com DATA.
     const titulo =
-        payload?.notification?.title ||
         payload?.data?.title ||
         "DH-PE";
 
     const corpo =
-        payload?.notification?.body ||
         payload?.data?.body ||
         "Você recebeu uma nova notificação.";
 
