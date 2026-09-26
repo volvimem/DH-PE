@@ -1635,6 +1635,932 @@ let imgHtml = e.img ? `<img src="${e.img}" class="evt-img-standard">` : `<div cl
              if (fEvt && fEvt !== 'ALL') allTimes = allTimes.filter(i => String(i.evtId) === String(fEvt));
              if (fCat && fCat !== 'ALL' && fCat !== 'ALL_SEP') allTimes = allTimes.filter(i => window.normalizeCatName(i.cat) === window.normalizeCatName(fCat));
              if (fRegion === 'PE') allTimes = allTimes.filter(t => { const u = db.users.find(user => user.cpf === t.cpf); return u && (u.uf === 'PE' || !u.uf || u.filiadoPE === true); });
+            
+             // ==========================================================
+// TODAS AS ETAPAS = MELHORES DO ANO
+// Soma o MENOR tempo OFICIAL de cada etapa oficial
+// para cada atleta.
+// ==========================================================
+if (fEvt === 'ALL') {
+
+    const eventosOficiais = (db.events || []).filter(e =>
+        e &&
+        e.type !== 'NON_OFFICIAL' &&
+        e.status !== 'CANCELLED' &&
+        e.status !== 'POSTPONED'
+    );
+
+    const eventoOficialPorId = {};
+
+    eventosOficiais.forEach(e => {
+        eventoOficialPorId[String(e.id)] = e;
+    });
+
+    // Para "Todas as Etapas", usamos somente tempos OFICIAIS.
+    const temposOficiais = allTimes.filter(t => {
+
+        if (!t) return false;
+
+        const ehOficial =
+            t.runType === '1st' ||
+            !t.runType ||
+            t.runType === 'oficial';
+
+        if (!ehOficial) return false;
+
+        if (!eventoOficialPorId[String(t.evtId)]) return false;
+
+        const ms = tempoParaMilissegundos(t.val);
+
+        return ms !== Infinity;
+    });
+
+
+    // Converte a soma em MM:SS.mmm
+    const formatarTempoSomado = (totalMs) => {
+
+        if (!Number.isFinite(totalMs)) {
+            return '--:--.---';
+        }
+
+        const min = Math.floor(totalMs / 60000);
+        const sec = Math.floor((totalMs % 60000) / 1000);
+        const ms = totalMs % 1000;
+
+        return `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}.${String(ms).padStart(3,'0')}`;
+    };
+
+
+    // Considera apenas etapas que já possuem resultado oficial.
+    // Etapas futuras ainda sem tempos não prejudicam os atletas.
+    const eventosComResultado = eventosOficiais.filter(evt =>
+        temposOficiais.some(
+            t => String(t.evtId) === String(evt.id)
+        )
+    );
+
+
+    // Descobre quais etapas tiveram resultado em cada categoria.
+    const eventosPorCategoria = {};
+
+    temposOficiais.forEach(t => {
+
+        const catNorm = window.normalizeCatName(t.cat);
+
+        if (!eventosPorCategoria[catNorm]) {
+            eventosPorCategoria[catNorm] = new Set();
+        }
+
+        eventosPorCategoria[catNorm].add(
+            String(t.evtId)
+        );
+    });
+
+
+    // Junta todos os tempos do mesmo atleta.
+    const atletasMap = {};
+
+    temposOficiais.forEach(t => {
+
+        const catNorm = window.normalizeCatName(t.cat);
+
+        const atletaKey =
+            (fCat === 'ALL_SEP')
+                ? `${t.cpf}__${catNorm}`
+                : String(t.cpf);
+
+
+        if (!atletasMap[atletaKey]) {
+
+            atletasMap[atletaKey] = {
+
+                cpf: t.cpf,
+                name: t.name,
+                city: t.city,
+                cat: catNorm,
+                num: t.num || '',
+                etapas: {}
+
+            };
+        }
+
+
+        const atleta = atletasMap[atletaKey];
+
+        if (t.num) {
+            atleta.num = t.num;
+        }
+
+
+        const evtId = String(t.evtId);
+
+        const ms = tempoParaMilissegundos(t.val);
+
+        const atual = atleta.etapas[evtId];
+
+
+        // Se existir mais de um tempo oficial na mesma etapa,
+        // fica somente o menor.
+        if (!atual || ms < atual.ms) {
+
+            const evtObj = eventoOficialPorId[evtId];
+
+            atleta.etapas[evtId] = {
+
+                evtId: evtId,
+
+                evtName:
+                    evtObj
+                        ? evtObj.t
+                        : 'ETAPA',
+
+                val: t.val,
+
+                ms: ms,
+
+                penaltyStr:
+                    t.penaltyStr || ''
+
+            };
+        }
+
+    });
+
+
+    // Calcula a soma dos tempos de cada atleta.
+    let melhoresAno = Object.values(atletasMap).map(atleta => {
+
+        const etapasDoAtleta =
+            Object.values(atleta.etapas);
+
+        const totalMs =
+            etapasDoAtleta.reduce(
+                (acc, etapa) => acc + etapa.ms,
+                0
+            );
+
+
+        let qtdObrigatoria;
+
+
+        if (fCat === 'ALL_SEP') {
+
+            const setCat =
+                eventosPorCategoria[atleta.cat];
+
+            qtdObrigatoria =
+                setCat
+                    ? setCat.size
+                    : 0;
+
+        } else {
+
+            qtdObrigatoria =
+                eventosComResultado.length;
+
+        }
+
+
+        const qtdConcluida =
+            etapasDoAtleta.length;
+
+
+        return {
+
+            ...atleta,
+
+            totalMs: totalMs,
+
+            totalFmt:
+                formatarTempoSomado(totalMs),
+
+            qtdConcluida:
+                qtdConcluida,
+
+            qtdObrigatoria:
+                qtdObrigatoria,
+
+            completo:
+                qtdObrigatoria > 0 &&
+                qtdConcluida === qtdObrigatoria
+
+        };
+
+    });
+
+
+    const ordemDesejadaTemposAno = [
+
+        "ESTREANTE",
+        "ESTREANTE (EXTRA)",
+
+        "RIGIDA",
+        "RÍGIDA",
+        "RÍGIDA (EXTRA)",
+
+        "OPEN",
+        "OPEN (EXTRA)",
+
+        "ELITE FEMININA",
+        "FEMININO ELITE",
+        "FEMININO",
+
+        "INFANTO-JUVENIL",
+        "JUVENIL",
+
+        "PCD",
+        "PCD (EXTRA)",
+
+        "MASTER D",
+
+        "MASTER C2",
+        "MASTER C1",
+        "MASTER C",
+
+        "MASTER B2",
+        "MASTER B1",
+        "MASTER B",
+
+        "MASTER A2",
+        "MASTER A1",
+        "MASTER A",
+
+        "E-BIKE",
+        "E-BIKE (EXTRA)",
+
+        "JUNIOR",
+        "SUB-30",
+        "ELITE"
+
+    ];
+
+
+    // Ordenação do resultado.
+    melhoresAno.sort((a, b) => {
+
+
+        if (
+            fCat === 'ALL_SEP' &&
+            a.cat !== b.cat
+        ) {
+
+            let ia =
+                ordemDesejadaTemposAno.indexOf(
+                    a.cat.toUpperCase().trim()
+                );
+
+            let ib =
+                ordemDesejadaTemposAno.indexOf(
+                    b.cat.toUpperCase().trim()
+                );
+
+
+            if (ia === -1) ia = 999;
+            if (ib === -1) ib = 999;
+
+
+            if (ia !== ib) {
+                return ia - ib;
+            }
+
+
+            return a.cat.localeCompare(b.cat);
+        }
+
+
+        // Quem completou todas as etapas fica acima.
+        if (a.completo !== b.completo) {
+
+            return a.completo
+                ? -1
+                : 1;
+
+        }
+
+
+        // Entre incompletos, quem participou de mais etapas
+        // fica acima.
+        if (
+            !a.completo &&
+            a.qtdConcluida !== b.qtdConcluida
+        ) {
+
+            return (
+                b.qtdConcluida -
+                a.qtdConcluida
+            );
+
+        }
+
+
+        // Menor soma = melhor colocação.
+        return a.totalMs - b.totalMs;
+
+    });
+
+
+    const tituloCategoriaAno =
+        fCat === 'ALL'
+            ? 'MELHORES DO ANO'
+            : (
+                fCat === 'ALL_SEP'
+                    ? 'MELHORES DO ANO POR CATEGORIA'
+                    : fCat
+            );
+
+
+    const tituloRegiaoAno =
+        fRegion === 'PE'
+            ? 'RESULTADO PERNAMBUCO'
+            : 'RESULTADO NORDESTE (OPEN)';
+
+
+    const headerAno = `
+        <div
+            class="print-header"
+            style="
+                background:linear-gradient(
+                    135deg,
+                    var(--pe-blue),
+                    #1e3a8a
+                );
+                color:white;
+                padding:15px;
+                border-radius:8px;
+                margin-bottom:15px;
+                box-shadow:0 4px 6px rgba(0,0,0,0.1);
+                text-align:center;
+            "
+        >
+
+            <h2
+                style="
+                    margin:0;
+                    font-size:18px;
+                    font-weight:900;
+                    text-transform:uppercase;
+                "
+            >
+                MELHORES DO ANO
+            </h2>
+
+            <div
+                style="
+                    font-size:11px;
+                    margin-top:5px;
+                    opacity:.9;
+                    font-weight:bold;
+                "
+            >
+                <i class="fas fa-map-marker-alt"></i>
+                ${tituloRegiaoAno}
+
+                &nbsp;|&nbsp;
+
+                <i class="fas fa-bicycle"></i>
+                ${tituloCategoriaAno}
+            </div>
+
+            <div
+                style="
+                    font-size:11px;
+                    margin-top:5px;
+                    opacity:.9;
+                    font-weight:bold;
+                "
+            >
+                <i class="fas fa-stopwatch"></i>
+                SOMA DOS MENORES TEMPOS OFICIAIS DE CADA ETAPA
+            </div>
+
+            <div
+                style="
+                    font-size:12px;
+                    margin-top:5px;
+                    color:#ffe500;
+                    font-weight:bold;
+                "
+            >
+                TODAS AS ETAPAS OFICIAIS
+            </div>
+
+        </div>
+    `;
+
+
+    if (melhoresAno.length === 0) {
+
+        listDiv.innerHTML =
+            headerAno +
+            `
+            <div
+                style="
+                    padding:20px;
+                    text-align:center;
+                    color:#999;
+                    font-size:11px;
+                "
+            >
+                Ainda não há tempos oficiais válidos
+                para montar o resultado anual.
+            </div>
+            `;
+
+        return;
+    }
+
+
+    // Guarda o menor total para calcular diferença
+    // em relação ao líder.
+    const liderPorGrupo = {};
+
+
+    melhoresAno.forEach(r => {
+
+        if (!r.completo) return;
+
+
+        const grupo =
+            fCat === 'ALL_SEP'
+                ? r.cat
+                : 'GERAL';
+
+
+        if (
+            liderPorGrupo[grupo] === undefined ||
+            r.totalMs < liderPorGrupo[grupo]
+        ) {
+
+            liderPorGrupo[grupo] =
+                r.totalMs;
+
+        }
+
+    });
+
+
+    const posPorGrupo = {};
+
+
+    const listAnoHtml =
+        melhoresAno.map((r, i) => {
+
+
+            const grupo =
+                fCat === 'ALL_SEP'
+                    ? r.cat
+                    : 'GERAL';
+
+
+            if (
+                posPorGrupo[grupo] === undefined
+            ) {
+
+                posPorGrupo[grupo] = 0;
+
+            }
+
+
+            let catHeader = '';
+
+
+            if (
+                fCat === 'ALL_SEP' &&
+                (
+                    i === 0 ||
+                    melhoresAno[i - 1].cat !== r.cat
+                )
+            ) {
+
+                const closeTag =
+                    i > 0
+                        ? '</div></div>'
+                        : '';
+
+
+                catHeader =
+                    `${closeTag}
+                    <div
+                        class="cat-print-page"
+                        style="
+                            margin-bottom:30px;
+                            border:2px solid var(--pe-blue);
+                            border-radius:8px;
+                            background:#fff;
+                            overflow:hidden;
+                            page-break-inside:avoid;
+                            break-inside:avoid;
+                        "
+                    >
+
+                        <div
+                            class="cat-title-box"
+                            style="
+                                background:var(--pe-blue);
+                                color:white;
+                                padding:10px;
+                                font-size:16px;
+                                font-weight:900;
+                                text-align:center;
+                                text-transform:uppercase;
+                                letter-spacing:1px;
+                            "
+                        >
+                            🏆 ${r.cat}
+                        </div>
+
+                        <div
+                            style="
+                                padding:10px;
+                                display:flex;
+                                flex-direction:column;
+                                gap:8px;
+                            "
+                        >
+                    `;
+
+            }
+
+
+            let posDisplay = '—';
+
+
+            if (r.completo) {
+
+                posPorGrupo[grupo]++;
+
+                posDisplay =
+                    posPorGrupo[grupo] + 'º';
+
+            }
+
+
+            let pNameFull =
+                getPilotName(
+                    r.cpf,
+                    r.name
+                );
+
+
+            let _pts =
+                pNameFull.split(' ');
+
+
+            let _lim =
+                [
+                    'DE',
+                    'DA',
+                    'DO',
+                    'DOS',
+                    'DAS'
+                ].includes(_pts[1])
+                    ? 3
+                    : 2;
+
+
+            const pName =
+                _pts
+                    .slice(0, _lim)
+                    .join(' ');
+
+
+            const pCityUF =
+                getPilotCityUF(
+                    r.cpf,
+                    r.city
+                );
+
+
+            const cClass =
+                getCatClass(r.cat);
+
+
+            const userObj =
+                db.users.find(
+                    u => u.cpf === r.cpf
+                );
+
+
+            const placaStr =
+                r.num ||
+                (
+                    userObj
+                        ? (
+                            userObj.numero ||
+                            userObj.numPlaca ||
+                            userObj.placa ||
+                            ''
+                        )
+                        : ''
+                );
+
+
+            const placaHtml =
+                placaStr
+                    ? `
+                        <span
+                            style="
+                                background:#1e293b;
+                                color:white;
+                                font-size:11px;
+                                font-weight:900;
+                                padding:2px 6px;
+                                border-radius:4px;
+                                margin-left:5px;
+                            "
+                        >
+                            #${placaStr}
+                        </span>
+                      `
+                    : '';
+
+
+            const etapasHtml =
+                eventosComResultado
+
+                    .filter(
+                        evt =>
+                            r.etapas[String(evt.id)]
+                    )
+
+                    .map(evt => {
+
+                        const et =
+                            r.etapas[String(evt.id)];
+
+
+                        const penHtml =
+                            et.penaltyStr
+                                ? `
+                                    <span
+                                        style="
+                                            color:#dc2626;
+                                            font-size:8px;
+                                            font-weight:900;
+                                        "
+                                    >
+                                        (${et.penaltyStr})
+                                    </span>
+                                  `
+                                : '';
+
+
+                        return `
+                            <div
+                                style="
+                                    display:flex;
+                                    justify-content:space-between;
+                                    gap:8px;
+                                    padding:4px 0;
+                                    border-bottom:1px dashed #e2e8f0;
+                                    font-size:9px;
+                                "
+                            >
+
+                                <span
+                                    style="
+                                        color:#475569;
+                                        font-weight:800;
+                                        text-transform:uppercase;
+                                    "
+                                >
+                                    ${evt.t}
+                                </span>
+
+                                <span
+                                    style="
+                                        font-family:monospace;
+                                        color:#0f172a;
+                                        font-weight:900;
+                                    "
+                                >
+                                    ${et.val}
+                                    ${penHtml}
+                                </span>
+
+                            </div>
+                        `;
+
+                    })
+                    .join('');
+
+
+            const liderMs =
+                liderPorGrupo[grupo];
+
+
+            const gapLider =
+                (
+                    r.completo &&
+                    liderMs !== undefined &&
+                    r.totalMs > liderMs
+                )
+                    ? formatarDiferenca(
+                        r.totalMs -
+                        liderMs
+                    )
+                    : '';
+
+
+            let gapHtml = '';
+
+
+            if (gapLider) {
+
+                gapHtml = `
+                    <div
+                        style="
+                            font-size:10px;
+                            color:#e11d48;
+                            font-weight:900;
+                            margin-top:3px;
+                        "
+                    >
+                        ${gapLider} PARA O LÍDER
+                    </div>
+                `;
+
+            }
+
+
+            const statusHtml =
+                r.completo
+
+                    ? `
+                        <span
+                            style="
+                                background:#dcfce7;
+                                color:#166534;
+                                border:1px solid #86efac;
+                                padding:3px 7px;
+                                border-radius:999px;
+                                font-size:9px;
+                                font-weight:900;
+                            "
+                        >
+                            ${r.qtdConcluida}/${r.qtdObrigatoria}
+                            ETAPAS
+                        </span>
+                      `
+
+                    : `
+                        <span
+                            style="
+                                background:#fff7ed;
+                                color:#c2410c;
+                                border:1px solid #fdba74;
+                                padding:3px 7px;
+                                border-radius:999px;
+                                font-size:9px;
+                                font-weight:900;
+                            "
+                        >
+                            INCOMPLETO •
+                            ${r.qtdConcluida}/${r.qtdObrigatoria}
+                        </span>
+                      `;
+
+
+            return `
+                ${catHeader}
+
+                <div
+                    class="rank-row"
+                    style="
+                        flex-direction:column;
+                        padding:0;
+                        margin-bottom:${fCat === 'ALL_SEP' ? '0' : '7px'};
+                        background:${i % 2 === 0 ? '#fff' : '#f8fafc'};
+                        border:1px solid #e2e8f0;
+                        border-radius:7px;
+                        overflow:hidden;
+                    "
+                >
+
+                    <div
+                        style="
+                            padding:9px 10px;
+                            width:100%;
+                        "
+                    >
+
+                        <div
+                            style="
+                                display:flex;
+                                justify-content:space-between;
+                                align-items:flex-start;
+                                gap:8px;
+                            "
+                        >
+
+                            <div style="min-width:0;">
+
+                                <div
+                                    style="
+                                        font-weight:bold;
+                                        font-size:13px;
+                                        color:#333;
+                                        display:flex;
+                                        align-items:center;
+                                        flex-wrap:wrap;
+                                    "
+                                >
+                                    ${posDisplay}
+                                    ${pName}
+                                    ${placaHtml}
+
+                                    <span
+                                        class="badge-city"
+                                        style="margin-left:5px"
+                                    >
+                                        ${pCityUF}
+                                    </span>
+
+                                </div>
+
+                                <span class="${cClass}">
+                                    ${r.cat}
+                                </span>
+
+                            </div>
+
+                            ${statusHtml}
+
+                        </div>
+
+
+                        <div style="margin-top:7px;">
+                            ${etapasHtml}
+                        </div>
+
+                    </div>
+
+
+                    <div
+                        style="
+                            width:100%;
+                            background:#d4edda;
+                            border-top:1px dashed #a7d8b0;
+                            padding:9px;
+                            text-align:center;
+                        "
+                    >
+
+                        <div
+                            style="
+                                font-size:9px;
+                                color:#15803d;
+                                font-weight:900;
+                            "
+                        >
+                            SOMA DOS TEMPOS OFICIAIS
+                        </div>
+
+
+                        <div
+                            style="
+                                font-family:monospace;
+                                font-size:18px;
+                                font-weight:900;
+                                color:#111827;
+                            "
+                        >
+                            ${r.totalFmt}
+                        </div>
+
+
+                        ${gapHtml}
+
+                    </div>
+
+                </div>
+            `;
+
+        }).join('');
+
+
+    let finalAnoHtml =
+        headerAno +
+        listAnoHtml;
+
+
+    if (
+        fCat === 'ALL_SEP' &&
+        melhoresAno.length > 0
+    ) {
+
+        finalAnoHtml +=
+            '</div></div>';
+
+    }
+
+
+    listDiv.innerHTML =
+        finalAnoHtml;
+
+
+    return;
+}
              const grouped = {};
              allTimes.forEach(t => { 
                  const key = t.cpf + '_' + t.cat + '_' + t.evtId; 
