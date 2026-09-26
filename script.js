@@ -4041,17 +4041,22 @@ window.gerarExcelLargada = function() {
     // =====================================================
     const nomeCurto = function(nome) {
 
-        const partes = String(nome || '')
-            .trim()
-            .split(/\s+/)
-            .filter(Boolean);
+    const partes = String(nome || '')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
 
-        if (partes.length <= 1) {
-            return partes[0] || '';
-        }
+    if (partes.length === 0) {
+        return '';
+    }
 
-        return `${partes[0]} ${partes[partes.length - 1]}`;
-    };
+    if (partes.length === 1) {
+        return partes[0];
+    }
+
+    // PRIMEIRO NOME + SEGUNDO NOME
+    return `${partes[0]} ${partes[1]}`;
+};
 
 
     // =====================================================
