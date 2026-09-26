@@ -203,14 +203,16 @@ function converterTipoVolta(tipo) {
 
 exports.receberResultadoGoogleSheets = onRequest(
     {
-        secrets: [SHEETS_SYNC_KEY]
+        secrets: [SHEETS_SYNC_KEY],
+        timeoutSeconds: 60,
+        memory: "256MiB"
     },
 
     async (req, res) => {
 
-        // --------------------------------------------------
+        // =====================================================
         // 1. SOMENTE POST
-        // --------------------------------------------------
+        // =====================================================
         if (req.method !== "POST") {
 
             res.status(405).json({
@@ -222,13 +224,14 @@ exports.receberResultadoGoogleSheets = onRequest(
         }
 
 
-        // --------------------------------------------------
-        // 2. CONFERE A CHAVE SECRETA
-        // --------------------------------------------------
+        // =====================================================
+        // 2. AUTORIZAÇÃO
+        // =====================================================
         const authorization =
             String(
                 req.get("authorization") || ""
             );
+
 
         const chaveEsperada =
             `Bearer ${SHEETS_SYNC_KEY.value()}`;
@@ -251,9 +254,9 @@ exports.receberResultadoGoogleSheets = onRequest(
                 req.body || {};
 
 
-            // --------------------------------------------------
-            // 3. RECEBE OS DADOS DO GOOGLE SHEETS
-            // --------------------------------------------------
+            // =================================================
+            // 3. DADOS RECEBIDOS
+            // =================================================
             const eventId =
                 String(
                     body.eventId || ""
@@ -264,6 +267,501 @@ exports.receberResultadoGoogleSheets = onRequest(
                 limparCpf(
                     body.idSistema
                 );
+
+
+            const categoria =
+                normalizarCategoria(
+                    body.categoria
+                );
+
+
+            const runType =
+                converterTipoVolta(
+                    body.tipoVolta
+                );
+
+
+            let resultado =
+                String(
+                    body.resultadoFinal || ""
+                )
+                .trim()
+                .toUpperCase();
+
+
+            const horaLargada =
+                String(
+                    body.horaLargada || ""
+                ).trim();
+
+
+            const horaChegada =
+                String(
+                    body.horaChegada || ""
+                ).trim();
+
+
+            const penalidade =
+                String(
+                    body.penalidade || ""
+                ).trim();
+
+
+            const placaRecebida =
+                String(
+                    body.placa || ""
+                ).trim();
+
+
+            // =================================================
+            // 4. VALIDAÇÕES
+            // =================================================
+            if (!eventId) {
+
+                res.status(400).json({
+                    ok: false,
+                    erro: "EVENT_ID não informado."
+                });
+
+                return;
+            }
+
+
+            if (!cpf || cpf.length !== 11) {
+
+                res.status(400).json({
+                    ok: false,
+                    erro: "ID_SISTEMA/CPF inválido."
+                });
+
+                return;
+            }
+
+
+            if (!runType) {
+
+                res.status(400).json({
+                    ok: false,
+                    erro: "TIPO_VOLTA inválido."
+                });
+
+                return;
+            }
+
+
+            if (!resultado) {
+
+                res.status(400).json({
+                    ok: false,
+                    erro: "RESULTADO FINAL vazio."
+                });
+
+                return;
+            }
+
+
+            if (
+                resultado === "DNS" ||
+                resultado === "DSQ"
+            ) {
+
+                resultado = "DNF";
+            }
+
+
+            if (
+                resultado !== "DNF" &&
+                !/^\d{1,3}:\d{2}\.\d{3}$/.test(resultado)
+            ) {
+
+                res.status(400).json({
+                    ok: false,
+                    erro:
+                        "Resultado inválido. Use MM:SS.mmm ou DNF."
+                });
+
+                return;
+            }
+
+
+            // =================================================
+            // 5. FIREBASE
+            // =================================================
+            const database =
+                getDatabase();
+
+
+            const base =
+                DHPE_DB_KEY_2026;
+
+
+            // =================================================
+            // 6. PROCURA SOMENTE O EVENTO
+            // =================================================
+            const eventosRef =
+                database.ref(
+                    `${base}/events`
+                );
+
+
+            const eventosSnap =
+                await eventosRef.get();
+
+
+            const eventosRaw =
+                eventosSnap.val() || {};
+
+
+            const eventos =
+                Array.isArray(eventosRaw)
+                    ? eventosRaw
+                    : Object.values(eventosRaw);
+
+
+            const evento =
+                eventos.find(
+                    e =>
+                        e &&
+                        String(e.id) ===
+                            String(eventId)
+                );
+
+
+            if (!evento) {
+
+                res.status(404).json({
+                    ok: false,
+                    erro:
+                        "EVENT_ID não encontrado no DH-PE."
+                });
+
+                return;
+            }
+
+
+            // =================================================
+            // 7. PROCURA SOMENTE O ATLETA NECESSÁRIO
+            // =================================================
+            const usuariosRef =
+                database.ref(
+                    `${base}/users`
+                );
+
+
+            let atleta = null;
+
+
+            // Primeiro tenta CPF somente números
+            const usuarioSnap =
+                await usuariosRef
+                    .orderByChild("cpf")
+                    .equalTo(cpf)
+                    .limitToFirst(1)
+                    .get();
+
+
+            if (usuarioSnap.exists()) {
+
+                const encontrados =
+                    usuarioSnap.val();
+
+
+                atleta =
+                    Object.values(
+                        encontrados
+                    )[0] || null;
+            }
+
+
+            // Se não achou, tenta CPF formatado
+            if (!atleta) {
+
+                const cpfFormatado =
+                    cpf.replace(
+                        /^(\d{3})(\d{3})(\d{3})(\d{2})$/,
+                        "$1.$2.$3-$4"
+                    );
+
+
+                const usuarioFormatadoSnap =
+                    await usuariosRef
+                        .orderByChild("cpf")
+                        .equalTo(cpfFormatado)
+                        .limitToFirst(1)
+                        .get();
+
+
+                if (
+                    usuarioFormatadoSnap.exists()
+                ) {
+
+                    atleta =
+                        Object.values(
+                            usuarioFormatadoSnap.val()
+                        )[0] || null;
+                }
+            }
+
+
+            if (!atleta) {
+
+                res.status(404).json({
+                    ok: false,
+                    erro:
+                        "ID_SISTEMA/CPF não encontrado no DH-PE."
+                });
+
+                return;
+            }
+
+
+            // =================================================
+            // 8. PREPARA RESULTADO
+            // =================================================
+            const nomeAtleta =
+                String(
+                    atleta.nome ||
+                    atleta.name ||
+                    ""
+                ).toUpperCase();
+
+
+            const cidadeAtleta =
+                String(
+                    atleta.city ||
+                    atleta.cidade ||
+                    ""
+                ).toUpperCase();
+
+
+            const placa =
+                placaRecebida ||
+                String(
+                    atleta.numero ||
+                    atleta.numPlaca ||
+                    atleta.placa ||
+                    ""
+                );
+
+
+            let penaltyStr = "";
+
+
+            if (penalidade) {
+
+                penaltyStr =
+                    penalidade.startsWith("+")
+                        ? penalidade
+                        : `+${penalidade}s`;
+            }
+
+
+            // =================================================
+            // 9. PROCURA APENAS OS TEMPOS DESSE CPF
+            // =================================================
+            const temposRef =
+                database.ref(
+                    `${base}/tempos`
+                );
+
+
+            const temposCpfSnap =
+                await temposRef
+                    .orderByChild("cpf")
+                    .equalTo(cpf)
+                    .get();
+
+
+            let chaveExistente =
+                null;
+
+
+            let tempoAnterior =
+                {};
+
+
+            if (temposCpfSnap.exists()) {
+
+                temposCpfSnap.forEach(
+                    child => {
+
+                        const t =
+                            child.val();
+
+
+                        if (
+                            t &&
+
+                            String(t.evtId) ===
+                                String(eventId) &&
+
+                            String(t.runType) ===
+                                String(runType) &&
+
+                            normalizarCategoria(
+                                t.cat
+                            ) === categoria
+                        ) {
+
+                            chaveExistente =
+                                child.key;
+
+
+                            tempoAnterior =
+                                t;
+
+                            return true;
+                        }
+
+                        return false;
+                    }
+                );
+            }
+
+
+            // =================================================
+            // 10. MONTA OBJETO
+            // =================================================
+            const novoTempo = {
+
+                ...tempoAnterior,
+
+                evtId:
+                    eventId,
+
+                cpf:
+                    cpf,
+
+                name:
+                    nomeAtleta,
+
+                city:
+                    cidadeAtleta,
+
+                cat:
+                    categoria,
+
+                val:
+                    resultado,
+
+                status:
+                    resultado === "DNF"
+                        ? "DNF"
+                        : "OK",
+
+                runType:
+                    runType,
+
+                num:
+                    placa,
+
+                penaltyStr:
+                    penaltyStr,
+
+                startClock:
+                    horaLargada ||
+                    tempoAnterior.startClock ||
+                    "",
+
+                finishClock:
+                    horaChegada ||
+                    tempoAnterior.finishClock ||
+                    "",
+
+                source:
+                    "GOOGLE_SHEETS",
+
+                updatedAt:
+                    Date.now()
+            };
+
+
+            // =================================================
+            // 11. ATUALIZA SOMENTE UM RESULTADO
+            // =================================================
+            let operacao;
+
+
+            if (chaveExistente !== null) {
+
+                await temposRef
+                    .child(chaveExistente)
+                    .update(
+                        novoTempo
+                    );
+
+
+                operacao =
+                    "atualizado";
+
+            } else {
+
+                await temposRef
+                    .push()
+                    .set(
+                        novoTempo
+                    );
+
+
+                operacao =
+                    "criado";
+            }
+
+
+            // =================================================
+            // 12. SUCESSO
+            // =================================================
+            res.status(200).json({
+
+                ok:
+                    true,
+
+                operacao:
+                    operacao,
+
+                evento:
+                    evento.t ||
+                    eventId,
+
+                cpf:
+                    cpf,
+
+                atleta:
+                    nomeAtleta,
+
+                categoria:
+                    categoria,
+
+                tipo:
+                    runType,
+
+                resultado:
+                    resultado
+            });
+
+
+        } catch (error) {
+
+            logger.error(
+                "Erro ao receber resultado do Google Sheets",
+                error
+            );
+
+
+            res.status(500).json({
+
+                ok:
+                    false,
+
+                erro:
+                    error &&
+                    error.message
+                        ? error.message
+                        : String(error)
+            });
+        }
+    }
+);
 
 
             const categoria =
