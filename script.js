@@ -3984,138 +3984,802 @@ window.importarExcelTempos = function(event) {
 // FUNÇÕES DE INTEGRAÇÃO EXCEL (GERAR LARGADA E IMPORTAR)
 // ==========================================================
 window.gerarExcelLargada = function() {
-    const evtId = document.getElementById('adm-res-evt').value; 
-    if(!evtId) return toast("Selecione um evento primeiro!", "error");
-    
-    const evt = db.events.find(e => String(e.id) === String(evtId));
-    if(!evt) return toast("Evento não encontrado", "error");
+    const evtId = document.getElementById('adm-res-evt').value;
+
+    if (!evtId) {
+        return toast("Selecione um evento primeiro!", "error");
+    }
+
+    const evt = db.events.find(
+        e => String(e.id) === String(evtId)
+    );
+
+    if (!evt) {
+        return toast("Evento não encontrado", "error");
+    }
+
+    // =====================================================
+    // TIPO DE VOLTA SELECIONADO NO PAINEL
+    // =====================================================
+    const runTypeSelecionado =
+        document.getElementById('adm-res-runtype')
+            ? document.getElementById('adm-res-runtype').value
+            : '1st';
+
+    let runTypeDb = '1st';
+    let runLabel = 'OFICIAL';
+
+    if (runTypeSelecionado === 'qualify') {
+        runTypeDb = 'qualify';
+        runLabel = 'QUALIFY';
+    } else if (runTypeSelecionado === '2nd') {
+        runTypeDb = '2nd';
+        runLabel = '2ª DESCIDA';
+    }
 
     const btnClicado = document.activeElement;
-    const textoOriginal = btnClicado ? btnClicado.innerHTML : ""; 
-    if(btnClicado && btnClicado.tagName === 'BUTTON') { 
-        btnClicado.disabled = true;
-        btnClicado.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GERANDO...'; 
-    } 
+    const textoOriginal =
+        btnClicado ? btnClicado.innerHTML : "";
 
-    toast("GERANDO PLANILHA DE LARGADA...", "info");
-    
+    if (
+        btnClicado &&
+        btnClicado.tagName === 'BUTTON'
+    ) {
+        btnClicado.disabled = true;
+        btnClicado.innerHTML =
+            '<i class="fas fa-spinner fa-spin"></i> GERANDO...';
+    }
+
+    toast(
+        `GERANDO LISTA DE LARGADA - ${runLabel}...`,
+        "info"
+    );
+
+
+    // =====================================================
+    // PRIMEIRO NOME + ÚLTIMO SOBRENOME
+    // =====================================================
+    const nomeCurto = function(nome) {
+
+        const partes = String(nome || '')
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean);
+
+        if (partes.length <= 1) {
+            return partes[0] || '';
+        }
+
+        return `${partes[0]} ${partes[partes.length - 1]}`;
+    };
+
+
+    // =====================================================
+    // CALCULA A HORA DE CHEGADA
+    // HORA LARGADA + TEMPO DA DESCIDA
+    // =====================================================
+    const calcularHoraChegada = function(
+        horaLargada,
+        tempoFinal
+    ) {
+
+        if (
+            !horaLargada ||
+            !tempoFinal ||
+            tempoFinal === 'DNF' ||
+            tempoFinal === '--:--.---'
+        ) {
+            return '';
+        }
+
+        const partesHora =
+            String(horaLargada).split(':');
+
+        if (partesHora.length < 3) {
+            return '';
+        }
+
+        const h =
+            parseInt(partesHora[0], 10);
+
+        const m =
+            parseInt(partesHora[1], 10);
+
+        const s =
+            parseInt(partesHora[2], 10);
+
+
+        if (
+            isNaN(h) ||
+            isNaN(m) ||
+            isNaN(s)
+        ) {
+            return '';
+        }
+
+
+        const tempoMs =
+            tempoParaMilissegundos(tempoFinal);
+
+
+        if (
+            tempoMs === Infinity ||
+            !Number.isFinite(tempoMs)
+        ) {
+            return '';
+        }
+
+
+        let total =
+            (
+                h * 3600000 +
+                m * 60000 +
+                s * 1000 +
+                tempoMs
+            ) % 86400000;
+
+
+        const hh =
+            Math.floor(total / 3600000);
+
+        total %= 3600000;
+
+
+        const mm =
+            Math.floor(total / 60000);
+
+        total %= 60000;
+
+
+        const ss =
+            Math.floor(total / 1000);
+
+        const ms =
+            total % 1000;
+
+
+        return (
+            String(hh).padStart(2, '0') +
+            ':' +
+            String(mm).padStart(2, '0') +
+            ':' +
+            String(ss).padStart(2, '0') +
+            '.' +
+            String(ms).padStart(3, '0')
+        );
+    };
+
+
     setTimeout(() => {
+
         try {
+
             let inscritos = [];
+
+
+            // =================================================
+            // PEGA TODOS:
+            // CONFIRMADO = OK
+            // ISENTO     = OK
+            // PENDENTE   = PENDENTE
+            // =================================================
             db.users.forEach(u => {
-                if (u.inscricoes) {
-                    u.inscricoes.forEach(i => {
-                        if (String(i.id) === String(evtId) && i.status === 'CONFIRMADO') {
-                            let cat = window.normalizeCatName(i.extraCat || u.cat);
-                            
-                            let qTime = "";
-                            if(db.tempos) {
-                                let tQ = db.tempos.find(t => String(t.evtId) === String(evtId) && t.cpf === u.cpf && t.runType === 'qualify' && t.cat === cat);
-                                if (tQ && tQ.val && tQ.val !== '--:--.---' && tQ.val !== 'DNF') qTime = tQ.val;
-                            }
-                            
-                            inscritos.push({
-                                ordem: 0,
-                                placa: u.numero || u.numPlaca || u.placa || "",
-                                cat: cat,
-                                nome: u.nome,
-                                cidade: u.city + '-' + (u.uf || 'PE'),
-                                qualify: qTime,
-                                cpf: u.cpf
-                            });
-                        }
-                    });
+
+                if (!u || !u.inscricoes) {
+                    return;
                 }
+
+
+                u.inscricoes.forEach(i => {
+
+                    if (
+                        String(i.id) !== String(evtId)
+                    ) {
+                        return;
+                    }
+
+
+                    if (
+                        i.status !== 'CONFIRMADO' &&
+                        i.status !== 'ISENTO' &&
+                        i.status !== 'PENDENTE'
+                    ) {
+                        return;
+                    }
+
+
+                    const cat =
+                        window.normalizeCatName(
+                            i.extraCat || u.cat
+                        );
+
+
+                    // -----------------------------------------
+                    // BUSCA O RESULTADO DA VOLTA ESCOLHIDA
+                    // -----------------------------------------
+                    let resultado = null;
+
+                    if (db.tempos) {
+
+                        resultado = db.tempos.find(t =>
+
+                            t &&
+
+                            String(t.evtId) ===
+                                String(evtId) &&
+
+                            t.cpf === u.cpf &&
+
+                            t.runType === runTypeDb &&
+
+                            window.normalizeCatName(t.cat) ===
+                                cat
+                        );
+                    }
+
+
+                    let resultadoFinal = '';
+                    let horaLargada = '';
+                    let horaChegada = '';
+
+
+                    if (resultado) {
+
+                        resultadoFinal =
+                            resultado.val || '';
+
+                        horaLargada =
+                            resultado.startClock || '';
+
+                        horaChegada =
+                            resultado.finishClock || '';
+
+
+                        // Se não existir hora de chegada gravada,
+                        // calcula automaticamente.
+                        if (
+                            !horaChegada &&
+                            horaLargada &&
+                            resultadoFinal
+                        ) {
+
+                            horaChegada =
+                                calcularHoraChegada(
+                                    horaLargada,
+                                    resultadoFinal
+                                );
+                        }
+                    }
+
+
+                    // CONFIRMADO E ISENTO = OK
+                    // PENDENTE = PENDENTE
+                    const situacao =
+                        (
+                            i.status === 'CONFIRMADO' ||
+                            i.status === 'ISENTO'
+                        )
+                            ? 'OK'
+                            : 'PENDENTE';
+
+
+                    inscritos.push({
+
+                        ordem: 0,
+
+                        placa:
+                            u.numero ||
+                            u.numPlaca ||
+                            u.placa ||
+                            "",
+
+                        cat: cat,
+
+                        nome:
+                            nomeCurto(u.nome),
+
+                        cidade:
+                            (u.city || '') +
+                            '-' +
+                            (u.uf || 'PE'),
+
+                        situacao:
+                            situacao,
+
+                        horaLargada:
+                            horaLargada,
+
+                        horaChegada:
+                            horaChegada,
+
+                        resultadoFinal:
+                            resultadoFinal,
+
+                        penalidade:
+                            resultado
+                                ? (
+                                    resultado.penaltyStr ||
+                                    ''
+                                )
+                                : '',
+
+                        cpf:
+                            u.cpf,
+
+                        qualify:
+                            ''
+                    });
+
+
+                });
+
             });
 
-            if(inscritos.length === 0) {
-                if(btnClicado && btnClicado.tagName === 'BUTTON') { btnClicado.innerHTML = textoOriginal; btnClicado.disabled = false; } 
-                return toast("Nenhum atleta confirmado nesta etapa.", "error");
+
+            if (inscritos.length === 0) {
+
+                if (
+                    btnClicado &&
+                    btnClicado.tagName === 'BUTTON'
+                ) {
+                    btnClicado.innerHTML =
+                        textoOriginal;
+
+                    btnClicado.disabled =
+                        false;
+                }
+
+                return toast(
+                    "Nenhum atleta inscrito nesta etapa.",
+                    "error"
+                );
             }
 
-            // FILTRO OFICIAL DO SISTEMA
-            const ordemDesejada = [
-                "ESTREANTE", "ESTREANTE (EXTRA)",
-                "RIGIDA", "RÍGIDA", "RÍGIDA (EXTRA)",
-                "OPEN", "OPEN (EXTRA)",
-                "ELITE FEMININA", "FEMININO ELITE", "FEMININO",
-                "INFANTO-JUVENIL", "JUVENIL", "PCD", "PCD (EXTRA)",
-                "MASTER D", "MASTER C2", "MASTER C1", "MASTER C",
-                "MASTER B2", "MASTER B1", "MASTER B",
-                "MASTER A2", "MASTER A1", "MASTER A",
-                "E-BIKE", "E-BIKE (EXTRA)", "JUNIOR", "SUB-30", "ELITE"
-            ];
 
-            inscritos.sort((a, b) => {
-                let indexA = ordemDesejada.indexOf(a.cat);
-                let indexB = ordemDesejada.indexOf(b.cat);
-                if (indexA === -1) indexA = 999;
-                if (indexB === -1) indexB = 999;
+            // =================================================
+            // PARA ORDEM DA LARGADA OFICIAL:
+            // BUSCA O QUALIFY, QUANDO EXISTIR
+            // =================================================
+            inscritos.forEach(p => {
 
-                // 1º Ordena pela Categoria Oficial
-                if (indexA !== indexB) return indexA - indexB;
-                
-                // 2º Ordena pelo Qualify (se houver) ou Nome
-                if (a.qualify && b.qualify) return b.qualify.localeCompare(a.qualify);
-                return a.nome.localeCompare(b.nome);
+                if (!db.tempos) {
+                    return;
+                }
+
+
+                const tQ =
+                    db.tempos.find(t =>
+
+                        t &&
+
+                        String(t.evtId) ===
+                            String(evtId) &&
+
+                        t.cpf === p.cpf &&
+
+                        t.runType === 'qualify' &&
+
+                        window.normalizeCatName(t.cat) ===
+                            p.cat
+                    );
+
+
+                if (
+                    tQ &&
+                    tQ.val &&
+                    tQ.val !== '--:--.---' &&
+                    tQ.val !== 'DNF'
+                ) {
+
+                    p.qualify =
+                        tQ.val;
+                }
+
             });
 
-            let ws_data = [
-                ["Ordem", "Placa", "Categoria", "Nome do Atleta", "Cidade/UF", "Tempo Qualify", "Tempo Oficial (Preencher)", "Status", "Penalidade (+s)", "ID_SISTEMA"]
+
+            // =================================================
+            // ORDEM DAS CATEGORIAS
+            // =================================================
+            const ordemDesejada = [
+
+                "ESTREANTE",
+                "ESTREANTE (EXTRA)",
+
+                "RIGIDA",
+                "RÍGIDA",
+                "RÍGIDA (EXTRA)",
+
+                "OPEN",
+                "OPEN (EXTRA)",
+
+                "ELITE FEMININA",
+                "FEMININO ELITE",
+                "FEMININO",
+
+                "INFANTO-JUVENIL",
+                "JUVENIL",
+
+                "PCD",
+                "PCD (EXTRA)",
+
+                "MASTER D",
+                "MASTER C2",
+                "MASTER C1",
+                "MASTER C",
+
+                "MASTER B2",
+                "MASTER B1",
+                "MASTER B",
+
+                "MASTER A2",
+                "MASTER A1",
+                "MASTER A",
+
+                "E-BIKE",
+                "E-BIKE (EXTRA)",
+
+                "JUNIOR",
+                "SUB-30",
+                "ELITE"
+
             ];
 
-            // ESTILOS
-            let thStyle = { font: { bold: true, color: {rgb: "FFFFFF"} }, fill: { fgColor: {rgb: "0038A8"} }, alignment: { horizontal: "center", vertical: "center" } };
-            let inputCenterStyle = { fill: { fgColor: {rgb: "FFF2CC"} }, alignment: { horizontal: "center", vertical: "center" } }; // Amarelo Centralizado
-            let centerStyle = { alignment: { horizontal: "center", vertical: "center" } };
-            let separatorStyle = { fill: { fgColor: {rgb: "E2E8F0"} } }; // Linha Cinza
 
-            let headerRow = ws_data[0].map(h => ({ v: h, t: 's', s: thStyle }));
-            let final_data = [headerRow];
+            inscritos.sort((a, b) => {
+
+                let indexA =
+                    ordemDesejada.indexOf(a.cat);
+
+                let indexB =
+                    ordemDesejada.indexOf(b.cat);
+
+
+                if (indexA === -1) {
+                    indexA = 999;
+                }
+
+                if (indexB === -1) {
+                    indexB = 999;
+                }
+
+
+                if (indexA !== indexB) {
+                    return indexA - indexB;
+                }
+
+
+                // Na lista OFICIAL,
+                // quem teve melhor qualify larga depois.
+                if (
+                    runTypeDb === '1st' &&
+                    a.qualify &&
+                    b.qualify
+                ) {
+
+                    return b.qualify.localeCompare(
+                        a.qualify
+                    );
+                }
+
+
+                return a.nome.localeCompare(
+                    b.nome
+                );
+
+            });
+
+
+            // =================================================
+            // CABEÇALHO DA PLANILHA
+            // =================================================
+            const ws_data = [[
+
+                "Ordem",
+                "Placa",
+                "Categoria",
+                "Atleta",
+                "Cidade/UF",
+                "Situação",
+                "Tipo de Volta",
+                "Hora de Largada",
+                "Hora de Chegada",
+                "Resultado Final",
+                "Penalidade (+s)",
+                "ID_SISTEMA"
+
+            ]];
+
+
+            const thStyle = {
+
+                font: {
+                    bold: true,
+                    color: {
+                        rgb: "FFFFFF"
+                    }
+                },
+
+                fill: {
+                    fgColor: {
+                        rgb: "0038A8"
+                    }
+                },
+
+                alignment: {
+                    horizontal: "center",
+                    vertical: "center"
+                }
+            };
+
+
+            const inputCenterStyle = {
+
+                fill: {
+                    fgColor: {
+                        rgb: "FFF2CC"
+                    }
+                },
+
+                alignment: {
+                    horizontal: "center",
+                    vertical: "center"
+                }
+            };
+
+
+            const centerStyle = {
+
+                alignment: {
+                    horizontal: "center",
+                    vertical: "center"
+                }
+            };
+
+
+            const separatorStyle = {
+
+                fill: {
+                    fgColor: {
+                        rgb: "E2E8F0"
+                    }
+                }
+            };
+
+
+            const headerRow =
+                ws_data[0].map(h => ({
+
+                    v: h,
+                    t: 's',
+                    s: thStyle
+
+                }));
+
+
+            const final_data = [
+                headerRow
+            ];
+
 
             let currentCat = null;
             let catCount = 0;
 
-            inscritos.forEach((p, index) => {
-                // Insere linha cinza entre categorias e zera a contagem
-                if (currentCat !== null && currentCat !== p.cat) {
+
+            inscritos.forEach(p => {
+
+
+                // Linha separadora entre categorias.
+                if (
+                    currentCat !== null &&
+                    currentCat !== p.cat
+                ) {
+
                     final_data.push([
-                        {v: "", t: 's', s: separatorStyle}, {v: "", t: 's', s: separatorStyle}, {v: "", t: 's', s: separatorStyle}, 
-                        {v: "", t: 's', s: separatorStyle}, {v: "", t: 's', s: separatorStyle}, {v: "", t: 's', s: separatorStyle}, 
-                        {v: "", t: 's', s: separatorStyle}, {v: "", t: 's', s: separatorStyle}, {v: "", t: 's', s: separatorStyle}, {v: "", t: 's', s: separatorStyle}
+
+                        {v:"",t:'s',s:separatorStyle},
+                        {v:"",t:'s',s:separatorStyle},
+                        {v:"",t:'s',s:separatorStyle},
+                        {v:"",t:'s',s:separatorStyle},
+                        {v:"",t:'s',s:separatorStyle},
+                        {v:"",t:'s',s:separatorStyle},
+                        {v:"",t:'s',s:separatorStyle},
+                        {v:"",t:'s',s:separatorStyle},
+                        {v:"",t:'s',s:separatorStyle},
+                        {v:"",t:'s',s:separatorStyle},
+                        {v:"",t:'s',s:separatorStyle},
+                        {v:"",t:'s',s:separatorStyle}
+
                     ]);
+
                     catCount = 0;
                 }
-                currentCat = p.cat;
+
+
+                currentCat =
+                    p.cat;
+
                 catCount++;
-                p.ordem = catCount;
+
+                p.ordem =
+                    catCount;
+
+
+                // PENDENTE fica destacado.
+                const statusStyle =
+                    p.situacao === 'OK'
+                        ? centerStyle
+                        : inputCenterStyle;
+
 
                 final_data.push([
-                    {v: p.ordem, t: 'n', s: centerStyle},
-                    {v: p.placa, t: 's', s: inputCenterStyle}, // Placa agora é amarela e digitável
-                    {v: p.cat, t: 's'},
-                    {v: p.nome, t: 's'},
-                    {v: p.cidade, t: 's'},
-                    {v: p.qualify, t: 's', s: centerStyle},
-                    {v: "", t: 's', s: inputCenterStyle},
-                    {v: "OK", t: 's', s: inputCenterStyle},
-                    {v: "", t: 's', s: inputCenterStyle},
-                    {v: p.cpf, t: 's'} 
+
+                    {
+                        v: p.ordem,
+                        t: 'n',
+                        s: centerStyle
+                    },
+
+                    {
+                        v: p.placa,
+                        t: 's',
+                        s: inputCenterStyle
+                    },
+
+                    {
+                        v: p.cat,
+                        t: 's'
+                    },
+
+                    {
+                        v: p.nome,
+                        t: 's'
+                    },
+
+                    {
+                        v: p.cidade,
+                        t: 's'
+                    },
+
+                    {
+                        v: p.situacao,
+                        t: 's',
+                        s: statusStyle
+                    },
+
+                    {
+                        v: runLabel,
+                        t: 's',
+                        s: centerStyle
+                    },
+
+                    {
+                        v: p.horaLargada,
+                        t: 's',
+                        s: centerStyle
+                    },
+
+                    {
+                        v: p.horaChegada,
+                        t: 's',
+                        s: centerStyle
+                    },
+
+                    {
+                        v: p.resultadoFinal,
+                        t: 's',
+                        s: inputCenterStyle
+                    },
+
+                    {
+                        v: p.penalidade,
+                        t: 's',
+                        s: inputCenterStyle
+                    },
+
+                    {
+                        v: p.cpf,
+                        t: 's'
+                    }
+
                 ]);
+
             });
 
-            let ws = XLSX.utils.aoa_to_sheet(final_data);
-            ws['!cols'] = [ {wch: 8}, {wch: 10}, {wch: 25}, {wch: 40}, {wch: 25}, {wch: 15}, {wch: 28}, {wch: 15}, {wch: 15}, {wch: 15} ];
-            let wb = XLSX.utils.book_new(); 
-            XLSX.utils.book_append_sheet(wb, ws, "Ordem de Largada");
 
-            let safeTitle = evt.t.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            XLSX.writeFile(wb, `Ordem_Largada_Tempos_${safeTitle}.xlsx`);
-            toast("PLANILHA GERADA COM SUCESSO!", "success");
-            
-        } catch (err) { console.error(err); toast("ERRO AO GERAR EXCEL", "error"); }
+            // =================================================
+            // GERA EXCEL
+            // =================================================
+            const ws =
+                XLSX.utils.aoa_to_sheet(
+                    final_data
+                );
 
-        if(btnClicado && btnClicado.tagName === 'BUTTON') { btnClicado.innerHTML = textoOriginal; btnClicado.disabled = false; } 
+
+            ws['!cols'] = [
+
+                {wch:8},
+                {wch:10},
+                {wch:23},
+                {wch:30},
+                {wch:24},
+                {wch:14},
+                {wch:16},
+                {wch:18},
+                {wch:18},
+                {wch:18},
+                {wch:16},
+                {wch:16}
+
+            ];
+
+
+            const wb =
+                XLSX.utils.book_new();
+
+
+            XLSX.utils.book_append_sheet(
+                wb,
+                ws,
+                `Largada ${runLabel}`
+            );
+
+
+            const safeTitle =
+                evt.t
+                    .replace(
+                        /[^a-z0-9]/gi,
+                        '_'
+                    )
+                    .toLowerCase();
+
+
+            const safeRun =
+                runLabel
+                    .replace(
+                        /[^a-z0-9]/gi,
+                        '_'
+                    )
+                    .toLowerCase();
+
+
+            XLSX.writeFile(
+                wb,
+                `Largada_${safeRun}_${safeTitle}.xlsx`
+            );
+
+
+            toast(
+                `LISTA ${runLabel} GERADA COM SUCESSO!`,
+                "success"
+            );
+
+
+        } catch (err) {
+
+            console.error(err);
+
+            toast(
+                "ERRO AO GERAR LISTA DE LARGADA",
+                "error"
+            );
+
+        }
+
+
+        if (
+            btnClicado &&
+            btnClicado.tagName === 'BUTTON'
+        ) {
+
+            btnClicado.innerHTML =
+                textoOriginal;
+
+            btnClicado.disabled =
+                false;
+        }
+
+
     }, 500);
 };
 
