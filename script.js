@@ -2182,17 +2182,10 @@ if (fEvt === 'ALL') {
             }
 
 
-            let posDisplay = '—';
+            posPorGrupo[grupo]++;
 
-
-            if (r.completo) {
-
-                posPorGrupo[grupo]++;
-
-                posDisplay =
-                    posPorGrupo[grupo] + 'º';
-
-            }
+         let posDisplay =
+            posPorGrupo[grupo] + 'º';
 
 
             let pNameFull =
@@ -2415,8 +2408,8 @@ if (fEvt === 'ALL') {
                                 font-weight:900;
                             "
                         >
-                            INCOMPLETO •
                             ${r.qtdConcluida}/${r.qtdObrigatoria}
+                           ETAPAS
                         </span>
                       `;
 
@@ -2467,7 +2460,6 @@ if (fEvt === 'ALL') {
                                 >
                                     ${posDisplay}
                                     ${pName}
-                                    ${placaHtml}
 
                                     <span
                                         class="badge-city"
