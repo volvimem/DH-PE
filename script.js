@@ -4041,21 +4041,33 @@ window.gerarExcelLargada = function() {
     // =====================================================
     const nomeCurto = function(nome) {
 
+    const ignorar = [
+        'DA',
+        'DE',
+        'DO',
+        'DAS',
+        'DOS',
+        'E'
+    ];
+
     const partes = String(nome || '')
         .trim()
         .split(/\s+/)
         .filter(Boolean);
 
-    if (partes.length === 0) {
+    const nomesValidos = partes.filter(
+        parte => !ignorar.includes(parte.toUpperCase())
+    );
+
+    if (nomesValidos.length === 0) {
         return '';
     }
 
-    if (partes.length === 1) {
-        return partes[0];
+    if (nomesValidos.length === 1) {
+        return nomesValidos[0];
     }
 
-    // PRIMEIRO NOME + SEGUNDO NOME
-    return `${partes[0]} ${partes[1]}`;
+    return `${nomesValidos[0]} ${nomesValidos[1]}`;
 };
 
 
