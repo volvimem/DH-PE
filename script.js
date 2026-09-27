@@ -5253,15 +5253,16 @@ window.deleteRes = function(index) {
                                 // ENVIA PEDIDO PARA ATUALIZAR SHEETS
                                 // ----------------------------------
                                 return database
-                                    .ref(
-                                        'sheets_sync_queue'
-                                    )
-                                    .push(
-                                        syncPlanilha
-                                    );
+                              .ref(
+                               DB_KEY +
+                            '/sheets_sync_queue'
+                            )
+                               .push(
+                                syncPlanilha
+                            );
 
                             })
-                            .then(() => {
+                              .then(() => {
 
                                 toast(
                                     "TEMPO EXCLUÍDO E SINCRONIZAÇÃO ENVIADA!",
