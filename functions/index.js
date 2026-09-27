@@ -3,11 +3,18 @@ const { onRequest } = require("firebase-functions/v2/https");
 const { logger } = require("firebase-functions");
 const { defineSecret } = require("firebase-functions/params");
 
-const { initializeApp } = require("firebase-admin/app");
+const {
+    initializeApp,
+    applicationDefault
+} = require("firebase-admin/app");
 const { getMessaging } = require("firebase-admin/messaging");
 const { getDatabase } = require("firebase-admin/database");
 
-initializeApp();
+initializeApp({
+    credential: applicationDefault(),
+    projectId: "fpc-per",
+    databaseURL: "https://fpc-per-default-rtdb.firebaseio.com"
+});
 
 
 // ==========================================================
