@@ -5123,11 +5123,225 @@ window.renderAdmResults = function() {
         return `<div class="adm-card" style="display:flex; flex-direction:column; gap:8px; border: 2px solid #cbd5e1; padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); background: #ffffff;"><div style="display:flex; justify-content:space-between; align-items:start;"><div><div style="font-weight:bold; font-size:13px; color:var(--pe-blue);">${pName} <span class="badge-city">${pCityUF}</span></div><div style="margin-top:4px;">${tags} <span class="${cClass}">${t.cat}</span></div></div><div style="text-align:right;"><b style="font-family:monospace; font-size:15px; background:#f1f5f9; padding:4px 6px; border-radius:6px; border:1px solid #e2e8f0; ${valStyle}">${valDisplay}</b>${penTag}</div></div><div style="display:flex; gap:5px; border-top:1px dashed #e2e8f0; padding-top:10px;"><button class="btn-mini-adm" style="background:#d65a00; color:white; flex:1; font-weight:bold;" onclick="aplicarPenalidade('${realIndex}')"><i class="fas fa-stopwatch"></i> PENALIZAR</button><button class="btn-mini-adm" style="background:var(--pe-blue); flex:1;" onclick="editRes('${realIndex}')"><i class="fas fa-pen"></i> EDITAR</button><button class="btn-mini-adm" style="background:var(--pe-red); width:40px;" onclick="deleteRes('${realIndex}')"><i class="fas fa-trash"></i></button></div></div>`; 
     }).join(''); 
 };
-window.deleteRes = function(index) { 
-    const execDelete = () => { showConfirm("EXCLUIR TEMPO?", "Deseja realmente excluir este tempo do sistema?", '<i class="fas fa-trash-alt" style="color:var(--pe-red)"></i>', function(res) { if(res) { database.ref(DB_KEY + '/tempos').once('value').then(snap => { let temposRemotos = snap.val() || []; if(!Array.isArray(temposRemotos)) temposRemotos = Object.values(temposRemotos); const tInfo = temposRemotos[index]; if(tInfo) { window.logAction(`Excluiu tempo do CPF ${tInfo.cpf} na Etapa ID: ${tInfo.evtId}`); } temposRemotos.splice(index, 1); database.ref(DB_KEY + '/tempos').set(temposRemotos).then(() => { toast("ATUALIZADO!"); renderAdmResults(); recalcRanking(); refreshCurrentView(); }); }); } });
+window.deleteRes = function(index) {
+
+    const execDelete = () => {
+
+        showConfirm(
+            "EXCLUIR TEMPO?",
+            "Deseja realmente excluir este tempo do sistema?",
+            '<i class="fas fa-trash-alt" style="color:var(--pe-red)"></i>',
+
+            function(res) {
+
+                if (!res) {
+                    return;
+                }
+
+
+                database
+                    .ref(
+                        DB_KEY + '/tempos'
+                    )
+                    .once('value')
+                    .then(snap => {
+
+                        let temposRemotos =
+                            snap.val() || [];
+
+
+                        if (
+                            !Array.isArray(
+                                temposRemotos
+                            )
+                        ) {
+
+                            temposRemotos =
+                                Object.values(
+                                    temposRemotos
+                                );
+                        }
+
+
+                        const tInfo =
+                            temposRemotos[
+                                index
+                            ];
+
+
+                        if (!tInfo) {
+
+                            toast(
+                                "TEMPO NÃO ENCONTRADO",
+                                "error"
+                            );
+
+                            return;
+                        }
+
+
+                        // ------------------------------------------
+                        // GUARDA OS DADOS ANTES DE APAGAR
+                        // ------------------------------------------
+                        const syncPlanilha = {
+
+                            acao:
+                                "EXCLUIR",
+
+                            eventId:
+                                String(
+                                    tInfo.evtId || ""
+                                ),
+
+                            cpf:
+                                String(
+                                    tInfo.cpf || ""
+                                ),
+
+                            categoria:
+                                String(
+                                    tInfo.cat || ""
+                                ),
+
+                            runType:
+                                String(
+                                    tInfo.runType ||
+                                    "1st"
+                                ),
+
+                            resultadoAnterior:
+                                String(
+                                    tInfo.val || ""
+                                ),
+
+                            source:
+                                "DHPE_APP",
+
+                            status:
+                                "pending",
+
+                            createdAt:
+                                Date.now()
+                        };
+
+
+                        window.logAction(
+                            `Excluiu tempo do CPF ${tInfo.cpf} na Etapa ID: ${tInfo.evtId}`
+                        );
+
+
+                        // ------------------------------------------
+                        // REMOVE DO DH-PE
+                        // ------------------------------------------
+                        temposRemotos.splice(
+                            index,
+                            1
+                        );
+
+
+                        return database
+                            .ref(
+                                DB_KEY +
+                                '/tempos'
+                            )
+                            .set(
+                                temposRemotos
+                            )
+                            .then(() => {
+
+                                // ----------------------------------
+                                // ENVIA PEDIDO PARA ATUALIZAR SHEETS
+                                // ----------------------------------
+                                return database
+                                    .ref(
+                                        'sheets_sync_queue'
+                                    )
+                                    .push(
+                                        syncPlanilha
+                                    );
+
+                            })
+                            .then(() => {
+
+                                toast(
+                                    "TEMPO EXCLUÍDO E SINCRONIZAÇÃO ENVIADA!",
+                                    "success"
+                                );
+
+
+                                renderAdmResults();
+                                recalcRanking();
+                                refreshCurrentView();
+
+                            })
+                            .catch(error => {
+
+                                console.error(
+                                    "Erro ao excluir/sincronizar:",
+                                    error
+                                );
+
+
+                                toast(
+                                    "TEMPO EXCLUÍDO, MAS HOUVE ERRO NA SINCRONIZAÇÃO",
+                                    "error"
+                                );
+
+                            });
+
+                    })
+                    .catch(error => {
+
+                        console.error(
+                            "Erro ao acessar tempos:",
+                            error
+                        );
+
+
+                        toast(
+                            "ERRO AO EXCLUIR TEMPO",
+                            "error"
+                        );
+
+                    });
+            }
+        );
     };
-    if(!isSuperAdmin(loggedUser)) { showPrompt("AUTORIZAÇÃO NECESSÁRIA", "Digite a Senha Master para excluir este tempo:", function(pwd) { if(pwd === db.config.rerunPass) execDelete(); else toast("SENHA INCORRETA", "error"); });
-    } else { execDelete(); }
+
+
+    if (
+        !isSuperAdmin(
+            loggedUser
+        )
+    ) {
+
+        showPrompt(
+            "AUTORIZAÇÃO NECESSÁRIA",
+            "Digite a Senha Master para excluir este tempo:",
+
+            function(pwd) {
+
+                if (
+                    pwd ===
+                    db.config.rerunPass
+                ) {
+
+                    execDelete();
+
+                } else {
+
+                    toast(
+                        "SENHA INCORRETA",
+                        "error"
+                    );
+                }
+            }
+        );
+
+    } else {
+
+        execDelete();
+    }
 };
 
 window.aplicarPenalidade = function(index) {
