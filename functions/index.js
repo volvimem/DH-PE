@@ -116,6 +116,9 @@ exports.processarPushQueueRtdbV2 = onValueCreated(
 
 const SHEETS_SYNC_KEY = defineSecret("SHEETS_SYNC_KEY");
 
+const SHEETS_WEBAPP_URL =
+    defineSecret("SHEETS_WEBAPP_URL");
+
 // Banco da temporada 2026 usado atualmente pelo DH-PE.
 const DHPE_DB_KEY_2026 = "dhpe_v25_final_stable_fix";
 
@@ -372,832 +375,256 @@ async function gravarNovoTempoEmIndiceLivre(
 
 
 // ==========================================================
-// 4. RECEBE RESULTADO DO GOOGLE SHEETS
+// DH-PE APP -> GOOGLE SHEETS
+// SINCRONIZA EXCLUSÕES DE RESULTADOS
 // ==========================================================
 
-exports.receberResultadoGoogleSheets = onRequest(
-    {
-        region: "us-central1",
-        secrets: [SHEETS_SYNC_KEY],
-        timeoutSeconds: 60,
-        memory: "256MiB"
-    },
+exports.sincronizarExclusaoGoogleSheets =
+    onValueCreated(
+        {
+            ref: "/sheets_sync_queue/{syncId}",
+            region: "us-central1",
 
-    async (req, res) => {
+            secrets: [
+                SHEETS_SYNC_KEY,
+                SHEETS_WEBAPP_URL
+            ],
 
-        // ==================================================
-        // 1. SOMENTE POST
-        // ==================================================
-        if (req.method !== "POST") {
+            timeoutSeconds: 60,
+            memory: "256MiB"
+        },
 
-            res.status(405).json({
-                ok: false,
-                erro: "Use POST."
-            });
+        async (event) => {
 
-            return;
-        }
+            const snap =
+                event.data;
 
 
-        // ==================================================
-        // 2. AUTORIZAÇÃO
-        // ==================================================
-        const authorization =
-            String(
-                req.get("authorization") || ""
-            );
+            const item =
+                snap.val();
 
 
-        const chaveEsperada =
-            `Bearer ${SHEETS_SYNC_KEY.value()}`;
-
-
-        if (authorization !== chaveEsperada) {
-
-            res.status(401).json({
-                ok: false,
-                erro: "Não autorizado."
-            });
-
-            return;
-        }
-
-
-        try {
-
-            const body =
-                req.body || {};
-
-
-            // ==================================================
-            // 3. AÇÃO
-            // ==================================================
-            const acao =
-                String(
-                    body.acao || "SALVAR"
-                )
-                .trim()
-                .toUpperCase();
-
-
-            // ==================================================
-            // 4. DADOS RECEBIDOS
-            // ==================================================
-            const eventId =
-                String(
-                    body.eventId || ""
-                ).trim();
-
-
-            const cpfLimpo =
-                limparCpf(
-                    body.idSistema
-                );
-
-
-            const categoria =
-                normalizarCategoria(
-                    body.categoria
-                );
-
-
-            const runType =
-                converterTipoVolta(
-                    body.tipoVolta
-                );
-
-
-            let resultado =
-                String(
-                    body.resultadoFinal || ""
-                )
-                .trim()
-                .toUpperCase();
-
-
-            const horaLargada =
-                String(
-                    body.horaLargada || ""
-                ).trim();
-
-
-            const horaChegada =
-                String(
-                    body.horaChegada || ""
-                ).trim();
-
-
-            const penalidade =
-                String(
-                    body.penalidade || ""
-                ).trim();
-
-
-            const placaRecebida =
-                String(
-                    body.placa || ""
-                ).trim();
-
-
-            // ==================================================
-            // 5. VALIDAÇÕES BÁSICAS
-            // ==================================================
-            if (!eventId) {
-
-                res.status(400).json({
-                    ok: false,
-                    erro: "EVENT_ID não informado."
-                });
-
+            // --------------------------------------------------
+            // IGNORA REGISTRO INVÁLIDO
+            // --------------------------------------------------
+            if (!item) {
                 return;
             }
 
 
+            // Processa somente itens pendentes.
             if (
-                !cpfLimpo ||
-                cpfLimpo.length !== 11
+                item.status &&
+                item.status !== "pending"
             ) {
 
-                res.status(400).json({
-                    ok: false,
-                    erro: "ID_SISTEMA/CPF inválido."
-                });
-
                 return;
             }
 
 
-            if (!runType) {
+            try {
 
-                res.status(400).json({
-                    ok: false,
-                    erro: "TIPO_VOLTA inválido."
-                });
-
-                return;
-            }
-
-
-            // ==================================================
-            // 6. FIREBASE
-            // ==================================================
-            const database =
-                getDatabase();
-
-
-            const base =
-                DHPE_DB_KEY_2026;
-
-
-            const temposRef =
-                database.ref(
-                    `${base}/tempos`
-                );
-
-
-            // ==================================================
-            // 7. EXCLUSÃO
-            // APAGOU NA PLANILHA → APAGA NO DH-PE
-            // ==================================================
-            if (acao === "EXCLUIR") {
-
-                const temposSnap =
-                    await temposRef.get();
-
-
-                const temposComChaves =
-                    normalizarTemposComChaves(
-                        temposSnap.val()
-                    );
-
-
-                const existente =
-                    temposComChaves.find(
-                        item => {
-
-                            const t =
-                                item.value;
-
-
-                            if (!t) {
-                                return false;
-                            }
-
-
-                            const tipoAtual =
-                                t.runType
-                                    ? String(t.runType)
-                                    : "1st";
-
-
-                            return (
-                                String(t.evtId) ===
-                                    String(eventId) &&
-
-                                limparCpf(t.cpf) ===
-                                    cpfLimpo &&
-
-                                tipoAtual ===
-                                    String(runType) &&
-
-                                normalizarCategoria(
-                                    t.cat
-                                ) ===
-                                    categoria
-                            );
-                        }
-                    ) || null;
-
-
-                // Já não existia.
-                // Consideramos a operação concluída.
-                if (!existente) {
-
-                    res.status(200).json({
-
-                        ok:
-                            true,
-
-                        operacao:
-                            "nao_encontrado",
-
-                        mensagem:
-                            "O resultado já não existia no DH-PE."
-                    });
-
-                    return;
-                }
-
-
-                // Remove SOMENTE o resultado encontrado.
-                await temposRef
-                    .child(existente.key)
-                    .remove();
-
-
-                logger.info(
-                    "Resultado excluído pelo Google Sheets",
-                    {
-                        eventId:
-                            eventId,
-
-                        cpf:
-                            cpfLimpo,
-
-                        categoria:
-                            categoria,
-
-                        runType:
-                            runType,
-
-                        chave:
-                            existente.key
-                    }
-                );
-
-
-                res.status(200).json({
-
-                    ok:
-                        true,
-
-                    operacao:
-                        "excluido",
-
-                    eventId:
-                        eventId,
-
-                    cpf:
-                        cpfLimpo,
-
-                    categoria:
-                        categoria,
-
-                    tipo:
-                        runType
-                });
-
-
-                return;
-            }
-
-
-            // ==================================================
-            // 8. VALIDA RESULTADO PARA SALVAR
-            // ==================================================
-            if (!resultado) {
-
-                res.status(400).json({
-                    ok: false,
-                    erro: "RESULTADO FINAL vazio."
-                });
-
-                return;
-            }
-
-
-            // O DH-PE atual trata DNS/DSQ junto com DNF.
-            if (
-                resultado === "DNS" ||
-                resultado === "DSQ"
-            ) {
-
-                resultado =
-                    "DNF";
-            }
-
-
-            if (
-                resultado !== "DNF" &&
-                !/^\d{1,3}:\d{2}\.\d{3}$/
-                    .test(resultado)
-            ) {
-
-                res.status(400).json({
-                    ok: false,
-                    erro:
-                        "Resultado inválido. Use MM:SS.mmm ou DNF."
-                });
-
-                return;
-            }
-
-
-            // ==================================================
-            // 9. CARREGA EVENTOS E USUÁRIOS
-            // ==================================================
-            const [
-                eventosSnap,
-                usuariosSnap
-            ] =
-                await Promise.all([
-
-                    database
-                        .ref(
-                            `${base}/events`
-                        )
-                        .get(),
-
-                    database
-                        .ref(
-                            `${base}/users`
-                        )
-                        .get()
-
-                ]);
-
-
-            const evento =
-                encontrarEvento(
-                    eventosSnap.val(),
-                    eventId
-                );
-
-
-            if (!evento) {
-
-                res.status(404).json({
-                    ok: false,
-                    erro:
-                        "EVENT_ID não encontrado no DH-PE."
-                });
-
-                return;
-            }
-
-
-            const atleta =
-                encontrarAtleta(
-                    usuariosSnap.val(),
-                    cpfLimpo
-                );
-
-
-            if (!atleta) {
-
-                res.status(404).json({
-                    ok: false,
-                    erro:
-                        "ID_SISTEMA/CPF não encontrado no DH-PE."
-                });
-
-                return;
-            }
-
-
-            // ==================================================
-            // 10. DADOS DO ATLETA
-            // ==================================================
-            const cpfBanco =
-                String(
-                    atleta.cpf ||
-                    formatarCpf(cpfLimpo)
-                ).trim();
-
-
-            const nomeAtleta =
-                String(
-                    atleta.nome ||
-                    atleta.name ||
-                    ""
-                ).toUpperCase();
-
-
-            const cidadeAtleta =
-                String(
-                    atleta.city ||
-                    atleta.cidade ||
-                    ""
-                ).toUpperCase();
-
-
-            const placa =
-                placaRecebida ||
-                String(
-                    atleta.numero ||
-                    atleta.numPlaca ||
-                    atleta.placa ||
-                    ""
-                );
-
-
-            let penaltyStr =
-                "";
-
-
-            if (penalidade) {
-
-                penaltyStr =
-                    penalidade.startsWith("+")
-                        ? penalidade
-                        : `+${penalidade}s`;
-            }
-
-
-            // ==================================================
-            // 11. LÊ OS TEMPOS
-            // ==================================================
-            const temposSnap =
-                await temposRef.get();
-
-
-            const temposComChaves =
-                normalizarTemposComChaves(
-                    temposSnap.val()
-                );
-
-
-            // ==================================================
-            // 12. PROCURA RESULTADO EXISTENTE
-            // ==================================================
-            const existente =
-                temposComChaves.find(
-                    item => {
-
-                        const t =
-                            item.value;
-
-
-                        if (!t) {
-                            return false;
-                        }
-
-
-                        const tipoAtual =
-                            t.runType
-                                ? String(t.runType)
-                                : "1st";
-
-
-                        return (
-                            String(t.evtId) ===
-                                String(eventId) &&
-
-                            limparCpf(t.cpf) ===
-                                cpfLimpo &&
-
-                            tipoAtual ===
-                                String(runType) &&
-
-                            normalizarCategoria(
-                                t.cat
-                            ) ===
-                                categoria
-                        );
-                    }
-                ) || null;
-
-
-            const anterior =
-                existente
-                    ? existente.value
-                    : {};
-
-
-            // ==================================================
-            // 13. DESCOBRE SE HOUVE ALTERAÇÃO REAL
-            // ==================================================
-            const resultadoAnterior =
-                String(
-                    anterior.val || ""
-                );
-
-
-            const penalidadeAnterior =
-                String(
-                    anterior.penaltyStr || ""
-                );
-
-
-            const houveAlteracao =
-                !existente ||
-                resultadoAnterior !== resultado ||
-                penalidadeAnterior !== penaltyStr;
-
-
-            // ==================================================
-            // 14. MONTA O RESULTADO FINAL
-            // ==================================================
-            const novoTempo = {
-
-                ...anterior,
-
-                evtId:
-                    eventId,
-
-                cpf:
-                    cpfBanco,
-
-                name:
-                    nomeAtleta,
-
-                city:
-                    cidadeAtleta,
-
-                cat:
-                    categoria,
-
-                val:
-                    resultado,
-
-                status:
-                    resultado === "DNF"
-                        ? "DNF"
-                        : "OK",
-
-                runType:
-                    runType,
-
-                num:
-                    placa,
-
-                penaltyStr:
-                    penaltyStr,
-
-                startClock:
-                    horaLargada ||
-                    anterior.startClock ||
-                    "",
-
-                finishClock:
-                    horaChegada ||
-                    anterior.finishClock ||
-                    "",
-
-                source:
-                    "GOOGLE_SHEETS",
-
-                updatedAt:
-                    Date.now()
-            };
-
-
-            // ==================================================
-            // 15. SALVA OU ATUALIZA
-            // ==================================================
-            let chaveDestino;
-            let operacao;
-
-
-            if (existente) {
-
-                chaveDestino =
-                    existente.key;
-
-
-                operacao =
-                    "atualizado";
-
-
-                await temposRef
-                    .child(chaveDestino)
-                    .set(novoTempo);
-
-            } else {
-
-                const indiceLivre =
-                    primeiroIndiceNumericoLivre(
-                        temposComChaves
-                    );
-
-
-                chaveDestino =
-                    await gravarNovoTempoEmIndiceLivre(
-                        temposRef,
-                        indiceLivre,
-                        novoTempo
-                    );
-
-
-                operacao =
-                    "criado";
-            }
-
-
-            // ==================================================
-            // 16. NOTIFICAÇÃO PARA O ATLETA
-            // ==================================================
-            let notificacaoEnviada =
-                false;
-
-
-            let motivoNotificacao =
-                "";
-
-
-            // Só gera nova notificação se:
-            // - o resultado foi criado;
-            // - ou realmente mudou.
-            if (houveAlteracao) {
-
-                const token =
+                const url =
                     String(
-                        atleta.fcmToken || ""
+                        SHEETS_WEBAPP_URL.value() || ""
                     ).trim();
 
 
-                if (token) {
+                if (!url) {
 
-                    let tituloPush;
-                    let mensagemPush;
-
-
-                    if (operacao === "criado") {
-
-                        tituloPush =
-                            "Tempo Registrado! ⏱️";
-
-
-                        mensagemPush =
-                            `Seu tempo de ${resultado} acabou de entrar no sistema. Confira sua posição!`;
-
-                    } else {
-
-                        tituloPush =
-                            "Tempo Atualizado! ⏱️";
-
-
-                        mensagemPush =
-                            `Seu resultado foi atualizado para ${resultado}. Confira sua posição!`;
-                    }
-
-
-                    await database
-                        .ref("push_queue")
-                        .push({
-
-                            token:
-                                token,
-
-                            title:
-                                tituloPush,
-
-                            body:
-                                mensagemPush,
-
-                            status:
-                                "pending",
-
-                            timestamp:
-                                Date.now(),
-
-                            source:
-                                "GOOGLE_SHEETS",
-
-                            cpf:
-                                cpfBanco,
-
-                            eventId:
-                                eventId
-                        });
-
-
-                    notificacaoEnviada =
-                        true;
-
-
-                    logger.info(
-                        "Notificação de resultado criada",
-                        {
-                            cpf:
-                                cpfBanco,
-
-                            eventId:
-                                eventId,
-
-                            resultado:
-                                resultado,
-
-                            operacao:
-                                operacao
-                        }
-                    );
-
-                } else {
-
-                    motivoNotificacao =
-                        "Atleta sem fcmToken cadastrado.";
-
-
-                    logger.info(
-                        "Resultado salvo sem push: atleta sem token",
-                        {
-                            cpf:
-                                cpfBanco,
-
-                            eventId:
-                                eventId
-                        }
+                    throw new Error(
+                        "SHEETS_WEBAPP_URL não configurada."
                     );
                 }
 
-            } else {
 
-                motivoNotificacao =
-                    "Resultado não mudou; push duplicado evitado.";
+                const chave =
+                    String(
+                        SHEETS_SYNC_KEY.value() || ""
+                    );
+
+
+                if (!chave) {
+
+                    throw new Error(
+                        "SHEETS_SYNC_KEY não configurada."
+                    );
+                }
+
+
+                // --------------------------------------------------
+                // DADOS ENVIADOS AO GOOGLE SHEETS
+                // --------------------------------------------------
+                const payload = {
+
+                    chave:
+                        chave,
+
+                    acao:
+                        "EXCLUIR",
+
+                    eventId:
+                        String(
+                            item.eventId || ""
+                        ),
+
+                    cpf:
+                        String(
+                            item.cpf || ""
+                        ),
+
+                    categoria:
+                        String(
+                            item.categoria || ""
+                        ),
+
+                    runType:
+                        String(
+                            item.runType || "1st"
+                        )
+                };
+
+
+                logger.info(
+                    "Enviando exclusão ao Google Sheets",
+                    {
+                        syncId:
+                            event.params.syncId,
+
+                        eventId:
+                            payload.eventId,
+
+                        cpf:
+                            payload.cpf,
+
+                        categoria:
+                            payload.categoria,
+
+                        runType:
+                            payload.runType
+                    }
+                );
+
+
+                // --------------------------------------------------
+                // CHAMA O WEB APP DO APPS SCRIPT
+                // --------------------------------------------------
+                const resposta =
+                    await fetch(
+                        url,
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+
+                            body:
+                                JSON.stringify(
+                                    payload
+                                ),
+
+                            redirect:
+                                "follow"
+                        }
+                    );
+
+
+                const texto =
+                    await resposta.text();
+
+
+                let retorno = {};
+
+
+                try {
+
+                    retorno =
+                        JSON.parse(texto);
+
+                } catch (erroJson) {
+
+                    retorno = {
+                        ok: false,
+                        respostaBruta: texto
+                    };
+                }
+
+
+                if (
+                    !resposta.ok ||
+                    retorno.ok !== true
+                ) {
+
+                    throw new Error(
+                        "Google Sheets respondeu com erro: " +
+                        texto
+                    );
+                }
+
+
+                // --------------------------------------------------
+                // MARCA COMO CONCLUÍDO
+                // --------------------------------------------------
+                await snap.ref.update({
+
+                    status:
+                        "sent",
+
+                    processedAt:
+                        Date.now(),
+
+                    linhasAlteradas:
+                        Number(
+                            retorno.linhasAlteradas || 0
+                        ),
+
+                    sheetsOperation:
+                        retorno.operacao || "",
+
+                    error:
+                        null
+                });
+
+
+                logger.info(
+                    "Exclusão sincronizada com Google Sheets",
+                    {
+                        syncId:
+                            event.params.syncId,
+
+                        linhasAlteradas:
+                            retorno.linhasAlteradas || 0,
+
+                        operacao:
+                            retorno.operacao || ""
+                    }
+                );
+
+
+            } catch (error) {
+
+                logger.error(
+                    "Falha ao sincronizar exclusão com Google Sheets",
+                    error
+                );
+
+
+                await snap.ref.update({
+
+                    status:
+                        "error",
+
+                    processedAt:
+                        Date.now(),
+
+                    error:
+                        error &&
+                        error.message
+                            ? error.message
+                            : String(error)
+                });
             }
-
-
-            // ==================================================
-            // 17. RESPOSTA DE SUCESSO
-            // ==================================================
-            res.status(200).json({
-
-                ok:
-                    true,
-
-                operacao:
-                    operacao,
-
-                chave:
-                    chaveDestino,
-
-                evento:
-                    evento.t ||
-                    eventId,
-
-                cpf:
-                    cpfBanco,
-
-                atleta:
-                    nomeAtleta,
-
-                categoria:
-                    categoria,
-
-                tipo:
-                    runType,
-
-                resultado:
-                    resultado,
-
-                notificacaoEnviada:
-                    notificacaoEnviada,
-
-                motivoNotificacao:
-                    motivoNotificacao
-            });
-
-
-        } catch (error) {
-
-            logger.error(
-                "Erro ao receber resultado do Google Sheets",
-                error
-            );
-
-
-            res.status(500).json({
-
-                ok:
-                    false,
-
-                erro:
-                    error &&
-                    error.message
-                        ? error.message
-                        : String(error)
-            });
         }
-    }
-);
+    );
