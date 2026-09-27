@@ -382,7 +382,7 @@ async function gravarNovoTempoEmIndiceLivre(
 exports.sincronizarExclusaoGoogleSheets =
     onValueCreated(
         {
-            ref: "/sheets_sync_queue/{syncId}",
+            ref: "/dhpe_v25_final_stable_fix/sheets_sync_queue/{syncId}",
             region: "us-central1",
 
             secrets: [
