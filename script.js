@@ -521,6 +521,7 @@ function refreshCurrentView() {
     if(currentTab === 'tempos') renderContent('tempos'); 
     if(currentTab === 'ranking') renderContent('ranking'); 
     if(currentTab === 'calendar') renderContent('calendar');
+    if(currentTab === 'race') window.renderModoCorrida();
     if(currentTab === 'profile') { updateCardLive(); loadProfileData(); }
     
     // ATUALIZA A TELA DO X1
@@ -2387,6 +2388,326 @@ window.verOrdemLargada = function() {
     );
 };
 
+// ==========================================================
+// MODO CORRIDA - VISÃO DO ATLETA
+// ==========================================================
+window.obterEventoModoCorrida = function() {
+    if (!loggedUser || !db.events) return null;
+
+    const agora = new Date();
+    const candidatos = [];
+
+    (loggedUser.inscricoes || []).forEach(insc => {
+        if (!insc) return;
+        if (insc.status !== 'CONFIRMADO' && insc.status !== 'ISENTO') return;
+
+        const evt = db.events.find(e => String(e.id) === String(insc.id));
+        if (!evt || evt.status === 'CANCELLED') return;
+        if (evt.startListPublished !== true) return;
+
+        const fimEvento = getEventoEndDate(evt);
+        if (fimEvento && agora > fimEvento) return;
+
+        candidatos.push(evt);
+    });
+
+    const unicos = candidatos.filter((evt, idx, arr) =>
+        arr.findIndex(x => String(x.id) === String(evt.id)) === idx
+    );
+
+    unicos.sort((a, b) => {
+        const fimA = getEventoEndDate(a);
+        const fimB = getEventoEndDate(b);
+        const ta = fimA ? fimA.getTime() : Number.MAX_SAFE_INTEGER;
+        const tb = fimB ? fimB.getTime() : Number.MAX_SAFE_INTEGER;
+        return ta - tb;
+    });
+
+    return unicos[0] || null;
+};
+
+window.renderModoCorridaEntrada = function() {
+    const box = document.getElementById('race-mode-entry');
+    if (!box) return;
+
+    const evt = window.obterEventoModoCorrida();
+
+    if (!evt) {
+        box.style.display = 'none';
+        box.innerHTML = '';
+        return;
+    }
+
+    box.style.display = 'block';
+    box.innerHTML = `
+        <button
+            onclick="nav('race')"
+            style="
+                width:100%;
+                border:none;
+                border-radius:12px;
+                padding:13px 14px;
+                background:linear-gradient(135deg,#0f172a,#1e3a8a);
+                color:white;
+                box-shadow:0 5px 14px rgba(15,23,42,.22);
+                cursor:pointer;
+                text-align:left;
+            "
+        >
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                <div>
+                    <div style="font-size:10px; color:#fde047; font-weight:900;">🏁 MODO CORRIDA DISPONÍVEL</div>
+                    <div style="font-size:13px; font-weight:900; margin-top:3px;">${evt.t}</div>
+                    <div style="font-size:9px; opacity:.8; margin-top:2px;">Acompanhe sua fila, largada e resultado em tempo real</div>
+                </div>
+                <i class="fas fa-chevron-right" style="font-size:18px; color:#fde047;"></i>
+            </div>
+        </button>
+    `;
+};
+
+window.getModoCorridaRunType = function(evt) {
+    const estado = db.live_state && db.live_state[String(evt.id)]
+        ? db.live_state[String(evt.id)]
+        : (db.live_state && db.live_state[evt.id] ? db.live_state[evt.id] : null);
+
+    if (estado && ['qualify', 'oficial', 'segunda'].includes(estado.runType)) {
+        return estado.runType;
+    }
+
+    return evt.hasQualify ? 'qualify' : 'oficial';
+};
+
+window.renderModoCorrida = function() {
+    const area = document.getElementById('race-mode-content');
+    if (!area) return;
+
+    if (!loggedUser) {
+        area.innerHTML = '<div style="padding:20px; text-align:center; color:#64748b;">Faça login para acessar o Modo Corrida.</div>';
+        return;
+    }
+
+    const evt = window.obterEventoModoCorrida();
+
+    if (!evt) {
+        area.innerHTML = `
+            <div style="background:white; border-radius:12px; padding:20px; text-align:center; border:1px solid #e2e8f0;">
+                <i class="fas fa-flag-checkered" style="font-size:34px; color:#94a3b8;"></i>
+                <div style="font-size:14px; font-weight:900; color:#334155; margin-top:10px;">MODO CORRIDA INDISPONÍVEL</div>
+                <div style="font-size:11px; color:#64748b; margin-top:6px; line-height:1.5;">
+                    Ele aparece quando você está CONFIRMADO/ISENTO e a organização publica a ordem de largada.
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    const runTypeUi = window.getModoCorridaRunType(evt);
+    const runTypeDb = runTypeUi === 'oficial' ? '1st' : (runTypeUi === 'segunda' ? '2nd' : 'qualify');
+    const runLabel = runTypeUi === 'qualify' ? 'QUALIFY' : (runTypeUi === 'segunda' ? '2ª DESCIDA' : 'DESCIDA OFICIAL');
+    const cpfLogado = cleanCPF(loggedUser.cpf);
+
+    const minhasInscricoes = (loggedUser.inscricoes || []).filter(i =>
+        String(i.id) === String(evt.id) &&
+        (i.status === 'CONFIRMADO' || i.status === 'ISENTO')
+    );
+
+    const slotsRaw = db.live_slots && (db.live_slots[String(evt.id)] || db.live_slots[evt.id]);
+    let slots = [];
+    if (Array.isArray(slotsRaw)) slots = slotsRaw.filter(Boolean);
+    else if (slotsRaw && typeof slotsRaw === 'object') slots = Object.values(slotsRaw).filter(Boolean);
+
+    const localizarAtletaPorRiderId = (riderId) => {
+        if (!riderId) return null;
+        const partes = String(riderId).split('||');
+        const cpf = cleanCPF(partes[0] || '');
+        const cat = partes.slice(1).join('||');
+        const u = (db.users || []).find(x => x && cleanCPF(x.cpf) === cpf);
+        return {
+            nome: u ? u.nome : 'ATLETA',
+            cat: cat || ''
+        };
+    };
+
+    const slotRodando = slots.find(s => s && s.isRunning === true);
+    const slotAguardando = slots.find(s => s && s.isRunning !== true);
+    const atletaRodando = slotRodando ? localizarAtletaPorRiderId(slotRodando.riderId) : null;
+    const atletaAguardando = slotAguardando ? localizarAtletaPorRiderId(slotAguardando.riderId) : null;
+
+    let html = `
+        <div style="background:linear-gradient(135deg,#0f172a,#1e3a8a); color:white; border-radius:14px; padding:14px; box-shadow:0 6px 16px rgba(15,23,42,.25); margin-bottom:12px;">
+            <div style="font-size:10px; color:#fde047; font-weight:900;">🏁 MODO CORRIDA</div>
+            <div style="font-size:17px; font-weight:900; margin-top:3px;">${evt.t}</div>
+            <div style="font-size:10px; opacity:.85; margin-top:3px;">${evt.d || ''} ${evt.m || ''} • ${evt.city || ''}</div>
+            <div style="margin-top:10px; display:inline-block; background:#fde047; color:#111827; font-size:10px; font-weight:900; padding:5px 8px; border-radius:999px;">${runLabel}</div>
+        </div>
+    `;
+
+    html += `
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+            <div style="background:white; border:1px solid #e2e8f0; border-radius:10px; padding:10px;">
+                <div style="font-size:9px; color:#64748b; font-weight:900;">NA PISTA</div>
+                <div style="font-size:11px; color:#0f172a; font-weight:900; margin-top:4px;">${atletaRodando ? atletaRodando.nome : 'AGUARDANDO'}</div>
+                <div style="font-size:9px; color:#64748b; margin-top:2px;">${atletaRodando ? atletaRodando.cat : ''}</div>
+            </div>
+            <div style="background:white; border:1px solid #e2e8f0; border-radius:10px; padding:10px;">
+                <div style="font-size:9px; color:#64748b; font-weight:900;">NA LARGADA</div>
+                <div style="font-size:11px; color:#0f172a; font-weight:900; margin-top:4px;">${atletaAguardando ? atletaAguardando.nome : 'AGUARDANDO'}</div>
+                <div style="font-size:9px; color:#64748b; margin-top:2px;">${atletaAguardando ? atletaAguardando.cat : ''}</div>
+            </div>
+        </div>
+    `;
+
+    minhasInscricoes.forEach(insc => {
+        const cat = window.normalizeCatName(insc.extraCat || loggedUser.cat);
+        const riderIdMeu = `${loggedUser.cpf}||${cat}`;
+
+        const competidores = [];
+
+        (db.users || []).forEach(u => {
+            (u.inscricoes || []).forEach(i => {
+                if (String(i.id) !== String(evt.id)) return;
+                if (i.status !== 'CONFIRMADO' && i.status !== 'ISENTO') return;
+
+                const catU = window.normalizeCatName(i.extraCat || u.cat);
+                if (catU !== cat) return;
+
+                const acharTempo = (tipo) => (db.tempos || []).find(t =>
+                    t &&
+                    String(t.evtId) === String(evt.id) &&
+                    cleanCPF(t.cpf) === cleanCPF(u.cpf) &&
+                    t.runType === tipo &&
+                    window.normalizeCatName(t.cat) === catU
+                );
+
+                competidores.push({
+                    cpf: u.cpf,
+                    nome: u.nome || '',
+                    placa: u.numero || u.numPlaca || u.placa || '',
+                    cat: catU,
+                    qualifyObj: acharTempo('qualify'),
+                    oficialObj: acharTempo('1st'),
+                    segundaObj: acharTempo('2nd')
+                });
+            });
+        });
+
+        if (runTypeUi === 'segunda') {
+            for (let i = competidores.length - 1; i >= 0; i--) {
+                if (!competidores[i].oficialObj) competidores.splice(i, 1);
+            }
+        }
+
+        const fonteTempo = runTypeUi === 'oficial' ? 'qualifyObj' : (runTypeUi === 'segunda' ? 'oficialObj' : null);
+
+        competidores.sort((a, b) => {
+            if (!fonteTempo) return a.nome.localeCompare(b.nome);
+
+            const objA = a[fonteTempo];
+            const objB = b[fonteTempo];
+            let tA = objA && objA.val ? tempoParaMilissegundos(objA.val) : 99999999;
+            let tB = objB && objB.val ? tempoParaMilissegundos(objB.val) : 99999999;
+
+            if (tA === Infinity && tB === Infinity) return a.nome.localeCompare(b.nome);
+            if (tA === Infinity) return -1;
+            if (tB === Infinity) return 1;
+            if (tA !== 99999999 || tB !== 99999999) return tB - tA;
+            return a.nome.localeCompare(b.nome);
+        });
+
+        const campoAtual = runTypeUi === 'qualify' ? 'qualifyObj' : (runTypeUi === 'segunda' ? 'segundaObj' : 'oficialObj');
+        const filaRestante = competidores.filter(c => !c[campoAtual]);
+        const minhaPosFila = filaRestante.findIndex(c => cleanCPF(c.cpf) === cpfLogado);
+        const meuRegistro = competidores.find(c => cleanCPF(c.cpf) === cpfLogado);
+        const meuResultado = meuRegistro ? meuRegistro[campoAtual] : null;
+        const meuSlot = slots.find(s => s && String(s.riderId) === riderIdMeu);
+
+        let statusTitulo = '';
+        let statusSub = '';
+        let statusBg = '#eff6ff';
+        let statusBorder = '#bfdbfe';
+        let statusColor = '#1e3a8a';
+
+        if (meuResultado) {
+            if (meuResultado.val === 'DNF') {
+                statusTitulo = 'RESULTADO: DNF';
+                statusSub = 'Sua descida foi registrada como DNF.';
+                statusBg = '#fef2f2'; statusBorder = '#fecaca'; statusColor = '#b91c1c';
+            } else {
+                const validos = competidores
+                    .map(c => c[campoAtual])
+                    .filter(x => x && x.val && x.val !== 'DNF' && x.val !== '--:--.---')
+                    .sort((a, b) => tempoParaMilissegundos(a.val) - tempoParaMilissegundos(b.val));
+                const posResultado = validos.findIndex(x => cleanCPF(x.cpf || '') === cpfLogado);
+                statusTitulo = `⏱️ ${meuResultado.val}`;
+                statusSub = posResultado > -1 ? `Posição atual: ${posResultado + 1}º na categoria` : 'Resultado registrado.';
+                statusBg = '#f0fdf4'; statusBorder = '#bbf7d0'; statusColor = '#166534';
+            }
+        } else if (meuSlot && meuSlot.isRunning === true) {
+            statusTitulo = '🚀 VOCÊ ESTÁ NA PISTA';
+            statusSub = 'Boa descida! Seu cronômetro está rodando.';
+            statusBg = '#fff7ed'; statusBorder = '#fdba74'; statusColor = '#c2410c';
+        } else if (meuSlot) {
+            statusTitulo = '🏁 VOCÊ ESTÁ NA LARGADA';
+            statusSub = 'Prepare-se. Você já foi chamado para o cronômetro.';
+            statusBg = '#fefce8'; statusBorder = '#fde047'; statusColor = '#854d0e';
+        } else if (minhaPosFila === 0) {
+            statusTitulo = '🚨 VOCÊ É O PRÓXIMO';
+            statusSub = 'Dirija-se à área de largada.';
+            statusBg = '#fef2f2'; statusBorder = '#fca5a5'; statusColor = '#b91c1c';
+        } else if (minhaPosFila === 1) {
+            statusTitulo = '⚠️ FALTA 1 ATLETA';
+            statusSub = 'Fique pronto para se dirigir à largada.';
+            statusBg = '#fff7ed'; statusBorder = '#fdba74'; statusColor = '#c2410c';
+        } else if (minhaPosFila > 1) {
+            statusTitulo = `FALTAM ${minhaPosFila} ATLETAS`;
+            statusSub = `Sua posição atual na fila é ${minhaPosFila + 1}º.`;
+        } else {
+            statusTitulo = 'AGUARDANDO FILA';
+            statusSub = 'Sua posição será atualizada automaticamente.';
+        }
+
+        const placa = meuRegistro ? meuRegistro.placa : (loggedUser.numero || loggedUser.numPlaca || loggedUser.placa || '—');
+
+        html += `
+            <div style="background:white; border:1px solid #dbe2ea; border-radius:12px; padding:11px; margin-bottom:12px; box-shadow:0 2px 6px rgba(15,23,42,.05);">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+                    <div>
+                        <div style="font-size:9px; color:#64748b; font-weight:900;">SUA CATEGORIA</div>
+                        <div style="font-size:14px; color:#1e3a8a; font-weight:900; margin-top:2px;">${cat}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:9px; color:#64748b; font-weight:900;">PLACA</div>
+                        <div style="font-size:18px; color:#d50000; font-weight:900;">${placa || '—'}</div>
+                    </div>
+                </div>
+
+                <div style="background:${statusBg}; border:1px solid ${statusBorder}; border-radius:10px; padding:12px; margin-top:10px; text-align:center;">
+                    <div style="font-size:15px; color:${statusColor}; font-weight:900;">${statusTitulo}</div>
+                    <div style="font-size:10px; color:#475569; margin-top:4px; line-height:1.4;">${statusSub}</div>
+                </div>
+
+                <div style="display:flex; gap:6px; margin-top:9px;">
+                    <button class="btn" style="background:#1e3a8a; flex:1; margin:0; padding:9px; font-size:10px;" onclick="verOrdemLargada()">
+                        <i class="fas fa-list-ol"></i> ORDEM COMPLETA
+                    </button>
+                    <button class="btn" style="background:#0f766e; flex:1; margin:0; padding:9px; font-size:10px;" onclick="nav('tempos')">
+                        <i class="fas fa-stopwatch"></i> RESULTADOS
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+
+    html += `
+        <div style="text-align:center; color:#94a3b8; font-size:9px; padding:4px 0 10px 0;">
+            <i class="fas fa-sync-alt"></i> Atualização automática enquanto os dados da prova são sincronizados.
+        </div>
+    `;
+
+    area.innerHTML = html;
+};
+
 window.renderPilotHistoryModal = function(cpf, name) {
     const histDiv = document.getElementById('my-history-list'); if(!histDiv) return;
     openModal('modal-history'); const titleEl = document.querySelector('#modal-history h3'); if(titleEl) titleEl.innerText = `HISTÓRICO: ${name}`; const user = db.users.find(u => u.cpf === cpf);
@@ -2488,6 +2809,12 @@ window.populatePublicFilters = function(tab) {
 };
 
 function renderContent(t) { 
+    if (t === 'race') {
+
+    window.renderModoCorrida();
+
+    return;
+}
     // CHAMA A TELA DO X1 COM SEGURANÇA
     if(t === 'x1') {
         window.renderX1List('ALL');
@@ -2496,6 +2823,7 @@ function renderContent(t) {
     
     if(t === 'calendar') { 
         document.getElementById('lbl-cal-year').innerText = SYSTEM_YEAR;
+        window.renderModoCorridaEntrada();
         const hD = document.getElementById('calendar-highlight'); const oD = document.getElementById('calendar-others'); const pD = document.getElementById('calendar-past-bar');
         if(!db.events || db.events.length === 0) { hD.innerHTML = '<div style="padding:20px;text-align:center">Nenhum evento cadastrado.</div>'; oD.innerHTML = ''; pD.style.display = 'none'; return; } 
         
