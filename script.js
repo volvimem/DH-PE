@@ -474,6 +474,67 @@ function ensureAdminExists() {
     if (!hasAdmin) db.users.push({ nome: "ADMINISTRADOR DO SISTEMA", cpf: "00000000000", pass: "admin123", role: "ADMIN", city: "SEDE", uf: "PE", cat: "MASTER", tel: "", cbc: "", nasc: "1990-01-01", secA: "MESTRE", gender: "M", team: "ORGANIZAÇÃO", idReleased: true, filiadoPE: true, inscricoes: [], selfie: null, allowedEvts: [] });
 }
 
+// ==========================================================
+// CARTEIRINHA DIGITAL POR TEMPORADA
+// ==========================================================
+
+// Verifica se a liberação GLOBAL vale para o ano atual
+window.isCarteirinhaGlobalLiberada = function() {
+
+    if (!db || !db.config) return false;
+
+    // Nova regra anual
+    if (
+        Number(db.config.allowAllIDsYear) ===
+        Number(SYSTEM_YEAR)
+    ) {
+        return true;
+    }
+
+    // Compatibilidade com a temporada 2026
+    // Mantém tudo funcionando exatamente como já está hoje.
+    if (
+        SYSTEM_YEAR === 2026 &&
+        db.config.allowAllIDs === true
+    ) {
+        return true;
+    }
+
+    return false;
+};
+
+
+// Verifica se UM atleta possui carteirinha válida no ano atual
+window.isCarteirinhaLiberada = function(user) {
+
+    if (!user) return false;
+
+    // Caso a organização tenha liberado todo mundo
+    if (window.isCarteirinhaGlobalLiberada()) {
+        return true;
+    }
+
+    // Nova regra:
+    // a carteirinha precisa ter sido liberada no ano atual.
+    if (
+        Number(user.cardReleasedYear) ===
+        Number(SYSTEM_YEAR)
+    ) {
+        return true;
+    }
+
+    // Compatibilidade somente para 2026.
+    // Quem já está liberado hoje NÃO será bloqueado agora.
+    if (
+        SYSTEM_YEAR === 2026 &&
+        user.idReleased === true
+    ) {
+        return true;
+    }
+
+    return false;
+};
+
 let pendingSaves = new Set(); let saveTimeout = null;
 window.saveDB = function(moduleName = null) { 
     if(DB_KEY.includes('archive')) return console.warn("Bloqueado: Tentativa de edição em arquivo histórico.");
@@ -1175,7 +1236,11 @@ function updateCardLive() { if(!loggedUser) return; const setText = (id, val) =>
 if(el) el.innerText = val; }; setText('card-name', loggedUser.nome); setText('card-cat', loggedUser.cat); setText('card-city', `${loggedUser.city} - ${loggedUser.uf || 'PE'}`); setText('card-cpf', loggedUser.cpf);
 setText('card-team', loggedUser.team || "INDEPENDENTE"); setText('card-cbc', loggedUser.cbc || "NÃO INFORMADA"); const img = document.getElementById('card-img-display'); if(img) { img.crossOrigin = "anonymous";
 let picUrl = loggedUser.selfie || "https://via.placeholder.com/80"; img.src = picUrl; } const yearEl = document.getElementById('card-year-display'); if(yearEl) yearEl.innerText = SYSTEM_YEAR;
-const isGlobalReleased = db.config.allowAllIDs === true; const isUserReleased = loggedUser.idReleased === true; const layer = document.getElementById('id-locked-layer'); const btn = document.getElementById('btn-dl-card');
+const isGlobalReleased =
+    window.isCarteirinhaGlobalLiberada();
+
+const isUserReleased =
+    window.isCarteirinhaLiberada(loggedUser); const layer = document.getElementById('id-locked-layer'); const btn = document.getElementById('btn-dl-card');
 if(isGlobalReleased || isUserReleased) { if(layer) layer.style.display = 'none'; if(btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> SALVAR CARTEIRINHA';
 btn.style.background = 'var(--pe-blue)'; } } else { if(layer) layer.style.display = 'flex'; if(btn) { btn.disabled = true;
 btn.innerHTML = '<i class="fas fa-lock"></i> BLOQUEADO'; btn.style.background = '#999'; } } }
@@ -1257,8 +1322,12 @@ window.iniciarInscricao = function(evtId, mode = 'MAIN') {
     
     if (mode === 'MAIN') { 
         const freshUser = db.users.find(u => u.cpf === loggedUser.cpf);
-        const liberacaoGlobal = (db.config.allowAllIDs === true); 
-        const liberacaoUsuario = (freshUser && freshUser.idReleased === true);
+        const liberacaoGlobal =
+    window.isCarteirinhaGlobalLiberada();
+
+const liberacaoUsuario =
+    freshUser &&
+    window.isCarteirinhaLiberada(freshUser);
         const jaInscritoOficial = loggedUser.inscricoes.some(i => String(i.id) === String(evtId) && !i.extraCat); 
         if (!liberacaoGlobal && !liberacaoUsuario && !jaInscritoOficial) { 
             tempEvtIdExtra = evtId;
@@ -4340,7 +4409,10 @@ window.openAdmSection = function(sec) {
     if(sec === 'config-global') { 
         document.getElementById('adm-cfg-phone').value = db.config.phone || ''; 
         document.getElementById('adm-cfg-rerun-pass').value = db.config.rerunPass || 'admin123'; 
-        document.getElementById('adm-cfg-allow-ids').checked = db.config.allowAllIDs || false; 
+        document
+    .getElementById('adm-cfg-allow-ids')
+    .checked =
+        window.isCarteirinhaGlobalLiberada(); 
         if(document.getElementById('adm-cfg-pix-key')) document.getElementById('adm-cfg-pix-key').value = db.config.pixKeyX1 || '';
         if(document.getElementById('adm-cfg-pix-name')) document.getElementById('adm-cfg-pix-name').value = db.config.pixNameX1 || '';
         document.getElementById('adm-cfg-search').value = ''; 
@@ -4391,7 +4463,8 @@ function filterPilots(ctx, force) {
             
             listDiv.innerHTML = found.map(u => { 
                 const pName = getPilotName(u.cpf, u.nome); const pCityUF = getPilotCityUF(u.cpf, u.city); const cClass = getCatClass(u.cat);
-                const statusTag = u.idReleased ? '<span style="background:#dcfce7; color:#15803d; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:bold; margin-right:4px; border:1px solid #86efac;"><i class="fas fa-check-circle"></i> LIBERADO</span>' : '<span style="background:#fee2e2; color:#b91c1c; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:bold; margin-right:4px; border:1px solid #fca5a5;"><i class="fas fa-lock"></i> BLOQUEADO</span>';
+               const statusTag =
+    window.isCarteirinhaLiberada(u) ? '<span style="background:#dcfce7; color:#15803d; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:bold; margin-right:4px; border:1px solid #86efac;"><i class="fas fa-check-circle"></i> LIBERADO</span>' : '<span style="background:#fee2e2; color:#b91c1c; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:bold; margin-right:4px; border:1px solid #fca5a5;"><i class="fas fa-lock"></i> BLOQUEADO</span>';
                 const wppBtnIcon = u.tel ? `<button class="btn-mini-adm" style="background:#25D366; width:45px; margin:0;" onclick="openWhatsApp('${u.tel}', 'Olá ${u.nome}')"><i class="fab fa-whatsapp" style="font-size:14px;"></i></button>` : '';
                 
                 let filiadoHtml = '';
@@ -4427,7 +4500,8 @@ function filterPilots(ctx, force) {
             if(found.length === 0) { listDiv.innerHTML = '<div style="padding:10px; text-align:center">Nenhum atleta encontrado.</div>'; return; }
             
             listDiv.innerHTML = found.map(u => { 
-                const isOn = u.idReleased === true; 
+                const isOn =
+    window.isCarteirinhaLiberada(u); 
                 const pName = getPilotName(u.cpf, u.nome); const pCityUF = getPilotCityUF(u.cpf, u.city); const cClass = getCatClass(u.cat); 
                 const statusTag = isOn ? '<span style="background:#dcfce7; color:#15803d; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:bold; margin-right:4px; border:1px solid #86efac;"><i class="fas fa-check-circle"></i> LIBERADO</span>' : '<span style="background:#fee2e2; color:#b91c1c; font-size:10px; padding:3px 6px; border-radius:4px; font-weight:bold; margin-right:4px; border:1px solid #fca5a5;"><i class="fas fa-lock"></i> BLOQUEADO</span>';
                 
@@ -4551,14 +4625,92 @@ window.toggleFiliacaoPE = function(cpf) {
 };
 
 window.toggleUserId = function(cpf, isReleased) {
-    if(!isSuperAdmin(loggedUser)) return toast("APENAS O SUPER ADMIN PODE ALTERAR", "error");
-    const idx = db.users.findIndex(u => u.cpf === cpf);
-    if(idx > -1) {
-        db.users[idx].idReleased = isReleased; saveDB('users');
-        window.logAction(`Alterou a liberação da carteirinha do atleta CPF: ${cpf} para ${isReleased ? 'LIBERADO' : 'BLOQUEADO'}`);
-        if (isReleased && typeof window.dispararPushAtleta === 'function') { window.dispararPushAtleta(cpf, "Carteirinha Liberada! 🪪", "Sua carteirinha digital foi liberada pela organização."); }
-        filterPilots('cfg-search', true); toast(isReleased ? "CARTEIRINHA LIBERADA COM SUCESSO!" : "ATLETA BLOQUEADO!");
-    } else { toast("ERRO: Atleta não encontrado.", "error"); }
+
+    if(!isSuperAdmin(loggedUser)) {
+        return toast(
+            "APENAS O SUPER ADMIN PODE ALTERAR",
+            "error"
+        );
+    }
+
+
+    const idx =
+        db.users.findIndex(
+            u => cleanCPF(u.cpf) === cleanCPF(cpf)
+        );
+
+
+    if(idx === -1) {
+
+        return toast(
+            "ERRO: Atleta não encontrado.",
+            "error"
+        );
+    }
+
+
+    // ======================================================
+    // NOVA LIBERAÇÃO POR ANO
+    // ======================================================
+
+    if(isReleased) {
+
+        // A carteira fica válida SOMENTE nesta temporada.
+        db.users[idx].cardReleasedYear =
+            SYSTEM_YEAR;
+
+        // Mantém compatibilidade com o sistema antigo.
+        db.users[idx].idReleased = true;
+
+    } else {
+
+        // Remove a autorização para o ano atual.
+        db.users[idx].cardReleasedYear =
+            null;
+
+        db.users[idx].idReleased = false;
+    }
+
+
+    saveDB('users');
+
+
+    window.logAction(
+        `Alterou a carteirinha ${SYSTEM_YEAR} do atleta CPF: ${cpf} para ${
+            isReleased
+                ? 'LIBERADA'
+                : 'BLOQUEADA'
+        }`
+    );
+
+
+    if (
+        isReleased &&
+        typeof window.dispararPushAtleta === 'function'
+    ) {
+
+        window.dispararPushAtleta(
+            cpf,
+            `Carteirinha ${SYSTEM_YEAR} Liberada! 🪪`,
+            `Sua carteirinha digital ${SYSTEM_YEAR} foi liberada pela organização.`
+        );
+    }
+
+
+    filterPilots(
+        'cfg-search',
+        true
+    );
+
+
+    toast(
+        isReleased
+            ? `CARTEIRINHA ${SYSTEM_YEAR} LIBERADA!`
+            : `CARTEIRINHA ${SYSTEM_YEAR} BLOQUEADA!`,
+        isReleased
+            ? "success"
+            : "info"
+    );
 };
 
 // ==========================================
@@ -4682,7 +4834,22 @@ window.saveGlobalConfig = function(){
     if(!isSuperAdmin(loggedUser)) return toast("APENAS ADMIN", "error"); 
     db.config.phone = document.getElementById('adm-cfg-phone').value; 
     db.config.rerunPass = document.getElementById('adm-cfg-rerun-pass').value || 'admin123'; 
-    db.config.allowAllIDs = document.getElementById('adm-cfg-allow-ids').checked;
+    const liberarGeral =
+    document
+        .getElementById('adm-cfg-allow-ids')
+        .checked;
+
+
+// Nova regra anual
+db.config.allowAllIDsYear =
+    liberarGeral
+        ? SYSTEM_YEAR
+        : null;
+
+
+// Compatibilidade com 2026
+db.config.allowAllIDs =
+    liberarGeral;
     db.config.pixKeyX1 = document.getElementById('adm-cfg-pix-key').value;
     db.config.pixNameX1 = document.getElementById('adm-cfg-pix-name').value;
     saveDB('config'); 
