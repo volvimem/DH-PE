@@ -148,12 +148,58 @@
         
         <div id="cont-calendar" class="c-sec active" style="overflow-y:auto; height:100vh; padding-bottom:120px;">
             <div class="section-header-area"><div class="section-title">CALENDÁRIO <span id="lbl-cal-year"></span></div></div>
+            <div id="race-mode-entry" style="display:none; padding:0 12px 10px 12px;"></div>
             <div id="calendar-past-bar" class="past-events-bar" style="display:none"></div>
             <div class="calendar-wrapper">
                 <div id="calendar-highlight"></div>
                 <div id="calendar-others" class="mini-events-grid"></div>
             </div>
         </div>
+
+        <div id="cont-race" class="c-sec" style="display:none; overflow-y:auto; height:100vh; padding-bottom:120px; background:#f1f5f9;">
+
+    <div
+        class="section-header-area"
+        style="background:linear-gradient(135deg,#0f172a,#1e3a8a); color:white;"
+    >
+
+        <div class="section-title-row">
+
+            <div
+                class="section-title"
+                style="color:white;"
+            >
+                🏁 MODO CORRIDA
+            </div>
+
+            <button
+                class="btn-mini-adm"
+                style="background:white; color:#1e3a8a; border:none;"
+                onclick="nav('calendar')"
+            >
+                VOLTAR
+            </button>
+
+        </div>
+
+        <div
+            style="
+                font-size:10px;
+                opacity:.85;
+                margin-top:4px;
+            "
+        >
+            Atualização automática com os dados da prova
+        </div>
+
+    </div>
+
+    <div
+        id="race-mode-content"
+        style="padding:12px;"
+    ></div>
+
+</div>
 
         <div id="cont-tempos" class="c-sec" style="display:none; overflow-y:auto; height:100vh; padding-bottom:120px;">
              <div class="section-header-area">
@@ -1061,6 +1107,25 @@
         athletes = data; categories = catsArray;
         if (rPass) rerunPassword = rPass;
         activeDbKey = dbKey; activeEvtId = evtId;
+        if (activeDbKey && activeEvtId) {
+
+    dbFirebase
+        .ref(
+            activeDbKey +
+            '/live_state/' +
+            activeEvtId
+        )
+        .update({
+
+            runType:
+                document
+                    .getElementById('runType')
+                    .value,
+
+            updatedAt:
+                Date.now()
+        });
+}
         populateLeftFilters(); refreshListsOnly();
         
         if(activeDbKey && activeEvtId) {
@@ -1129,7 +1194,36 @@
     function changeRunType() {
         if (slots[0].isRunning || slots[1].isRunning) { alert("Cronômetro rodando! Pare primeiro.");
         document.getElementById('runType').value = currentRunType; return; }
-        currentRunType = document.getElementById('runType').value; clearRiderFromStart(0); clearRiderFromStart(1); refreshListsOnly();
+        currentRunType =
+    document
+        .getElementById('runType')
+        .value;
+
+
+if (activeDbKey && activeEvtId) {
+
+    dbFirebase
+        .ref(
+            activeDbKey +
+            '/live_state/' +
+            activeEvtId
+        )
+        .update({
+
+            runType:
+                currentRunType,
+
+            updatedAt:
+                Date.now()
+        });
+}
+
+
+clearRiderFromStart(0);
+clearRiderFromStart(1);
+
+refreshListsOnly();
+        
     }
 
     function updateStylesByRunType() {
@@ -1521,7 +1615,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
 
-<script src="script.js?v=153"></script>
+<script src="script.js?v=152"></script>
 
 </body>
 </html>
