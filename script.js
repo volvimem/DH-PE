@@ -666,168 +666,481 @@ function injectNotificationUI() {
         notifBtn.innerHTML = '<i class="fas fa-bell" style="font-size:22px; color:var(--pe-blue)"></i><span id="notif-badge" style="display:none; position:absolute; top:-2px; right:-8px; background:var(--pe-red); color:white; border-radius:50%; font-size:10px; padding:2px 6px; font-weight:bold; border:1px solid white; box-shadow:0 2px 4px rgba(0,0,0,0.2);">0</span>';
         notifBtn.onclick = async function() {
 
-    // ==========================================================
-// FORÇA AVISO DE ATIVAÇÃO DE NOTIFICAÇÕES
-// ==========================================================
-if ("Notification" in window) {
+    if ("Notification" in window) {
 
-    // ======================================================
-    // 1. JÁ ESTÁ PERMITIDO
-    // ======================================================
-    if (Notification.permission === "granted") {
+        if (Notification.permission === "denied") {
 
-        // Atualiza/cria o token deste aparelho.
-        window.solicitarPermissaoPush();
+            toast(
+                "AS NOTIFICAÇÕES ESTÃO BLOQUEADAS. LIBERE NAS CONFIGURAÇÕES DO APARELHO.",
+                "error"
+            );
 
+            window.abrirNotificacoes();
+            return;
+        }
+
+        // Sempre verifica e atualiza o token deste aparelho.
+        await window.solicitarPermissaoPush();
     }
 
+    window.abrirNotificacoes();
+}; 
+        headerRight.insertBefore(notifBtn, headerRight.firstChild); 
+    }
+    
+    // O trator agora é inteligente: só destrói o modal se faltar o botão "P/ TODOS" (se for o velho)
+    const oldModal = document.getElementById('modal-notifications');
+    if(oldModal && !document.getElementById('btn-del-notif-all')) {
+        oldModal.remove();
+    }
 
-    // ======================================================
-    // 2. AINDA NÃO DECIDIU
-    // MOSTRA O AVISO EM TODO LOGIN ATÉ ATIVAR
-    // ======================================================
-    else if (Notification.permission === "default") {
+    // Só cria de novo se não existir (impede o erro de apagar e fechar sozinho)
+    if(!document.getElementById('modal-notifications')) {
+        const modalHtml = `<div class="modal-overlay" id="modal-notifications" style="z-index:300000; padding:20px;"><div class="modal-box" style="text-align:left; max-height:85vh; display:flex; flex-direction:column; padding:15px; width:100%; max-width:400px; border-top: 5px solid var(--pe-blue); overflow:hidden; border-radius:12px;"><h3 style="color:var(--pe-blue); border-bottom:1px solid #eee; padding-bottom:10px; display:flex; justify-content:space-between; align-items:center; margin:0; flex-shrink:0; font-size:16px;">NOTIFICAÇÕES <i class="fas fa-times" style="cursor:pointer; color:#999; font-size:18px;" onclick="fecharModal('modal-notifications')"></i></h3><div style="display:flex; gap:5px; margin-top:10px; width:100%;"><button onclick="window.limparNotificacoesPremium('MIM')" style="background:#f87171; color:white; border:none; padding:8px; border-radius:4px; font-size:10px; font-weight:bold; cursor:pointer; flex:1; box-shadow:0 2px 4px rgba(0,0,0,0.1);"><i class="fas fa-user-slash"></i> APAGAR P/ MIM</button><button onclick="window.limparNotificacoesPremium('TODOS')" id="btn-del-notif-all" style="background:#d50000; color:white; border:none; padding:8px; border-radius:4px; font-size:10px; font-weight:bold; cursor:pointer; flex:1; box-shadow:0 2px 4px rgba(0,0,0,0.1); display:none;"><i class="fas fa-globe"></i> P/ TODOS</button></div><select id="notif-filter-evt" onchange="window.abrirNotificacoes()" class="input-field" style="margin-top:10px; padding:8px; font-size:11px; font-weight:bold;"><option value="ALL">TODOS OS EVENTOS (GERAL)</option></select><div id="notif-list-content" style="flex:1; overflow-y:auto; margin-top:10px; font-size:12px; padding-right:5px; -webkit-overflow-scrolling:touch;"></div></div></div>`;
+        document.body.insertAdjacentHTML('beforeend', modalHtml); 
+    }
+}
 
-        setTimeout(() => {
+window.atualizarBadgeNotificacoes = function() { 
+    if(!loggedUser) return; 
+    injectNotificationUI(); 
+    let unreadCount = 0; 
+    const minhasNotificacoes = window.obterMinhasNotificacoes();
+    
+    minhasNotificacoes.forEach(n => { 
+        if(!n.readBy) n.readBy = []; 
+        if(!n.readBy.includes(loggedUser.cpf)) unreadCount++; 
+    }); 
+    
+    const badge = document.getElementById('notif-badge');
+    if(badge) { 
+        if(unreadCount > 0) { 
+            badge.style.display = 'block'; 
+            badge.innerText = unreadCount > 9 ? '9+' : unreadCount; 
+        } else { 
+            badge.style.display = 'none'; 
+        } 
+    }
 
-            showConfirm(
+    // NOVA LÓGICA: Atualiza o selo numérico no ícone do celular (PWA)
+    if ('setAppBadge' in navigator) {
+        if (unreadCount > 0) {
+            navigator.setAppBadge(unreadCount).catch(err => console.log("Erro no badge:", err));
+        } else {
+            navigator.clearAppBadge().catch(err => console.log("Erro ao limpar badge:", err));
+        }
+    }
+};
 
-                "🔔 ATIVE AS NOTIFICAÇÕES DO DH-PE",
+window.abrirNotificacoes = function() {
+    // Garante que o painel exista no HTML antes de manipular
+    injectNotificationUI();
 
-                `
-                    <b>Não perca informações importantes da prova!</b>
+    const listDiv = document.getElementById('notif-list-content');
+    const filterEvt = document.getElementById('notif-filter-evt');
+    
+    if (filterEvt && filterEvt.options.length <= 1 && db.events) {
+        let htmlOpts = '<option value="ALL">TODOS OS EVENTOS (GERAL)</option>';
+        db.events.forEach(e => { htmlOpts += `<option value="${e.id}">${e.t}</option>`; });
+        filterEvt.innerHTML = htmlOpts;
+    }
 
-                    <br><br>
+    let minhasNotificacoes = window.obterMinhasNotificacoes();
+    const selectedEvtId = filterEvt ? filterEvt.value : 'ALL';
 
-                    Ative as notificações para receber no celular:
+    if (selectedEvtId !== 'ALL') {
+        minhasNotificacoes = minhasNotificacoes.filter(n => String(n.targetEvtId) === String(selectedEvtId) || !n.targetEvtId);
+    }
 
-                    <br><br>
+    if (minhasNotificacoes.length === 0) { 
+        listDiv.innerHTML = '<div style="padding:20px; text-align:center; color:#999;">Nenhuma notificação encontrada para este filtro.</div>';
+    } 
+    else { 
+        listDiv.innerHTML = minhasNotificacoes.map(n => { 
+            const isRead = n.readBy && n.readBy.includes(loggedUser.cpf); 
+            const bg = isRead ? 'transparent' : '#f0f9ff'; 
+            const fw = isRead ? 'normal' : 'bold'; 
+            const iconColor = isRead ? '#cbd5e1' : 'var(--pe-blue)'; 
+            
+            let evtNameTag = '';
+            if (n.targetEvtId) {
+                const evtObj = db.events.find(e => String(e.id) === String(n.targetEvtId));
+                if (evtObj) evtNameTag = `<span style="font-size:9px; background:#e2e8f0; color:#475569; padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px;">${evtObj.t}</span>`;
+            }
 
-                    🏁 Ordem de largada<br>
-                    ⏱️ Resultados e tempos<br>
-                    ✅ Confirmação de pagamento<br>
-                    📢 Alterações da etapa<br>
-                    🚨 Comunicados importantes
+            return `<div style="padding:12px 10px; border-bottom:1px solid #eee; background:${bg}; font-weight:${fw}; display:flex; gap:10px; align-items:flex-start; position:relative; border-radius:6px; margin-bottom:5px;"><i class="fas fa-bell" style="color:${iconColor}; margin-top:2px; flex-shrink:0;"></i><div style="flex:1; padding-right:35px;"><div style="color:#333; line-height:1.3; font-size:12px;">${n.msg}</div>${evtNameTag}<div style="font-size:9px; color:#94a3b8; margin-top:6px;">${new Date(n.date).toLocaleString('pt-BR')}</div></div><button onclick="confirmarDeletarNotificacao('${n.id}')" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:var(--pe-red); border:none; color:white; cursor:pointer; font-size:12px; padding:8px; border-radius:6px; box-shadow:0 2px 5px rgba(213,0,0,0.2);"><i class="fas fa-trash-alt"></i></button></div>`; 
+        }).join(''); 
+    }
+    
+    // 👇 O COMANDO CRUCIAL QUE HAVIA SUMIDO ESTÁ DE VOLTA AQUI 👇
+    openModal('modal-notifications'); 
+    
+    const btnAll = document.getElementById('btn-del-notif-all');
+    if(btnAll) btnAll.style.display = isSuperAdmin(loggedUser) ? 'block' : 'none'; 
+    
+    let hasChanges = false; 
+    window.obterMinhasNotificacoes().forEach(n => { 
+        if(!n.readBy) n.readBy = []; 
+        if(!n.readBy.includes(loggedUser.cpf)) { n.readBy.push(loggedUser.cpf); hasChanges = true; } 
+    }); 
+    if(hasChanges) { saveDB('notifications'); atualizarBadgeNotificacoes(); }
+};
 
-                    <br><br>
+// ==========================================================
+// 6. EVENTOS DE INICIALIZAÇÃO DA PÁGINA (LOAD)
+// ==========================================================
+document.addEventListener("DOMContentLoaded", function() {
+    if(window.location.search.includes('live_external')) { checkExternalMode(); return; }
+    ensureAdminExists(); ensureAuditUI(); 
+    if(document.getElementById('lbl-cad-season')) document.getElementById('lbl-cad-season').innerText = SYSTEM_YEAR;
+    
+    const selSeason = document.getElementById('season-selector');
+    if(selSeason) {
+        let html = '';
+        if (SYSTEM_YEAR <= 2026) { html += `<option value="dhpe_v25_final_stable_fix">TEMP. ATUAL (2026)</option><option value="dhpe_2025_archive">HISTÓRICO 2025</option>`; } 
+        else if (SYSTEM_YEAR === 2027) { html += `<option value="dhpe_2027_active">TEMP. ATUAL (2027)</option><option value="dhpe_2026_archive">HISTÓRICO 2026</option><option value="dhpe_2025_archive">HISTÓRICO 2025</option>`; } 
+        else { html += `<option value="dhpe_${SYSTEM_YEAR}_active">TEMP. ATUAL (${SYSTEM_YEAR})</option><option value="dhpe_${SYSTEM_YEAR - 1}_archive">HISTÓRICO ${SYSTEM_YEAR - 1}</option><option value="dhpe_2026_archive">HISTÓRICO 2026</option>`; }
+        selSeason.innerHTML = html;
+        if(selSeason.querySelector(`option[value="${DB_KEY}"]`)) { selSeason.value = DB_KEY; } else { selSeason.value = defaultKey; localStorage.setItem('dhpe_active_season', defaultKey); DB_KEY = defaultKey; }
+    }
+    if(DB_KEY.includes('archive')) { document.body.classList.add('archive-mode'); const badge = document.getElementById('archive-badge-display'); if(badge) badge.style.display = 'block'; }
+    
+   const uiElementsToSave = ['filter-region-tempos', 'filter-evt-tempos', 'filter-type-tempos', 'filter-cat-tempos', 'filter-region-ranking', 'filter-mode-ranking', 'filter-evt-ranking', 'filter-cat-ranking', 'adm-res-evt', 'adm-res-runtype', 'adm-res-filter-cat', 'adm-res-filter-type', 'adm-user-filter-cat', 'fin-evt-select', 'adm-edit-user-search', 'adm-cfg-search', 'adm-org-search'];
+    uiElementsToSave.forEach(id => { const el = document.getElementById(id); if(el) { el.addEventListener('change', () => localStorage.setItem('ui_'+id, el.value)); if(el.tagName === 'INPUT') el.addEventListener('input', () => localStorage.setItem('ui_'+id, el.value)); } });
+    uiElementsToSave.forEach(id => { const el = document.getElementById(id); const val = localStorage.getItem('ui_'+id); if(el && val !== null) el.value = val; });
+    currentFilterStatus = localStorage.getItem('ui_fin-status') || 'ALL'; setupAutoSave();
+    
+    let savedSession = localStorage.getItem(SESS_KEY) || sessionStorage.getItem(SESS_KEY);
+    if(savedSession) { 
+        try { 
+            const u = JSON.parse(savedSession);
+            // Garante que a configuração base exista antes de montar a tela
+            if(!db.config) db.config = { phone: '', rerunPass: 'admin123', allowAllIDs: false, categories: DEFAULT_CATS };
+            if(db.users && !Array.isArray(db.users)) db.users = Object.values(db.users);
+            if(db.users) db.users = db.users.filter(x => x !== null && x !== undefined);
+            const fresh = (db.users || []).find(x => x && x.cpf && cleanCPF(x.cpf) === cleanCPF(u.cpf)); 
+            loggedUser = fresh ? fresh : u; 
+            initApp(true); 
+            
+            if(localStorage.getItem('draft_evt_t')) document.getElementById('adm-evt-t').value = localStorage.getItem('draft_evt_t'); 
+            if(localStorage.getItem('draft_evt_d')) document.getElementById('adm-evt-d').value = localStorage.getItem('draft_evt_d'); 
+            if(localStorage.getItem('draft_evt_c')) document.getElementById('adm-evt-c').value = localStorage.getItem('draft_evt_c');
+        } catch(e) { 
+            console.error("Erro ignorado. Mantendo o usuário logado:", e);
+            // Se der erro menor, não derruba o usuário. Força a tela do App.
+            if(loggedUser) trocarTela('app'); else mostrarLoginInicial();
+        } 
+    } else { 
+        mostrarLoginInicial();
+    }
+    
+    const timeInput = document.getElementById('adm-res-val'); if(timeInput) timeInput.addEventListener('input', function() { window.mascaraTempo(this); });
+    const qualifyCheck = document.getElementById('adm-evt-has-qualify'); if(qualifyCheck) qualifyCheck.addEventListener('change', toggleQualifyInputs);
+    const inputEvtName = document.getElementById('adm-evt-t'); if(inputEvtName) inputEvtName.addEventListener('input', function() { localStorage.setItem('draft_evt_t', this.value); });
+    const inputEvtDate = document.getElementById('adm-evt-d'); if(inputEvtDate) inputEvtDate.addEventListener('input', function() { localStorage.setItem('draft_evt_d', this.value); });
+    const inputEvtCity = document.getElementById('adm-evt-c');
+    if(inputEvtCity) inputEvtCity.addEventListener('input', function() { localStorage.setItem('draft_evt_c', this.value); });
+    
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.ready.then((reg) => { reg.update(); }); }
 
-                    <b>Toque em OK e depois em PERMITIR.</b>
-                `,
+    // ==========================================================
+    // NOVO: AUTOCOMPLETE DE CIDADES VIA API OFICIAL DO IBGE (CUSTOMIZADO)
+    // ==========================================================
+    function configurarAutocompleteCidades(idInputCity, idSelectUf, datalistId) {
+        const inputCity = document.getElementById(idInputCity);
+        const selectUf = document.getElementById(idSelectUf);
+        
+        if (inputCity && selectUf) {
+            // Remove o comportamento padrão do navegador
+            inputCity.setAttribute('autocomplete', 'off');
+            inputCity.removeAttribute('list');
+            
+            // Cria a caixa flutuante do dropdown se ela não existir
+            let dropdownList = document.getElementById(idInputCity + '-dropdown');
+            if (!dropdownList) {
+                dropdownList = document.createElement('div');
+                dropdownList.id = idInputCity + '-dropdown';
+                
+                // Estilo da caixa para ficar bonita tanto no PC quanto no celular
+                dropdownList.style.cssText = 'position: absolute; width: 100%; max-height: 220px; overflow-y: auto; background: white; border: 1px solid #cbd5e1; border-radius: 6px; z-index: 10000; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-top: 2px;';
+                
+                // Garante que a lista flutue exatamente abaixo do input
+                if (window.getComputedStyle(inputCity.parentNode).position === 'static') {
+                    inputCity.parentNode.style.position = 'relative';
+                }
+                inputCity.parentNode.appendChild(dropdownList);
+            }
 
-                '<i class="fas fa-bell" style="color:#0038a8; font-size:35px;"></i>',
+            let cidadesAtuais = [];
 
-                async function(res) {
+            const loadCities = (uf) => {
+                cidadesAtuais = []; 
+                dropdownList.style.display = 'none';
+                if (!uf || uf === 'OUTRO') return;
+                
+                fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`)
+                    .then(res => res.json())
+                    .then(cidades => {
+                        cidadesAtuais = cidades.map(c => c.nome.toUpperCase());
+                    }).catch(e => console.log("Erro ao carregar IBGE:", e));
+            };
 
-                    if (!res) {
+            // Carrega inicialmente
+            loadCities(selectUf.value);
 
-                        // Não grava nenhuma opção.
-                        // Portanto o aviso aparecerá novamente
-                        // no próximo login.
-                        return;
-                    }
+            // Quando mudar o estado (UF)
+            selectUf.addEventListener('change', function() {
+                loadCities(this.value);
+                if(idInputCity === 'cad-city') inputCity.value = ''; 
+                dropdownList.style.display = 'none';
+            });
+
+            // Lógica principal: quando o atleta digitar no campo
+            inputCity.addEventListener('input', function() {
+                const termo = this.value.toUpperCase();
+                dropdownList.innerHTML = ''; 
+                
+                if (!termo) {
+                    dropdownList.style.display = 'none';
+                    return;
+                }
+
+                // Filtra cidades que começam ou contêm o texto digitado
+                const filtradas = cidadesAtuais.filter(cidade => cidade.includes(termo));
+
+                if (filtradas.length > 0) {
+                    dropdownList.style.display = 'block';
+                    filtradas.forEach(cidade => {
+                        const item = document.createElement('div');
+                        item.style.cssText = 'padding: 12px 10px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; transition: background 0.2s;';
+                        
+                        // Destaca em negrito/azul a exata parte que o usuário digitou
+                        const matchIndex = cidade.indexOf(termo);
+                        const before = cidade.substring(0, matchIndex);
+                        const match = cidade.substring(matchIndex, matchIndex + termo.length);
+                        const after = cidade.substring(matchIndex + termo.length);
+                        
+                        item.innerHTML = `${before}<strong style="color:var(--pe-blue); font-weight:900;">${match}</strong>${after}`;
+                        
+                        item.addEventListener('mouseenter', () => item.style.background = '#f8fafc');
+                        item.addEventListener('mouseleave', () => item.style.background = 'white');
+                        
+                        // Ao clicar na sugestão da cidade
+                        item.addEventListener('click', function() {
+                            inputCity.value = cidade;
+                            dropdownList.style.display = 'none';
+                            // Dispara evento para o auto-save do formulário registrar a escolha
+                            inputCity.dispatchEvent(new Event('input')); 
+                        });
+                        
+                        dropdownList.appendChild(item);
+                    });
+                } else {
+                    dropdownList.style.display = 'none';
+                }
+            });
+
+            // Fecha a lista se clicar em qualquer outro lugar da tela
+            document.addEventListener('click', function(e) {
+                if (e.target !== inputCity && e.target !== dropdownList) {
+                    dropdownList.style.display = 'none';
+                }
+            });
+            
+            // Mostra a lista novamente se voltar a clicar no campo
+            inputCity.addEventListener('focus', function() {
+                if (this.value && dropdownList.innerHTML !== '') {
+                    dropdownList.style.display = 'block';
+                }
+            });
+        }
+    }
+
+    configurarAutocompleteCidades('cad-city', 'cad-uf', 'lista-cidades-cad');
+    configurarAutocompleteCidades('prof-edit-city', 'prof-edit-uf', 'lista-cidades-prof');
+    configurarAutocompleteCidades('super-edit-city', 'super-edit-uf', 'lista-cidades-adm');
+    // ==========================================================
+});
+function trocarTela(id) { document.querySelectorAll('.screen').forEach(e => e.classList.remove('active')); const tela = document.getElementById('screen-' + id); if(tela) tela.classList.add('active'); const nav = document.getElementById('main-nav-bar');
+const head = document.getElementById('main-app-header'); if(id === 'app') { if(nav) nav.style.display='flex'; if(head) head.style.display='flex'; } else { if(nav) nav.style.display='none'; if(head) head.style.display='none'; } }
+function mostrarLoginInicial() { document.getElementById('lbl-season-year').innerText = SYSTEM_YEAR; trocarTela('login'); }
+window.togglePass = function(id) { const input = document.getElementById(id); const icon = input.nextElementSibling;
+if (input.type === "password") { input.type = "text"; icon.classList.remove("fa-eye"); icon.classList.add("fa-eye-slash"); } else { input.type = "password"; icon.classList.remove("fa-eye-slash"); icon.classList.add("fa-eye"); } };
+
+// ==========================================================
+// 7. SISTEMA DE LOGIN, CADASTRO E CONTAS
+// ==========================================================
+window.fazerLogin = function() { 
+    const cpfRaw = document.getElementById('login-cpf').value;
+    const passRaw = document.getElementById('login-pass').value; const remember = document.getElementById('login-remember').checked;
+    if(!cpfRaw || !passRaw) return toast("PREENCHA TUDO", "error");
+    const clean = cleanCPF(cpfRaw);
+    const emailFake = clean + "@dhpe.com.br"; const authPass = passRaw.length < 6 ? passRaw.padEnd(6, '0') : passRaw;
+    toast("AUTENTICANDO...", "info");
+    let localUser = db.users.find(x => cleanCPF(x.cpf) === clean);
+    if(localUser && localUser.tempPass && localUser.tempPass === passRaw) { if(Date.now() <= localUser.tempPassExp) return executeLogin(localUser, remember);
+    else return toast("SENHA TEMPORÁRIA EXPIRADA", "error"); }
+    if(auth) { auth.signInWithEmailAndPassword(emailFake, authPass).then(() => { finishLogin(clean, remember); }).catch((error) => { if (localUser && (localUser.pass === passRaw || localUser.adminNewPass === passRaw)) { if (error.code === 'auth/user-not-found') { auth.createUserWithEmailAndPassword(emailFake, authPass).catch(()=>{}); } executeLogin(localUser, remember); } else { toast("CPF OU SENHA INCORRETOS", "error"); } });
+    } else { if(localUser && (localUser.pass === passRaw || localUser.adminNewPass === passRaw)) { executeLogin(localUser, remember);
+    } else { toast("CPF OU SENHA INCORRETOS", "error"); } }
+};
+
+function finishLogin(cpfClean, remember) { if(cpfClean === "00000000000") ensureAdminExists();
+let user = db.users.find(x => cleanCPF(x.cpf) === cpfClean); if(user) { executeLogin(user, remember);
+} else { toast("DADOS NÃO ENCONTRADOS NO SISTEMA", "error"); if(auth) auth.signOut(); } }
+function executeLogin(user, remember) { loggedUser = user;
+if(remember) { localStorage.setItem(SESS_KEY, JSON.stringify(user)); sessionStorage.removeItem(SESS_KEY); } else { sessionStorage.setItem(SESS_KEY, JSON.stringify(user)); localStorage.removeItem(SESS_KEY); } toast("BEM-VINDO DE VOLTA!"); initApp(false);
+}
+window.fazerLogout = function() { if(auth) auth.signOut(); localStorage.removeItem(SESS_KEY); sessionStorage.removeItem(SESS_KEY); localStorage.removeItem(LAST_TAB_KEY); localStorage.removeItem(LAST_ADM_KEY); loggedUser = null; window.location.reload(true); };
+window.cadastrar = function() { 
+    const nome = document.getElementById('cad-nome').value.toUpperCase(); const cpf = document.getElementById('cad-cpf').value; const tel = document.getElementById('cad-tel').value;
+    const city = document.getElementById('cad-city').value.toUpperCase(); const uf = document.getElementById('cad-uf').value; const gender = document.getElementById('cad-gender').value; const pass = document.getElementById('cad-pass').value; const cat = document.getElementById('cad-cat-final').value;
+    const nasc = document.getElementById('cad-nasc').value; const secA = document.getElementById('cad-sec-a').value.toUpperCase(); const cbc = document.getElementById('cad-cbc') ? document.getElementById('cad-cbc').value : "";
+    if(!nome || !cpf || !tel || !city || !gender || !pass || !secA || !cat || !nasc) return toast("PREENCHA TUDO", "error");
+    if(!validarCPF(cleanCPF(cpf))) return toast("CPF INVÁLIDO! VERIFIQUE.", "error"); if(db.users.find(u => cleanCPF(u.cpf) === cleanCPF(cpf))) return toast("CPF JÁ CADASTRADO NO BANCO", "error");
+    if(pass.length < 6) return toast("A SENHA DEVE TER NO MÍNIMO 6 CARACTERES", "error");
+    const emailFake = cleanCPF(cpf) + "@dhpe.com.br";
+    toast("CRIANDO CONTA...", "info");
+    if(auth) { auth.createUserWithEmailAndPassword(emailFake, pass).then((userCredential) => { const newUser = { nome, cpf, tel, city, uf, gender, cat, nasc, secA, team: '', cbc: cbc, role: 'USER', inscricoes: [], selfie: null, allowedEvts: [], idReleased: false, filiadoPE: false }; db.users.push(newUser); saveDB('users'); window.enviarNotificacao(`Novo atleta cadastrado no sistema: ${nome} (${city}-${uf}).`, 'ADMIN', null, null); loggedUser = newUser; updateSessionStorage(); toast("CADASTRO REALIZADO COM SUCESSO!"); initApp(false); }).catch((error) => { if(error.code === 'auth/email-already-in-use') toast("ESTE CPF JÁ ESTÁ REGISTRADO NO FIREBASE", "error"); else toast("ERRO AO CADASTRAR: " + error.message, "error"); });
+    }
+};
+
+window.abrirModalRecovery = function() { document.getElementById('rec-cpf').value = ''; document.getElementById('rec-answer').value = ''; document.getElementById('rec-new-pass').value = ''; document.getElementById('rec-security-area').style.display = 'none'; document.getElementById('rec-change-pass-area').style.display = 'none';
+openModal('modal-recovery'); };
+window.buscarUsuarioRecuperacao = function() { const cpfRaw = document.getElementById('rec-cpf').value; const user = db.users.find(u => cleanCPF(u.cpf) === cleanCPF(cpfRaw));
+if(user) { document.getElementById('rec-security-area').style.display='block'; document.getElementById('rec-change-pass-area').style.display='none'; toast("USUÁRIO ENCONTRADO"); } else { toast("CPF NÃO ENCONTRADO", "error"); } };
+window.revelarSenha = function() { const cpfRaw = document.getElementById('rec-cpf').value; const ans = document.getElementById('rec-answer').value.toUpperCase(); const user = db.users.find(u => cleanCPF(u.cpf) === cleanCPF(cpfRaw));
+if(user && user.secA === ans) { document.getElementById('rec-security-area').style.display = 'none'; document.getElementById('rec-change-pass-area').style.display = 'block'; toast("RESPOSTA CORRETA!", "success");
+} else { showConfirm("ERRO DE SEGURANÇA", "Resposta Incorreta. Tente novamente.", '<i class="fas fa-times-circle" style="color:#d50000"></i>', null); } };
+window.mudarSenhaRecuperacao = function() {
+    const cpfRaw = document.getElementById('rec-cpf').value; const clean = cleanCPF(cpfRaw);
+    const user = db.users.find(u => cleanCPF(u.cpf) === clean); const newPass = document.getElementById('rec-new-pass').value;
+    if(newPass.length > 0 && newPass.length < 6) return toast("A nova senha deve ter no mínimo 6 dígitos", "error");
+    if(newPass.length >= 6) {
+        const emailFake = clean + "@dhpe.com.br"; toast("ATUALIZANDO SENHA...", "info");
+        const salvarLocal = () => { const idx = db.users.findIndex(u => cleanCPF(u.cpf) === clean);
+        if(idx > -1) { db.users[idx].pass = newPass; db.users[idx].tempPass = null; db.users[idx].adminNewPass = null; saveDB('users'); } toast("SENHA ALTERADA COM SUCESSO!"); fecharModal('modal-recovery');
+        };
+        salvarLocal();
+        if(auth) { const authPass = newPass.padEnd(6, '0'); auth.signInWithEmailAndPassword(emailFake, user.pass || 'default123').then(() => { auth.currentUser.updatePassword(authPass).catch(()=>{}); }).catch((e) => { if (e.code === 'auth/user-not-found') { auth.createUserWithEmailAndPassword(emailFake, authPass).catch(()=>{}); } });
+        }
+    } else { toast("Nenhuma alteração feita. Você pode logar."); fecharModal('modal-recovery'); }
+};
+function initApp(isRestoring = false) { 
+    trocarTela('app');
+    if(loggedUser && (isSuperAdmin(loggedUser) || loggedUser.role === 'ORGANIZER' || loggedUser.role === 'ADMIN')) { document.getElementById('btn-adm').style.display = 'flex';
+    } else { document.getElementById('btn-adm').style.display = 'none'; } 
+    let savedTab = localStorage.getItem(LAST_TAB_KEY) || 'calendar';
+    if(savedTab === 'adm' && (!loggedUser || (!isSuperAdmin(loggedUser) && loggedUser.role !== 'ORGANIZER' && loggedUser.role !== 'ADMIN'))) { savedTab = 'calendar';
+    }
+    document.getElementById('lbl-season-year').innerText = SYSTEM_YEAR; recalcRanking(); nav(savedTab); 
+    if (isRestoring && savedTab === 'adm') { setTimeout(() => { document.getElementById('adm-login-box').style.display = 'none'; document.getElementById('adm-panel-real').style.display = 'block'; applyAdminPermissions(); let lastAdm = localStorage.getItem(LAST_ADM_KEY) || 'menu'; openAdmSection(lastAdm); }, 100);
+    }
+        updateSupportLink();
+    atualizarBadgeNotificacoes();
 
 
-                    const ok =
-                        await window.solicitarPermissaoPush();
+    // ==========================================================
+    // FORÇA AVISO DE ATIVAÇÃO DE NOTIFICAÇÕES EM TODO LOGIN
+    // ==========================================================
+    if ("Notification" in window) {
 
+        // 1. JÁ PERMITIU: apenas registra/atualiza o token deste aparelho.
+        if (Notification.permission === "granted") {
+            window.solicitarPermissaoPush();
+        }
 
-                    if (ok) {
+        // 2. AINDA NÃO RESPONDEU: mostra o aviso em todo login até ativar.
+        else if (Notification.permission === "default") {
 
-                        toast(
-                            "NOTIFICAÇÕES ATIVADAS COM SUCESSO!",
-                            "success"
-                        );
+            setTimeout(() => {
 
-                    } else {
+                showConfirm(
+                    "🔔 ATIVE AS NOTIFICAÇÕES DO DH-PE",
+                    `
+                        <b>Não perca informações importantes da prova!</b>
+                        <br><br>
+                        Ative as notificações para receber no celular:
+                        <br><br>
+                        🏁 Ordem de largada<br>
+                        ⏱️ Resultados e tempos<br>
+                        ✅ Confirmação de pagamento<br>
+                        📢 Alterações da etapa<br>
+                        🚨 Comunicados importantes
+                        <br><br>
+                        <b>Toque em OK e depois em PERMITIR.</b>
+                    `,
+                    '<i class="fas fa-bell" style="color:#0038a8; font-size:35px;"></i>',
 
-                        if (
-                            Notification.permission ===
-                            "denied"
-                        ) {
+                    async function(res) {
 
+                        if (!res) return;
+
+                        const ok = await window.solicitarPermissaoPush();
+
+                        if (ok) {
+                            toast(
+                                "NOTIFICAÇÕES ATIVADAS COM SUCESSO!",
+                                "success"
+                            );
+                        }
+
+                        else if (Notification.permission === "denied") {
                             showConfirm(
-
                                 "🔕 NOTIFICAÇÕES BLOQUEADAS",
-
                                 `
                                     O seu celular bloqueou as notificações do DH-PE.
-
                                     <br><br>
-
-                                    Para receber:
-                                    <b>ordem de largada, resultados e avisos da prova</b>,
-                                    você precisa liberar a permissão nas configurações
-                                    do navegador ou do aparelho.
-
+                                    Para receber <b>ordem de largada, resultados e avisos da prova</b>,
+                                    libere a permissão nas configurações do navegador ou do aparelho.
                                     <br><br>
-
                                     Depois volte ao DH-PE e toque novamente no sino.
                                 `,
-
                                 '<i class="fas fa-bell-slash" style="color:#d50000; font-size:35px;"></i>',
-
                                 function() {}
                             );
                         }
                     }
-                }
-            );
+                );
 
-        }, 800);
-    }
+            }, 800);
+        }
 
+        // 3. JÁ BLOQUEOU: continua lembrando em todo login.
+        else if (Notification.permission === "denied") {
 
-    // ======================================================
-    // 3. USUÁRIO JÁ NEGOU NO ANDROID/CHROME
-    // CONTINUA AVISANDO EM TODO LOGIN
-    // ======================================================
-    else if (Notification.permission === "denied") {
+            setTimeout(() => {
 
-        setTimeout(() => {
+                showConfirm(
+                    "🔕 ATIVE AS NOTIFICAÇÕES",
+                    `
+                        As notificações do DH-PE estão <b>BLOQUEADAS neste aparelho.</b>
+                        <br><br>
+                        Você pode deixar de receber:
+                        <br><br>
+                        🏁 Ordem de largada<br>
+                        ⏱️ Resultado da prova<br>
+                        ✅ Confirmação da inscrição<br>
+                        📢 Comunicados da organização
+                        <br><br>
+                        <b>Libere as notificações nas configurações do navegador/aparelho.</b>
+                        <br><br>
+                        Depois volte ao DH-PE e toque no sino.
+                    `,
+                    '<i class="fas fa-bell-slash" style="color:#d50000; font-size:35px;"></i>',
+                    function() {
+                        toast(
+                            "LIBERE AS NOTIFICAÇÕES NAS CONFIGURAÇÕES DO CELULAR.",
+                            "error"
+                        );
+                    }
+                );
 
-            showConfirm(
-
-                "🔕 ATIVE AS NOTIFICAÇÕES",
-
-                `
-                    As notificações do DH-PE estão
-                    <b>BLOQUEADAS neste aparelho.</b>
-
-                    <br><br>
-
-                    Você pode deixar de receber:
-
-                    <br><br>
-
-                    🏁 Ordem de largada<br>
-                    ⏱️ Resultado da prova<br>
-                    ✅ Confirmação da inscrição<br>
-                    📢 Comunicados da organização
-
-                    <br><br>
-
-                    <b>Libere as notificações nas configurações
-                    do navegador/aparelho.</b>
-
-                    <br><br>
-
-                    Depois volte ao DH-PE e toque no sino.
-                `,
-
-                '<i class="fas fa-bell-slash" style="color:#d50000; font-size:35px;"></i>',
-
-                function() {
-
-                    toast(
-                        "LIBERE AS NOTIFICAÇÕES NAS CONFIGURAÇÕES DO CELULAR.",
-                        "error"
-                    );
-                }
-            );
-
-        }, 800);
+            }, 800);
+        }
     }
 }
+
 
 function nav(t) { currentTab = t; localStorage.setItem(LAST_TAB_KEY, t); document.querySelectorAll('.bar-item').forEach(b => b.classList.remove('active')); if(document.getElementById('btn-'+t)) document.getElementById('btn-'+t).classList.add('active');
 document.querySelectorAll('.c-sec').forEach(e => { e.style.display='none'; e.classList.remove('active'); }); const activeSec = document.getElementById('cont-'+t); if(activeSec) { activeSec.style.display='block'; activeSec.classList.add('active');
