@@ -458,7 +458,7 @@
 </div>
                         
                         <div style="margin-top:5px; background:#e0f2fe; padding:5px; border-radius:5px; border:1px solid #bae6fd;">
-                            <label style="color:#0369a1;">DATA/HORA P/ REVELAR ORDEM DE LARGADA</label>
+                            <label style="color:#0369a1;">DATA/HORA PREVISTA P/ ORDEM DE LARGADA</label>
                             <input type="datetime-local" id="adm-evt-startlist-date" class="input-field" style="margin-top:2px;">
                         </div>
             
@@ -509,6 +509,16 @@
                                 <!-- BOTÃO DE GERAR EXCEL LARGADA -->
                                 <button class="btn-live-launch" title="Baixar Planilha de Largada" style="background:#107c41; color:white; padding:6px 10px; border:none; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer; display:flex; align-items:center; gap:5px;" onclick="window.gerarExcelLargada()">
                                     <i class="fas fa-file-excel"></i> LARGADA
+                                    <!-- PUBLICA / DESPUBLICA A ORDEM PARA OS ATLETAS -->
+<button
+    id="btn-publish-start-list"
+    class="btn-live-launch"
+    title="Liberar a ordem de largada para atletas pagos ou isentos"
+    style="background:#7c3aed; color:white; padding:6px 10px; border:none; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer; display:flex; align-items:center; gap:5px;"
+    onclick="window.alternarPublicacaoOrdemLargada()"
+>
+    <i class="fas fa-bullhorn"></i> PUBLICAR ORDEM
+</button>
                                 </button>
                                 
                                 <button class="btn-live-launch" style="background:#ff9800; color:white; padding:6px 10px; border:none; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer;" onclick="imprimirOrdemLargadaGeral()"><i class="fas fa-print"></i> IMPRIMIR</button>
@@ -706,11 +716,26 @@
 </div>
 
 <div class="modal-overlay" id="modal-ordem-largada">
-    <div class="modal-box" style="text-align:left; padding:15px;">
-        <h3 style="color:var(--pe-blue); border-bottom:1px solid #eee; padding-bottom:10px; margin:0;">MINHA ORDEM DE LARGADA</h3>
-        <p style="font-size:10px; color:#666; margin-top:5px; margin-bottom:0;">Posição definida pela ordem de inscrição.</p>
-        <div id="ordem-largada-list" style="margin-top:10px; max-height:400px; overflow-y:auto; padding-right:5px;"></div>
-        <button class="btn" style="background:#ddd; color:#333; margin-top:15px" onclick="fecharModal('modal-ordem-largada')">FECHAR</button>
+    <div class="modal-box" style="text-align:left; padding:15px; max-width:520px;">
+        <h3 style="color:var(--pe-blue); border-bottom:1px solid #eee; padding-bottom:10px; margin:0;">
+            ORDEM DE LARGADA
+        </h3>
+
+        <p style="font-size:10px; color:#666; margin-top:5px; margin-bottom:0;">
+            Disponível somente para atletas com inscrição PAGA/CONFIRMADA ou ISENTA.
+        </p>
+
+        <div
+            id="ordem-largada-list"
+            style="margin-top:10px; max-height:65vh; overflow-y:auto; padding-right:5px;">
+        </div>
+
+        <button
+            class="btn"
+            style="background:#ddd; color:#333; margin-top:15px"
+            onclick="fecharModal('modal-ordem-largada')">
+            FECHAR
+        </button>
     </div>
 </div>
 
@@ -1496,7 +1521,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
 
-<script src="script.js?v=151"></script>
+<script src="script.js?v=152"></script>
 
 </body>
 </html>
