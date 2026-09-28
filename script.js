@@ -1326,40 +1326,1013 @@ if(newIndex < 0) newIndex = currentGalleryList.length - 1; if(newIndex >= curren
 window.abrirTicket = function(evtId) { const e = db.events.find(x => String(x.id) === String(evtId)); if(!e || !loggedUser) return; document.getElementById('share-event-name').innerText = e.t;
 document.getElementById('share-event-details').innerText = `${e.d} | ${e.city}`; document.getElementById('share-piloto-name').innerText = loggedUser.nome; document.getElementById('share-piloto-details').innerText = `${loggedUser.cat} • ${loggedUser.city}`; document.getElementById('ticket-year-display').innerText = SYSTEM_YEAR; openModal('modal-share'); };
 window.verOrdemLargada = function() {
-    if (!loggedUser) return toast("Faça login", "error"); const listDiv = document.getElementById('ordem-largada-list'); if (!listDiv) return;
-    listDiv.innerHTML = '';
-    if (!loggedUser.inscricoes || loggedUser.inscricoes.length === 0) { listDiv.innerHTML = '<div style="padding:15px; color:#666; text-align:center;">Você não possui inscrições.</div>'; openModal('modal-ordem-largada');
-    return; }
-    let hasConfirmed = false;
-    loggedUser.inscricoes.forEach(insc => {
-        if (insc.status !== 'CONFIRMADO' && insc.status !== 'ISENTO') return;
-        const evt = db.events.find(e => String(e.id) === String(insc.id)); 
-                if (!evt || evt.status === 'CANCELLED') return;
+    if (!loggedUser) return toast("Faça login", "error");
 
-        // A ordem permanece disponível até o fim
-        // do último dia do evento.
+    const listDiv = document.getElementById('ordem-largada-list');
+    if (!listDiv) return;
+
+    listDiv.innerHTML = '';
+
+    const cpfLogado = cleanCPF(loggedUser.cpf);
+    const agora = new Date();
+
+    const ordemCategorias = [
+        "ESTREANTE", "ESTREANTE (EXTRA)",
+        "RIGIDA", "RÍGIDA", "RÍGIDA (EXTRA)",
+        "OPEN", "OPEN (EXTRA)",
+        "ELITE FEMININA", "FEMININO ELITE", "FEMININO",
+        "INFANTO-JUVENIL", "JUVENIL",
+        "PCD", "PCD (EXTRA)",
+        "MASTER D",
+        "MASTER C2", "MASTER C1", "MASTER C",
+        "MASTER B2", "MASTER B1", "MASTER B",
+        "MASTER A2", "MASTER A1", "MASTER A",
+        "E-BIKE", "E-BIKE (EXTRA)",
+        "JUNIOR", "SUB-30", "ELITE"
+    ];
+
+    // ======================================================
+    // SOMENTE PAGO/CONFIRMADO OU ISENTO PODE VISUALIZAR
+    // ======================================================
+    const inscricoesValidas = (loggedUser.inscricoes || []).filter(insc => {
+
+        if (!insc) return false;
+
+        if (
+            insc.status !== 'CONFIRMADO' &&
+            insc.status !== 'ISENTO'
+        ) {
+            return false;
+        }
+
+        const evt = db.events.find(
+            e => String(e.id) === String(insc.id)
+        );
+
+        if (!evt || evt.status === 'CANCELLED') {
+            return false;
+        }
+
         const fimEvento = getEventoEndDate(evt);
 
         if (
             fimEvento &&
-            new Date() > fimEvento
+            agora > fimEvento
         ) {
+            return false;
+        }
+
+        return true;
+    });
+
+
+    // ======================================================
+    // USUÁRIO PENDENTE / SEM INSCRIÇÃO VÁLIDA
+    // ======================================================
+    if (inscricoesValidas.length === 0) {
+
+        listDiv.innerHTML = `
+            <div
+                style="
+                    padding:18px;
+                    text-align:center;
+                    background:#fff7ed;
+                    border:1px solid #fdba74;
+                    border-radius:10px;
+                    color:#9a3412;
+                "
+            >
+                <i
+                    class="fas fa-lock"
+                    style="font-size:24px; margin-bottom:8px;">
+                </i>
+
+                <br>
+
+                <b>ORDEM DE LARGADA BLOQUEADA</b>
+
+                <br>
+
+                <span
+                    style="
+                        font-size:11px;
+                        display:block;
+                        margin-top:6px;
+                        line-height:1.4;
+                    "
+                >
+                    A visualização é exclusiva para atletas com inscrição
+                    <b>PAGA/CONFIRMADA</b> ou <b>ISENTA</b> nesta etapa.
+                </span>
+            </div>
+        `;
+
+        openModal('modal-ordem-largada');
+
+        return;
+    }
+
+
+    const eventosIds = [
+        ...new Set(
+            inscricoesValidas.map(
+                i => String(i.id)
+            )
+        )
+    ];
+
+
+    let encontrouEventoPublicado = false;
+
+
+    eventosIds.forEach(evtId => {
+
+        const evt = db.events.find(
+            e => String(e.id) === String(evtId)
+        );
+
+        if (!evt) return;
+
+
+        // ==================================================
+        // LIBERAÇÃO SOMENTE MANUAL
+        // A DATA/HORA É APENAS PREVISÃO
+        // ==================================================
+        const isReleased =
+            evt.startListPublished === true;
+
+
+        if (!isReleased) {
+
+            let previsaoTexto =
+                'Aguarde a liberação da organização.';
+
+
+            if (evt.startListDate) {
+
+                const dataPrevista =
+                    new Date(evt.startListDate);
+
+                if (
+                    !Number.isNaN(
+                        dataPrevista.getTime()
+                    )
+                ) {
+
+                    previsaoTexto =
+                        'Previsão: ' +
+                        dataPrevista.toLocaleString(
+                            'pt-BR'
+                        );
+                }
+            }
+
+
+            listDiv.innerHTML += `
+                <div
+                    style="
+                        background:#fff8e1;
+                        border:1px solid #ffe082;
+                        padding:12px;
+                        border-radius:10px;
+                        margin-bottom:12px;
+                    "
+                >
+                    <b
+                        style="
+                            color:var(--pe-blue);
+                            font-size:13px;
+                        "
+                    >
+                        🏁 ${evt.t}
+                    </b>
+
+                    <div
+                        style="
+                            color:#d65a00;
+                            font-size:11px;
+                            font-weight:bold;
+                            margin-top:8px;
+                            line-height:1.4;
+                        "
+                    >
+                        <i class="fas fa-clock"></i>
+                        ORDEM AINDA NÃO PUBLICADA
+
+                        <br>
+
+                        <span
+                            style="
+                                font-weight:600;
+                                color:#7c2d12;
+                            "
+                        >
+                            ${previsaoTexto}
+                        </span>
+                    </div>
+                </div>
+            `;
+
             return;
         }
-        hasConfirmed = true;
-        const catToSearch = window.normalizeCatName(insc.extraCat || loggedUser.cat);
-        let isReleased = false; if (evt.startListDate) { const releaseDate = new Date(evt.startListDate); const now = new Date(); if (now >= releaseDate) isReleased = true; }
-        if (!isReleased) { listDiv.innerHTML += `<div style="background:#fff8e1; border:1px solid #ffe082; padding:10px; border-radius:8px; margin-bottom:10px;"><b style="color:var(--pe-blue); font-size:12px;">${evt.t}</b><br><span class="badge-cat" style="margin-top:5px;">${catToSearch}</span><br><div style="color:#d65a00; font-size:11px; font-weight:bold; margin-top:8px;"><i class="fas fa-clock"></i> Lista será revelada em:<br>${evt.startListDate ? new Date(evt.startListDate).toLocaleString('pt-BR') : 'Data não definida'}</div></div>`; return; }
-        let competitors = [];
-        db.users.forEach(u => { if (u.inscricoes) { const uInsc = u.inscricoes.find(i => String(i.id) === String(evt.id) && window.normalizeCatName(i.extraCat || u.cat) === catToSearch && (i.status === 'CONFIRMADO' || i.status === 'ISENTO')); if (uInsc) { competitors.push({ cpf: u.cpf, name: u.nome, city: u.city, uf: u.uf || 'PE', date: new Date(uInsc.date || 0).getTime() }); } } });
-        competitors.sort((a, b) => a.date - b.date);
-        let listHtml = `<div style="background:white; border:1px solid #ddd; border-radius:8px; overflow:hidden; margin-bottom:15px;"><div style="background:var(--pe-blue); color:white; padding:10px; font-weight:bold; font-size:12px; text-align:center;">${evt.t}<br><span style="font-size:10px; color:#ffe500; font-weight:900;">${catToSearch}</span></div>`;
-        competitors.forEach((c, index) => { const isMe = c.cpf === loggedUser.cpf; const bgColor = isMe ? '#fffbeb' : (index % 2 === 0 ? '#f8fafc' : 'white'); const borderColor = isMe ? 'border-left: 4px solid var(--pe-yellow);' : ''; const nameColor = isMe ? 'var(--pe-blue)' : '#333'; const meBadge = isMe ? `<span style="background:var(--pe-yellow); color:black; font-size:8px; padding:2px 5px; border-radius:4px; font-weight:900; margin-left:5px;">VOCÊ</span>` : ''; listHtml += `<div style="padding:10px; border-bottom:1px solid #eee; background:${bgColor}; display:flex; align-items:center; ${borderColor}"><div style="width:30px; font-size:14px; font-weight:900; color:#64748b; text-align:center;">${index + 1}º</div><div style="flex:1; padding-left:10px;"><div style="font-size:12px; font-weight:bold; color:${nameColor};">${c.name} ${meBadge}</div><div style="font-size:9px; color:#94a3b8; margin-top:2px;">${c.city}-${c.uf}</div></div></div>`; });
-        listHtml += `</div>`; listDiv.innerHTML += listHtml;
+
+
+        encontrouEventoPublicado = true;
+
+
+        // ==================================================
+        // TODOS OS ATLETAS CONFIRMADOS/ISENTOS DA ETAPA
+        // ==================================================
+        const competidores = [];
+
+
+        db.users.forEach(u => {
+
+            (u.inscricoes || []).forEach(insc => {
+
+                if (
+                    String(insc.id) !==
+                    String(evt.id)
+                ) {
+                    return;
+                }
+
+
+                if (
+                    insc.status !== 'CONFIRMADO' &&
+                    insc.status !== 'ISENTO'
+                ) {
+                    return;
+                }
+
+
+                const cat =
+                    window.normalizeCatName(
+                        insc.extraCat || u.cat
+                    );
+
+
+                // ===========================================
+                // PROCURA QUALIFY DO ATLETA
+                // ===========================================
+                const tQ =
+                    (db.tempos || []).find(t =>
+
+                        t &&
+
+                        String(t.evtId) ===
+                            String(evt.id) &&
+
+                        cleanCPF(t.cpf) ===
+                            cleanCPF(u.cpf) &&
+
+                        t.runType === 'qualify' &&
+
+                        window.normalizeCatName(
+                            t.cat
+                        ) === cat
+                    );
+
+
+                let qualify = '';
+
+
+                if (
+                    tQ &&
+                    tQ.val &&
+                    tQ.val !== '--:--.---' &&
+                    tQ.val !== 'DNF'
+                ) {
+
+                    qualify =
+                        tQ.val;
+                }
+
+
+                competidores.push({
+
+                    cpf:
+                        u.cpf,
+
+                    name:
+                        u.nome || '',
+
+                    city:
+                        u.city || '',
+
+                    uf:
+                        u.uf || 'PE',
+
+                    cat:
+                        cat,
+
+                    placa:
+                        u.numero ||
+                        u.numPlaca ||
+                        u.placa ||
+                        '',
+
+                    qualify:
+                        qualify
+
+                });
+
+            });
+
+        });
+
+
+        if (competidores.length === 0) {
+
+            listDiv.innerHTML += `
+                <div
+                    style="
+                        padding:15px;
+                        color:#666;
+                        text-align:center;
+                    "
+                >
+                    Nenhum atleta confirmado/isento nesta etapa.
+                </div>
+            `;
+
+            return;
+        }
+
+
+        // ==================================================
+        // CATEGORIAS PRESENTES NA ETAPA
+        // ==================================================
+        const categoriasPresentes = [
+            ...new Set(
+                competidores.map(
+                    c => c.cat
+                )
+            )
+        ];
+
+
+        categoriasPresentes.sort((a, b) => {
+
+            let ia =
+                ordemCategorias.indexOf(a);
+
+            let ib =
+                ordemCategorias.indexOf(b);
+
+
+            if (ia === -1) {
+                ia = 999;
+            }
+
+            if (ib === -1) {
+                ib = 999;
+            }
+
+
+            if (ia !== ib) {
+                return ia - ib;
+            }
+
+
+            return a.localeCompare(b);
+
+        });
+
+
+        // ==================================================
+        // CATEGORIA(S) DO ATLETA LOGADO
+        // ==================================================
+        const minhasCats =
+            inscricoesValidas
+
+                .filter(
+                    i =>
+                        String(i.id) ===
+                        String(evt.id)
+                )
+
+                .map(
+                    i =>
+                        window.normalizeCatName(
+                            i.extraCat ||
+                            loggedUser.cat
+                        )
+                );
+
+
+        // ==================================================
+        // MONTA LISTA POR CATEGORIA
+        // ==================================================
+        const listasPorCat = {};
+
+
+        categoriasPresentes.forEach(cat => {
+
+            const lista =
+                competidores.filter(
+                    c => c.cat === cat
+                );
+
+
+            lista.sort((a, b) => {
+
+                // Quem não tem qualify fica antes.
+                // Melhor qualify larga depois.
+                if (
+                    a.qualify ||
+                    b.qualify
+                ) {
+
+                    const tempoA =
+                        a.qualify
+                            ? tempoParaMilissegundos(
+                                a.qualify
+                            )
+                            : Infinity;
+
+
+                    const tempoB =
+                        b.qualify
+                            ? tempoParaMilissegundos(
+                                b.qualify
+                            )
+                            : Infinity;
+
+
+                    if (tempoA !== tempoB) {
+                        return tempoB - tempoA;
+                    }
+                }
+
+
+                return a.name.localeCompare(
+                    b.name
+                );
+
+            });
+
+
+            listasPorCat[cat] =
+                lista;
+
+        });
+
+
+        // ==================================================
+        // SUA LARGADA
+        // ==================================================
+        let minhaLargadaHtml = '';
+
+
+        [
+            ...new Set(minhasCats)
+        ].forEach(cat => {
+
+            const lista =
+                listasPorCat[cat] || [];
+
+
+            const pos =
+                lista.findIndex(
+                    c =>
+                        cleanCPF(c.cpf) ===
+                        cpfLogado
+                );
+
+
+            const meuRegistro =
+                pos > -1
+                    ? lista[pos]
+                    : null;
+
+
+            if (!meuRegistro) {
+                return;
+            }
+
+
+            minhaLargadaHtml += `
+                <div
+                    style="
+                        background:white;
+                        border:1px solid #bfdbfe;
+                        border-left:5px solid var(--pe-blue);
+                        border-radius:8px;
+                        padding:9px;
+                        margin-top:7px;
+                    "
+                >
+                    <div
+                        style="
+                            display:grid;
+                            grid-template-columns:1fr auto;
+                            gap:8px;
+                            align-items:center;
+                        "
+                    >
+                        <div>
+
+                            <div
+                                style="
+                                    font-size:9px;
+                                    color:#64748b;
+                                    font-weight:800;
+                                "
+                            >
+                                CATEGORIA
+                            </div>
+
+                            <div
+                                style="
+                                    font-size:13px;
+                                    color:var(--pe-blue);
+                                    font-weight:900;
+                                "
+                            >
+                                ${cat}
+                            </div>
+
+                            <div
+                                style="
+                                    font-size:10px;
+                                    color:#475569;
+                                    margin-top:3px;
+                                "
+                            >
+                                PLACA:
+                                <b>
+                                    ${meuRegistro.placa || '—'}
+                                </b>
+                            </div>
+
+                        </div>
+
+
+                        <div
+                            style="
+                                text-align:center;
+                                background:#fffbeb;
+                                border:1px solid #fde68a;
+                                border-radius:8px;
+                                padding:7px 10px;
+                                min-width:72px;
+                            "
+                        >
+
+                            <div
+                                style="
+                                    font-size:9px;
+                                    color:#92400e;
+                                    font-weight:800;
+                                "
+                            >
+                                POSIÇÃO
+                            </div>
+
+                            <div
+                                style="
+                                    font-size:20px;
+                                    color:#b45309;
+                                    font-weight:900;
+                                "
+                            >
+                                ${pos + 1}º
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div>
+            `;
+
+        });
+
+
+        // ==================================================
+        // CABEÇALHO DO EVENTO
+        // ==================================================
+        let html = `
+
+            <div
+                style="
+                    background:linear-gradient(
+                        135deg,
+                        #0038a8,
+                        #0f172a
+                    );
+                    color:white;
+                    border-radius:12px;
+                    padding:12px;
+                    margin-bottom:10px;
+                    box-shadow:0 4px 12px rgba(0,0,0,.15);
+                "
+            >
+
+                <div
+                    style="
+                        font-size:15px;
+                        font-weight:900;
+                    "
+                >
+                    🏁 ${evt.t}
+                </div>
+
+                <div
+                    style="
+                        font-size:9px;
+                        opacity:.8;
+                        margin-top:2px;
+                    "
+                >
+                    ORDEM DE LARGADA PUBLICADA
+                </div>
+
+            </div>
+
+
+            <div
+                style="
+                    background:#eff6ff;
+                    border:1px solid #bfdbfe;
+                    border-radius:10px;
+                    padding:10px;
+                    margin-bottom:10px;
+                "
+            >
+
+                <div
+                    style="
+                        font-size:11px;
+                        color:#1e3a8a;
+                        font-weight:900;
+                    "
+                >
+                    <i class="fas fa-user"></i>
+                    SUA LARGADA
+                </div>
+
+                ${
+                    minhaLargadaHtml ||
+                    `
+                    <div
+                        style="
+                            font-size:10px;
+                            color:#64748b;
+                            margin-top:6px;
+                        "
+                    >
+                        Seu registro não foi localizado na lista publicada.
+                    </div>
+                    `
+                }
+
+            </div>
+
+
+            <div
+                style="
+                    background:#f8fafc;
+                    border:1px solid #e2e8f0;
+                    border-radius:10px;
+                    padding:10px;
+                    margin-bottom:12px;
+                "
+            >
+
+                <div
+                    style="
+                        font-size:11px;
+                        color:#334155;
+                        font-weight:900;
+                        margin-bottom:7px;
+                    "
+                >
+                    <i class="fas fa-list-ol"></i>
+                    ORDEM DAS CATEGORIAS
+                </div>
+        `;
+
+
+        // ==================================================
+        // LISTA DA ORDEM DAS CATEGORIAS
+        // ==================================================
+        categoriasPresentes.forEach(
+            (cat, idx) => {
+
+                const minha =
+                    minhasCats.includes(cat);
+
+
+                html += `
+                    <div
+                        style="
+                            display:flex;
+                            align-items:center;
+                            gap:8px;
+                            padding:5px 7px;
+                            margin-bottom:3px;
+                            border-radius:6px;
+
+                            ${
+                                minha
+                                    ? 'background:#fff7cc; border:1px solid #fde68a;'
+                                    : 'background:white; border:1px solid #eef2f7;'
+                            }
+                        "
+                    >
+
+                        <b
+                            style="
+                                width:22px;
+                                color:${
+                                    minha
+                                        ? '#b45309'
+                                        : '#64748b'
+                                };
+                            "
+                        >
+                            ${idx + 1}.
+                        </b>
+
+
+                        <span
+                            style="
+                                font-size:11px;
+                                font-weight:${
+                                    minha
+                                        ? '900'
+                                        : '700'
+                                };
+                                color:${
+                                    minha
+                                        ? '#1e3a8a'
+                                        : '#334155'
+                                };
+                            "
+                        >
+                            ${cat}
+                        </span>
+
+
+                        ${
+                            minha
+                                ? `
+                                <span
+                                    style="
+                                        margin-left:auto;
+                                        background:var(--pe-yellow);
+                                        color:#111;
+                                        font-size:8px;
+                                        padding:2px 5px;
+                                        border-radius:4px;
+                                        font-weight:900;
+                                    "
+                                >
+                                    SUA CATEGORIA
+                                </span>
+                                `
+                                : ''
+                        }
+
+                    </div>
+                `;
+
+            }
+        );
+
+
+        html += `</div>`;
+
+
+        // ==================================================
+        // LISTA COMPLETA DE ATLETAS POR CATEGORIA
+        // ==================================================
+        categoriasPresentes.forEach(cat => {
+
+            const lista =
+                listasPorCat[cat] || [];
+
+
+            const minhaCat =
+                minhasCats.includes(cat);
+
+
+            html += `
+                <div
+                    style="
+                        background:white;
+                        border:${
+                            minhaCat
+                                ? '2px solid #facc15'
+                                : '1px solid #dbe2ea'
+                        };
+                        border-radius:10px;
+                        overflow:hidden;
+                        margin-bottom:12px;
+                    "
+                >
+
+                    <div
+                        style="
+                            background:${
+                                minhaCat
+                                    ? '#1e3a8a'
+                                    : '#334155'
+                            };
+                            color:white;
+                            padding:9px 10px;
+                            font-size:11px;
+                            font-weight:900;
+                            display:flex;
+                            justify-content:space-between;
+                            gap:10px;
+                        "
+                    >
+
+                        <span>
+                            ${cat}
+                        </span>
+
+                        <span
+                            style="
+                                font-size:9px;
+                                color:#fde68a;
+                            "
+                        >
+                            ${lista.length}
+                            ATLETA${
+                                lista.length === 1
+                                    ? ''
+                                    : 'S'
+                            }
+                        </span>
+
+                    </div>
+            `;
+
+
+            lista.forEach(
+                (c, index) => {
+
+                    const isMe =
+                        cleanCPF(c.cpf) ===
+                        cpfLogado;
+
+
+                    html += `
+                        <div
+                            style="
+                                display:grid;
+                                grid-template-columns:
+                                    34px
+                                    48px
+                                    1fr;
+                                align-items:center;
+                                gap:6px;
+                                padding:8px 7px;
+                                border-bottom:1px solid #eef2f7;
+
+                                ${
+                                    isMe
+                                        ? 'background:#fffbeb; border-left:4px solid var(--pe-yellow);'
+                                        : (
+                                            index % 2 === 0
+                                                ? 'background:#f8fafc;'
+                                                : 'background:white;'
+                                        )
+                                }
+                            "
+                        >
+
+                            <div
+                                style="
+                                    font-size:13px;
+                                    font-weight:900;
+                                    color:${
+                                        isMe
+                                            ? '#b45309'
+                                            : '#64748b'
+                                    };
+                                    text-align:center;
+                                "
+                            >
+                                ${index + 1}º
+                            </div>
+
+
+                            <div
+                                style="
+                                    font-size:12px;
+                                    font-weight:900;
+                                    color:#d50000;
+                                    text-align:center;
+                                "
+                            >
+                                ${c.placa || '—'}
+                            </div>
+
+
+                            <div>
+
+                                <div
+                                    style="
+                                        font-size:11px;
+                                        font-weight:900;
+                                        color:${
+                                            isMe
+                                                ? 'var(--pe-blue)'
+                                                : '#334155'
+                                        };
+                                        line-height:1.2;
+                                    "
+                                >
+
+                                    ${c.name}
+
+                                    ${
+                                        isMe
+                                            ? `
+                                            <span
+                                                style="
+                                                    background:var(--pe-yellow);
+                                                    color:#111;
+                                                    font-size:8px;
+                                                    padding:2px 5px;
+                                                    border-radius:4px;
+                                                    margin-left:4px;
+                                                "
+                                            >
+                                                VOCÊ
+                                            </span>
+                                            `
+                                            : ''
+                                    }
+
+                                </div>
+
+
+                                <div
+                                    style="
+                                        font-size:8.5px;
+                                        color:#94a3b8;
+                                        margin-top:2px;
+                                    "
+                                >
+
+                                    ${c.city}-${c.uf}
+
+                                    ${
+                                        c.qualify
+                                            ? ' • QUALIFY: ' + c.qualify
+                                            : ''
+                                    }
+
+                                </div>
+
+                            </div>
+
+                        </div>
+                    `;
+
+                }
+            );
+
+
+            html += `</div>`;
+
+        });
+
+
+        listDiv.innerHTML +=
+            html;
+
     });
-    if (!hasConfirmed) { listDiv.innerHTML = '<div style="padding:15px; color:#666; text-align:center;">Você não possui inscrições CONFIRMADAS para visualizar a ordem.</div>';
+
+
+    if (
+        !encontrouEventoPublicado &&
+        listDiv.innerHTML.trim() === ''
+    ) {
+
+        listDiv.innerHTML = `
+            <div
+                style="
+                    padding:15px;
+                    color:#666;
+                    text-align:center;
+                "
+            >
+                Nenhuma ordem de largada disponível no momento.
+            </div>
+        `;
+
     }
-    openModal('modal-ordem-largada');
+
+
+    openModal(
+        'modal-ordem-largada'
+    );
 };
 
 window.renderPilotHistoryModal = function(cpf, name) {
@@ -3101,8 +4074,14 @@ function filterPilots(ctx, force) {
         } else if (ctx === 'res') {
             const evtId = document.getElementById('adm-res-evt').value;
             if(evtId) { let entries = [];
-            found.forEach(u => { if(u.inscricoes) { u.inscricoes.forEach(i => { if(String(i.id) === String(evtId) && i.status === 'CONFIRMADO') { entries.push({cpf: u.cpf, name: u.nome, city: u.city, cat: window.normalizeCatName(i.extraCat || u.cat)}); } }); } });
-            if(entries.length === 0) listDiv.innerHTML = '<div style="padding:10px; color:red">Nenhum piloto CONFIRMADO nesta etapa.</div>';
+            found.forEach(u => { if(u.inscricoes) { u.inscricoes.forEach(i => { if (
+    String(i.id) === String(evtId) &&
+    (
+        i.status === 'CONFIRMADO' ||
+        i.status === 'ISENTO'
+    )
+) { entries.push({cpf: u.cpf, name: u.nome, city: u.city, cat: window.normalizeCatName(i.extraCat || u.cat)}); } }); } });
+            if(entries.length === 0) listDiv.innerHTML = '<div style="padding:10px; color:red">Nenhum piloto CONFIRMADO/ISENTO nesta etapa.</div>';
             else listDiv.innerHTML = entries.map(e => `<div class="smart-item" onclick="selectResPilot('${e.cpf}', '${e.name}', '${e.city}', '${e.cat}')"><b>${getPilotName(e.cpf, e.name)}</b> <span class="badge-city">${getPilotCityUF(e.cpf, e.city)}</span> <span style="font-size:10px; color:#666">(${e.cat})</span></div>`).join('');
             } else listDiv.innerHTML = 'Selecione o evento.';
             
@@ -3428,8 +4407,47 @@ window.addEvent = function() {
         qTime: hasQualify ? document.getElementById('adm-evt-q-time').value : null, 
         extraVals: extraVals 
     };
-    if(getVal('adm-evt-id-edit')) { const oldIdx = db.events.findIndex(e => e.id == evtObj.id); if(oldIdx > -1) { if(db.events[oldIdx].img) evtObj.img = db.events[oldIdx].img;
-    if(db.events[oldIdx].gallery) evtObj.gallery = db.events[oldIdx].gallery; } } 
+   if (getVal('adm-evt-id-edit')) {
+
+    const oldIdx =
+        db.events.findIndex(
+            e => e.id == evtObj.id
+        );
+
+    if (oldIdx > -1) {
+
+        if (db.events[oldIdx].img) {
+            evtObj.img =
+                db.events[oldIdx].img;
+        }
+
+        if (db.events[oldIdx].gallery) {
+            evtObj.gallery =
+                db.events[oldIdx].gallery;
+        }
+
+        // Mantém a publicação da ordem ao editar o evento
+        if (
+            typeof db.events[oldIdx].startListPublished === 'boolean'
+        ) {
+            evtObj.startListPublished =
+                db.events[oldIdx].startListPublished;
+        }
+
+        if (
+            db.events[oldIdx].startListPublishedAt
+        ) {
+            evtObj.startListPublishedAt =
+                db.events[oldIdx].startListPublishedAt;
+        }
+    }
+
+} else {
+
+    // Evento novo começa com a ordem bloqueada
+    evtObj.startListPublished = false;
+    evtObj.startListPublishedAt = null;
+} 
     
     const fileInput = document.getElementById('adm-evt-img');
     const galleryInput = document.getElementById('adm-evt-gallery'); 
@@ -5062,6 +6080,12 @@ document.getElementById('btn-save-res').innerText = "LANÇAR / SALVAR"; document
 window.renderAdmResults = function() { 
     const evtId = document.getElementById('adm-res-evt').value;
     const listDiv = document.getElementById('adm-list-results'); 
+    if (
+    typeof window.atualizarBotaoPublicacaoOrdem ===
+    'function'
+) {
+    window.atualizarBotaoPublicacaoOrdem();
+}
 
     // --- ATUALIZA O DROPDOWN DE CATEGORIAS DINAMICAMENTE ---
     const catFilter = document.getElementById('adm-res-filter-cat');
@@ -5851,6 +6875,423 @@ window.removerInscricao = function(cpf, evtId, cat) {
 };
 
 // ==========================================================
+// PUBLICAÇÃO DA ORDEM DE LARGADA + PUSH PARA ATLETAS
+// ==========================================================
+window.atualizarBotaoPublicacaoOrdem = function() {
+
+    const btn =
+        document.getElementById(
+            'btn-publish-start-list'
+        );
+
+
+    if (!btn) {
+        return;
+    }
+
+
+    const selectEvento =
+        document.getElementById(
+            'adm-res-evt'
+        );
+
+
+    const evtId =
+        selectEvento
+            ? selectEvento.value
+            : '';
+
+
+    const evt =
+        evtId
+            ? db.events.find(
+                e =>
+                    String(e.id) ===
+                    String(evtId)
+            )
+            : null;
+
+
+    // Nenhum evento selecionado.
+    if (!evt) {
+
+        btn.disabled = true;
+
+        btn.style.opacity =
+            '0.55';
+
+        btn.style.background =
+            '#7c3aed';
+
+        btn.innerHTML =
+            '<i class="fas fa-bullhorn"></i> PUBLICAR ORDEM';
+
+        btn.title =
+            'Selecione primeiro uma etapa';
+
+        return;
+    }
+
+
+    btn.disabled = false;
+
+    btn.style.opacity =
+        '1';
+
+
+    // ===============================================
+    // JÁ PUBLICADA
+    // ===============================================
+    if (
+        evt.startListPublished ===
+        true
+    ) {
+
+        btn.style.background =
+            '#dc3545';
+
+        btn.innerHTML =
+            '<i class="fas fa-eye-slash"></i> DESPUBLICAR ORDEM';
+
+        btn.title =
+            'Bloquear novamente a visualização da ordem de largada';
+
+    } else {
+
+        // ===========================================
+        // AINDA BLOQUEADA
+        // ===========================================
+        btn.style.background =
+            '#7c3aed';
+
+        btn.innerHTML =
+            '<i class="fas fa-bullhorn"></i> PUBLICAR ORDEM';
+
+        btn.title =
+            'Liberar a ordem e avisar atletas pagos/confirmados ou isentos';
+    }
+};
+
+
+// ==========================================================
+// PUBLICAR OU DESPUBLICAR
+// ==========================================================
+window.alternarPublicacaoOrdemLargada = function() {
+
+    const selectEvento =
+        document.getElementById(
+            'adm-res-evt'
+        );
+
+
+    const evtId =
+        selectEvento
+            ? selectEvento.value
+            : '';
+
+
+    if (!evtId) {
+
+        return toast(
+            'SELECIONE UM EVENTO PRIMEIRO!',
+            'error'
+        );
+    }
+
+
+    if (
+        !canManageEvent(evtId)
+    ) {
+
+        return toast(
+            'VOCÊ NÃO TEM PERMISSÃO NESTE EVENTO',
+            'error'
+        );
+    }
+
+
+    const evtIdx =
+        db.events.findIndex(
+            e =>
+                String(e.id) ===
+                String(evtId)
+        );
+
+
+    if (evtIdx < 0) {
+
+        return toast(
+            'Evento não encontrado.',
+            'error'
+        );
+    }
+
+
+    const evt =
+        db.events[evtIdx];
+
+
+    // ======================================================
+    // SE JÁ ESTIVER PUBLICADA → DESPUBLICAR
+    // ======================================================
+    if (
+        evt.startListPublished ===
+        true
+    ) {
+
+        showConfirm(
+
+            'DESPUBLICAR ORDEM?',
+
+            `
+                A ordem de largada de
+                <b>${evt.t}</b>
+                ficará bloqueada novamente para os atletas.
+                <br><br>
+                Deseja continuar?
+            `,
+
+            '<i class="fas fa-eye-slash" style="color:#dc3545"></i>',
+
+            function(res) {
+
+                if (!res) {
+                    return;
+                }
+
+
+                db.events[evtIdx]
+                    .startListPublished =
+                    false;
+
+
+                db.events[evtIdx]
+                    .startListPublishedAt =
+                    null;
+
+
+                saveDB(
+                    'events'
+                );
+
+
+                if (
+                    typeof window.logAction ===
+                    'function'
+                ) {
+
+                    window.logAction(
+                        `Despublicou a ordem de largada do evento ${evt.t} (ID: ${evt.id})`
+                    );
+                }
+
+
+                window
+                    .atualizarBotaoPublicacaoOrdem();
+
+
+                toast(
+                    'ORDEM DE LARGADA DESPUBLICADA!'
+                );
+            }
+        );
+
+
+        return;
+    }
+
+
+    // ======================================================
+    // LOCALIZA APENAS ATLETAS PAGOS/CONFIRMADOS OU ISENTOS
+    // ======================================================
+    const atletasElegiveis =
+        (db.users || []).filter(
+            u =>
+
+                (u.inscricoes || [])
+                    .some(
+                        i =>
+
+                            String(i.id) ===
+                                String(evtId) &&
+
+                            (
+                                i.status ===
+                                    'CONFIRMADO' ||
+
+                                i.status ===
+                                    'ISENTO'
+                            )
+                    )
+        );
+
+
+    if (
+        atletasElegiveis.length ===
+        0
+    ) {
+
+        return toast(
+            'NENHUM ATLETA PAGO/CONFIRMADO OU ISENTO NESTA ETAPA.',
+            'error'
+        );
+    }
+
+
+    // ======================================================
+    // CONFIRMAÇÃO ANTES DE ENVIAR PUSH
+    // ======================================================
+    showConfirm(
+
+        'PUBLICAR ORDEM DE LARGADA?',
+
+        `
+            A ordem de
+            <b>${evt.t}</b>
+            será liberada para
+            <b>${atletasElegiveis.length} atleta(s)</b>
+            com inscrição paga/confirmada ou isenta.
+
+            <br><br>
+
+            Os atletas que ativaram as notificações
+            receberão um aviso no celular.
+        `,
+
+        '<i class="fas fa-bullhorn" style="color:#7c3aed"></i>',
+
+        function(res) {
+
+            if (!res) {
+                return;
+            }
+
+
+            // ===============================================
+            // PUBLICA
+            // ===============================================
+            db.events[evtIdx]
+                .startListPublished =
+                true;
+
+
+            db.events[evtIdx]
+                .startListPublishedAt =
+                new Date()
+                    .toISOString();
+
+
+            saveDB(
+                'events'
+            );
+
+
+            const titulo =
+                '🏁 Ordem de Largada Disponível!';
+
+
+            const mensagem =
+                `A ordem de largada da etapa "${evt.t}" já foi publicada. Abra o DH-PE para conferir sua categoria e posição.`;
+
+
+            // Evita mandar duas vezes para o mesmo celular.
+            const tokensEnviados =
+                new Set();
+
+
+            atletasElegiveis.forEach(
+                atleta => {
+
+
+                    // =======================================
+                    // SININHO INTERNO DO APP
+                    // =======================================
+                    if (
+                        typeof window.enviarNotificacao ===
+                        'function'
+                    ) {
+
+                        window.enviarNotificacao(
+                            mensagem,
+                            'USER',
+                            atleta.cpf,
+                            evtId
+                        );
+                    }
+
+
+                    // =======================================
+                    // PUSH FCM
+                    // =======================================
+                    if (
+                        database &&
+                        atleta.fcmToken &&
+                        !tokensEnviados.has(
+                            atleta.fcmToken
+                        )
+                    ) {
+
+                        tokensEnviados.add(
+                            atleta.fcmToken
+                        );
+
+
+                        database
+                            .ref(
+                                'push_queue'
+                            )
+                            .push({
+
+                                token:
+                                    atleta.fcmToken,
+
+                                title:
+                                    titulo,
+
+                                body:
+                                    mensagem,
+
+                                status:
+                                    'pending',
+
+                                timestamp:
+                                    Date.now()
+
+                            });
+                    }
+
+                }
+            );
+
+
+            // ===============================================
+            // AUDITORIA
+            // ===============================================
+            if (
+                typeof window.logAction ===
+                'function'
+            ) {
+
+                window.logAction(
+                    `Publicou a ordem de largada do evento ${evt.t} para ${atletasElegiveis.length} atleta(s) (ID: ${evt.id})`
+                );
+            }
+
+
+            window
+                .atualizarBotaoPublicacaoOrdem();
+
+
+            toast(
+                `ORDEM PUBLICADA! ${tokensEnviados.size} PUSH(ES) ENVIADO(S).`,
+                'success'
+            );
+
+        }
+    );
+};
+
+// ==========================================================
 // FUNÇÃO PARA IMPRIMIR ORDEM DE LARGADA (PAINEL RESULTADOS)
 // ==========================================================
 window.imprimirOrdemLargadaGeral = function() {
@@ -5864,7 +7305,13 @@ window.imprimirOrdemLargadaGeral = function() {
     db.users.forEach(u => {
         if (u.inscricoes && u.inscricoes.length > 0) {
             u.inscricoes.forEach(i => {
-                if (String(i.id) === String(evtId) && i.status === 'CONFIRMADO') {
+                if (
+    String(i.id) === String(evtId) &&
+    (
+        i.status === 'CONFIRMADO' ||
+        i.status === 'ISENTO'
+    )
+) {
                     let cat = window.normalizeCatName(i.extraCat || u.cat);
                     
                     let qualifyTime = "99:99.999";
