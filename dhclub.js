@@ -4395,59 +4395,371 @@ function openContact(
     'index.html';
 }
   
-async function shareRetrospective() {
+function fmtShareTime(v) {
+  if (v == null || v === '' || Number.isNaN(Number(v))) {
+    return '--:--.---';
+  }
 
-  const s =
-    careerStats();
+  const ms = Number(v);
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  const millis = ms % 1000;
 
+  return (
+    String(minutes).padStart(2, '0') + ':' +
+    String(seconds).padStart(2, '0') + '.' +
+    String(millis).padStart(3, '0')
+  );
+}
 
-  const txt =
-`🏁 Minha temporada DH-PE ${SYSTEM_YEAR}
+function getAchievementList(stats) {
+  const arr = [];
 
-${s.races} etapas
-${s.podiums} pódios
-${s.wins} vitórias
+  if ((stats.wins || 0) >= 1) {
+    arr.push('🏆 Venceu etapa na temporada');
+  }
 
-Melhor tempo:
-${bestTimeLabel(s.best)}
+  if ((stats.podiums || 0) >= 1) {
+    arr.push('🥇 Conquistou TOP 5 em etapa');
+  }
 
-DH-Club+`;
+  if ((stats.races || 0) >= 3) {
+    arr.push('🚵 Participou de 3 ou mais etapas');
+  }
 
+  if (stats.best != null && Number(stats.best) > 0 && Number(stats.best) <= 150000) {
+    arr.push('⚡ Baixou de 2:30 min');
+  }
 
-  try {
+  if (!arr.length) {
+    arr.push('🔥 Fez parte da temporada oficial DH-PE');
+  }
 
-    if (
-      navigator.share
-    ) {
+  return arr.slice(0, 4);
+}
 
-      await navigator.share({
+function getSeasonLabel() {
+  return `TEMPORADA ${SYSTEM_YEAR}`;
+}
 
-        title:
-          `Minha temporada ${SYSTEM_YEAR}`,
+function getCategoryLabel() {
+  return (loggedUser && loggedUser.cat)
+    ? String(loggedUser.cat).toUpperCase()
+    : 'ATLETA DH-PE';
+}
 
-        text:
-          txt
+function getAthleteNameLabel() {
+  return (loggedUser && loggedUser.nome)
+    ? String(loggedUser.nome).toUpperCase()
+    : 'ATLETA';
+}
 
-      });
-
-    } else {
-
-      await navigator
-        .clipboard
-        .writeText(
-          txt
-        );
-
-
-      toast(
-        'Retrospectiva copiada!'
-      );
+function safeLoadImage(src) {
+  return new Promise((resolve, reject) => {
+    if (!src) {
+      reject(new Error('Imagem não informada.'));
+      return;
     }
 
-  } catch (e) {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Falha ao carregar imagem: ' + src));
+
+    img.src = src;
+  });
+}
+
+async function blobToDataURL(blob) {
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function loadImageWithFallback(src, fallback = '') {
+  try {
+    return await safeLoadImage(src);
+  } catch (_) {
+    if (fallback && fallback !== src) {
+      return await safeLoadImage(fallback);
+    }
+    throw _;
   }
 }
 
+function drawRoundedRect(ctx, x, y, w, h, r, fillStyle, strokeStyle = null, lineWidth = 1) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+
+  if (fillStyle) {
+    ctx.fillStyle = fillStyle;
+    ctx.fill();
+  }
+
+  if (strokeStyle) {
+    ctx.lineWidth = lineWidth;
+    ctx.strokeStyle = strokeStyle;
+    ctx.stroke();
+  }
+}
+
+function drawCoverImage(ctx, img, x, y, w, h, radius = 0) {
+  ctx.save();
+
+  if (radius > 0) {
+    drawRoundedRect(ctx, x, y, w, h, radius, null);
+    ctx.clip();
+  }
+
+  const imgRatio = img.width / img.height;
+  const boxRatio = w / h;
+
+  let drawW, drawH, dx, dy;
+
+  if (imgRatio > boxRatio) {
+    drawH = h;
+    drawW = h * imgRatio;
+    dx = x - (drawW - w) / 2;
+    dy = y;
+  } else {
+    drawW = w;
+    drawH = w / imgRatio;
+    dx = x;
+    dy = y - (drawH - h) / 2;
+  }
+
+  ctx.drawImage(img, dx, dy, drawW, drawH);
+  ctx.restore();
+}
+
+function drawText(ctx, text, x, y, size, color, weight = '400', align = 'left') {
+  ctx.fillStyle = color;
+  ctx.font = `${weight} ${size}px Arial`;
+  ctx.textAlign = align;
+  ctx.fillText(text, x, y);
+}
+
+function drawMultilineText(ctx, text, x, y, maxWidth, lineHeight, size, color, weight = '400', align = 'left') {
+  ctx.fillStyle = color;
+  ctx.font = `${weight} ${size}px Arial`;
+  ctx.textAlign = align;
+
+  const words = String(text || '').split(' ');
+  let line = '';
+  const lines = [];
+
+  for (let n = 0; n < words.length; n++) {
+    const testLine = line + words[n] + ' ';
+    const metrics = ctx.measureText(testLine);
+
+    if (metrics.width > maxWidth && n > 0) {
+      lines.push(line.trim());
+      line = words[n] + ' ';
+    } else {
+      line = testLine;
+    }
+  }
+
+  if (line.trim()) {
+    lines.push(line.trim());
+  }
+
+  lines.forEach((ln, i) => {
+    ctx.fillText(ln, x, y + (i * lineHeight));
+  });
+}
+
+function drawStatCard(ctx, x, y, w, h, title, value, highlight = false) {
+  drawRoundedRect(
+    ctx,
+    x,
+    y,
+    w,
+    h,
+    28,
+    highlight ? 'rgba(255,193,7,0.14)' : 'rgba(255,255,255,0.06)',
+    highlight ? 'rgba(255,193,7,0.32)' : 'rgba(255,255,255,0.10)',
+    2
+  );
+
+  drawText(ctx, title, x + 28, y + 42, 24, 'rgba(255,255,255,0.70)', '700', 'left');
+  drawText(ctx, value, x + 28, y + 96, 42, highlight ? '#ffd24a' : '#ffffff', '900', 'left');
+}
+
+async function generateRetrospectiveImage() {
+  const s = getAthleteStats();
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 1080;
+  canvas.height = 1920;
+
+  const ctx = canvas.getContext('2d');
+
+  const photoSrc = (loggedUser && loggedUser.selfie) ? loggedUser.selfie : 'logo.png';
+  const logoSrc = 'logo.png';
+
+  const photoImg = await loadImageWithFallback(photoSrc, 'logo.png');
+  const logoImg = await loadImageWithFallback(logoSrc);
+
+  // fundo
+  const bg = ctx.createLinearGradient(0, 0, 1080, 1920);
+  bg.addColorStop(0, '#03101f');
+  bg.addColorStop(0.5, '#0a2342');
+  bg.addColorStop(1, '#020814');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, 1080, 1920);
+
+  // brilho central
+  const glow = ctx.createRadialGradient(540, 380, 50, 540, 380, 700);
+  glow.addColorStop(0, 'rgba(40,110,220,0.22)');
+  glow.addColorStop(1, 'rgba(40,110,220,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, 1080, 1920);
+
+  // barra colorida topo
+  ctx.fillStyle = '#3559a8';
+  ctx.fillRect(80, 70, 230, 16);
+
+  ctx.fillStyle = '#08b44c';
+  ctx.fillRect(310, 70, 230, 16);
+
+  ctx.fillStyle = '#c6433f';
+  ctx.fillRect(540, 70, 250, 16);
+
+  ctx.fillStyle = '#f5b611';
+  ctx.fillRect(790, 70, 210, 16);
+
+  // logo
+  ctx.drawImage(logoImg, 90, 120, 250, 125);
+
+  // selo
+  drawRoundedRect(ctx, 760, 120, 240, 64, 32, 'rgba(255,193,7,0.12)', 'rgba(255,193,7,0.35)', 2);
+  drawText(ctx, 'RETROSPECTIVA OFICIAL', 880, 162, 24, '#ffd24a', '900', 'center');
+
+  // título
+  drawText(ctx, getSeasonLabel(), 90, 310, 28, '#ffd24a', '900', 'left');
+  drawText(ctx, 'MINHA TEMPORADA NO DH-PE', 90, 365, 54, '#ffffff', '900', 'left');
+
+  // card principal
+  drawRoundedRect(ctx, 70, 410, 940, 1330, 42, 'rgba(5,18,35,0.70)', 'rgba(255,255,255,0.09)', 2);
+
+  // foto
+  drawRoundedRect(ctx, 115, 470, 240, 240, 34, '#09131f', 'rgba(255,193,7,0.35)', 3);
+  drawCoverImage(ctx, photoImg, 125, 480, 220, 220, 28);
+
+  // dados do atleta
+  drawText(ctx, getAthleteNameLabel(), 390, 545, 42, '#ffffff', '900', 'left');
+  drawText(ctx, getCategoryLabel(), 390, 595, 24, '#ffd24a', '900', 'left');
+
+  drawText(ctx, `ETAPA/ANO: ${SYSTEM_YEAR}`, 390, 645, 22, 'rgba(255,255,255,0.78)', '700', 'left');
+  drawText(ctx, `TOP 5: ${s.podiums}`, 390, 680, 22, 'rgba(255,255,255,0.78)', '700', 'left');
+  drawText(ctx, `MELHOR TEMPO: ${fmtShareTime(s.best)}`, 390, 715, 22, 'rgba(255,255,255,0.78)', '700', 'left');
+
+  // blocos de estatísticas
+  drawStatCard(ctx, 110, 780, 400, 130, 'ETAPAS', String(s.races || 0), false);
+  drawStatCard(ctx, 570, 780, 400, 130, 'TOP 5', String(s.podiums || 0), true);
+
+  drawStatCard(ctx, 110, 940, 400, 130, 'VITÓRIAS', String(s.wins || 0), false);
+  drawStatCard(ctx, 570, 940, 400, 130, 'MELHOR TEMPO', fmtShareTime(s.best), true);
+
+  // bloco conquistas
+  drawText(ctx, 'CONQUISTAS DA TEMPORADA', 110, 1155, 30, '#ffffff', '900', 'left');
+
+  drawRoundedRect(ctx, 110, 1185, 860, 250, 30, 'rgba(255,255,255,0.05)', 'rgba(255,255,255,0.08)', 2);
+
+  const achievements = getAchievementList(s);
+
+  achievements.forEach((item, i) => {
+    drawText(ctx, item, 145, 1250 + (i * 52), 26, i === 0 ? '#ffd24a' : '#ffffff', '700', 'left');
+  });
+
+  // bloco frase
+  drawText(ctx, 'DESTAQUE DO ATLETA', 110, 1500, 30, '#ffffff', '900', 'left');
+
+  drawRoundedRect(ctx, 110, 1530, 860, 145, 30, 'rgba(255,193,7,0.10)', 'rgba(255,193,7,0.22)', 2);
+
+  const frase = (
+    `${getAthleteNameLabel()} fez parte da temporada ${SYSTEM_YEAR} do DH-PE ` +
+    `com ${s.races || 0} participação(ões), ${s.podiums || 0} resultado(s) em TOP 5 ` +
+    `e melhor tempo de ${fmtShareTime(s.best)}.`
+  );
+
+  drawMultilineText(ctx, frase, 145, 1590, 790, 40, 25, '#ffffff', '700', 'left');
+
+  // rodapé
+  drawText(ctx, 'DH-PE • DOWNHILL PERNAMBUCO', 540, 1815, 28, 'rgba(255,255,255,0.92)', '900', 'center');
+  drawText(ctx, 'Retrospectiva oficial gerada pelo DH-Club', 540, 1858, 22, 'rgba(255,255,255,0.55)', '700', 'center');
+
+  return await new Promise((resolve, reject) => {
+    canvas.toBlob(async (blob) => {
+      try {
+        if (!blob) {
+          reject(new Error('Não foi possível gerar a imagem.'));
+          return;
+        }
+
+        resolve({
+          blob,
+          dataUrl: await blobToDataURL(blob)
+        });
+      } catch (err) {
+        reject(err);
+      }
+    }, 'image/png');
+  });
+}
+
+async function shareRetrospective() {
+  try {
+    showLoading('Gerando retrospectiva...');
+
+    const result = await generateRetrospectiveImage();
+
+    const file = new File(
+      [result.blob],
+      `retrospectiva-dhpe-${Date.now()}.png`,
+      { type: 'image/png' }
+    );
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        title: `Retrospectiva ${SYSTEM_YEAR} - DH-PE`,
+        text: 'Minha retrospectiva oficial da temporada no DH-PE.',
+        files: [file]
+      });
+    } else {
+      const a = document.createElement('a');
+      a.href = result.dataUrl;
+      a.download = `retrospectiva-dhpe-${SYSTEM_YEAR}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      alert('Seu aparelho não suportou compartilhamento direto. A imagem foi baixada para você compartilhar.');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao gerar retrospectiva: ' + (err.message || err));
+  } finally {
+    hideLoading();
+  }
+}
 
 // ==========================================================
 // NORMALIZAR BANCO DO CLUB
