@@ -4676,49 +4676,68 @@ window.Club = {
 // INICIA O DH-CLUB
 // ==========================================================
 
-init()
-  .catch(
-    err => {
+init().catch(err => {
 
-      console.error(
-        err
-      );
+    console.error("ERRO DH-CLUB:", err);
 
+    const splash =
+        document.getElementById('club-splash');
 
-      document
-        .getElementById(
-          'club-splash'
-        )
-        .classList.add(
-          'hidden'
-        );
+    const gate =
+        document.getElementById('club-gate');
 
+    const title =
+        document.getElementById('gate-title');
 
-      document
-        .getElementById(
-          'club-gate'
-        )
-        .classList.remove(
-          'hidden'
-        );
+    const message =
+        document.getElementById('gate-message');
 
 
-      document
-        .getElementById(
-          'gate-title'
-        )
-        .textContent =
-          'Erro ao abrir DH-Club';
-
-
-      document
-        .getElementById(
-          'gate-message'
-        )
-        .textContent =
-          'Não foi possível carregar o módulo. Verifique a conexão e tente novamente.';
-
+    if (splash) {
+        splash.classList.add('hidden');
     }
-  );
+
+
+    if (gate) {
+        gate.classList.remove('hidden');
+    }
+
+
+    if (title) {
+        title.textContent =
+            'Erro ao abrir DH-Club';
+    }
+
+
+    if (message) {
+
+        const codigo =
+            err && err.code
+                ? err.code
+                : 'SEM_CODIGO';
+
+        const detalhe =
+            err && err.message
+                ? err.message
+                : String(err);
+
+
+        message.innerHTML = `
+            <b style="color:#ffcc4d;">
+                ${codigo}
+            </b>
+
+            <br><br>
+
+            <span style="
+                font-size:12px;
+                word-break:break-word;
+            ">
+                ${detalhe}
+            </span>
+        `;
+    }
+
+});
 
 })();
