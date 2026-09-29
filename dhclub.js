@@ -4727,7 +4727,7 @@ async function generateRetrospectiveImage() {
 
 async function shareRetrospective() {
   try {
-    showLoading('Gerando retrospectiva...');
+    toast("GERANDO SUA RETROSPECTIVA...");
 
     const result = await generateRetrospectiveImage();
 
@@ -4756,9 +4756,6 @@ async function shareRetrospective() {
   } catch (err) {
     console.error(err);
     alert('Erro ao gerar retrospectiva: ' + (err.message || err));
-  } finally {
-    hideLoading();
-  }
 }
 
 // ==========================================================
