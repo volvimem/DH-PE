@@ -38,6 +38,7 @@ if (!firebase.apps.length) {
 }
 
 const database = firebase.database();
+const auth = firebase.auth();
 
 
 let loggedUser = null;
@@ -4364,6 +4365,20 @@ async function init() {
   loggedUser =
     sessionUser();
 
+  // Aguarda o Firebase Authentication restaurar
+// o usuário que já entrou pelo DH-PE.
+await new Promise((resolve) => {
+
+    const unsubscribe =
+        auth.onAuthStateChanged(() => {
+
+            unsubscribe();
+
+            resolve();
+
+        });
+
+});
 
   if (!loggedUser) {
 
