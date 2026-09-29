@@ -556,7 +556,7 @@ function achievements() {
       id: 'podium',
       icon: 'fa-medal',
       title: 'PÓDIO',
-      desc: 'Conquistou um lugar no pódio.',
+      desc: 'Terminou uma etapa entre os 5 primeiros da categoria.',
       ok: s.podiums > 0
     },
 
@@ -569,15 +569,15 @@ function achievements() {
     },
 
     {
-      id: 'sub3',
+      id: 'sub230',
       icon: 'fa-bolt',
-      title: 'SUB 3 MIN',
-      desc: 'Registrou uma descida oficial abaixo de 3 minutos.',
+      title: '-2:30 MIN',
+      desc: 'Registrou uma descida oficial abaixo de 2 minutos e 30 segundos.',
       ok:
         s.results.some(
           t =>
             timeMs(t.val) <
-            180000
+            150000
         )
     },
 
