@@ -4603,7 +4603,7 @@ function drawStatCard(ctx, x, y, w, h, title, value, highlight = false) {
 }
 
 async function generateRetrospectiveImage() {
-  const s = getAthleteStats();
+  const s = careerStats();
 
   const canvas = document.createElement('canvas');
   canvas.width = 1080;
