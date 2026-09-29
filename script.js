@@ -1032,19 +1032,212 @@ if (input.type === "password") { input.type = "text"; icon.classList.remove("fa-
 // ==========================================================
 // 7. SISTEMA DE LOGIN, CADASTRO E CONTAS
 // ==========================================================
-window.fazerLogin = function() { 
-    const cpfRaw = document.getElementById('login-cpf').value;
-    const passRaw = document.getElementById('login-pass').value; const remember = document.getElementById('login-remember').checked;
-    if(!cpfRaw || !passRaw) return toast("PREENCHA TUDO", "error");
-    const clean = cleanCPF(cpfRaw);
-    const emailFake = clean + "@dhpe.com.br"; const authPass = passRaw.length < 6 ? passRaw.padEnd(6, '0') : passRaw;
-    toast("AUTENTICANDO...", "info");
-    let localUser = db.users.find(x => cleanCPF(x.cpf) === clean);
-    if(localUser && localUser.tempPass && localUser.tempPass === passRaw) { if(Date.now() <= localUser.tempPassExp) return executeLogin(localUser, remember);
-    else return toast("SENHA TEMPORÁRIA EXPIRADA", "error"); }
-    if(auth) { auth.signInWithEmailAndPassword(emailFake, authPass).then(() => { finishLogin(clean, remember); }).catch((error) => { if (localUser && (localUser.pass === passRaw || localUser.adminNewPass === passRaw)) { if (error.code === 'auth/user-not-found') { auth.createUserWithEmailAndPassword(emailFake, authPass).catch(()=>{}); } executeLogin(localUser, remember); } else { toast("CPF OU SENHA INCORRETOS", "error"); } });
-    } else { if(localUser && (localUser.pass === passRaw || localUser.adminNewPass === passRaw)) { executeLogin(localUser, remember);
-    } else { toast("CPF OU SENHA INCORRETOS", "error"); } }
+window.fazerLogin = async function() {
+
+    const cpfRaw =
+        document.getElementById('login-cpf').value;
+
+    const passRaw =
+        document.getElementById('login-pass').value;
+
+    const remember =
+        document.getElementById('login-remember').checked;
+
+
+    if (!cpfRaw || !passRaw) {
+        return toast("PREENCHA TUDO", "error");
+    }
+
+
+    const clean =
+        cleanCPF(cpfRaw);
+
+    const emailFake =
+        clean + "@dhpe.com.br";
+
+    const authPass =
+        passRaw.length < 6
+            ? passRaw.padEnd(6, '0')
+            : passRaw;
+
+
+    toast(
+        "AUTENTICANDO...",
+        "info"
+    );
+
+
+    const localUser =
+        db.users.find(
+            x =>
+                cleanCPF(x.cpf) === clean
+        );
+
+
+    // ======================================================
+    // SENHA TEMPORÁRIA
+    // ======================================================
+
+    if (
+        localUser &&
+        localUser.tempPass &&
+        localUser.tempPass === passRaw
+    ) {
+
+        if (
+            Date.now() >
+            localUser.tempPassExp
+        ) {
+
+            return toast(
+                "SENHA TEMPORÁRIA EXPIRADA",
+                "error"
+            );
+        }
+
+        return executeLogin(
+            localUser,
+            remember
+        );
+    }
+
+
+    // ======================================================
+    // SEM FIREBASE AUTH
+    // ======================================================
+
+    if (!auth) {
+
+        if (
+            localUser &&
+            (
+                localUser.pass === passRaw ||
+                localUser.adminNewPass === passRaw
+            )
+        ) {
+
+            return executeLogin(
+                localUser,
+                remember
+            );
+        }
+
+
+        return toast(
+            "CPF OU SENHA INCORRETOS",
+            "error"
+        );
+    }
+
+
+    // ======================================================
+    // PRIMEIRO TENTA LOGIN NORMAL NO FIREBASE
+    // ======================================================
+
+    try {
+
+        await auth.signInWithEmailAndPassword(
+            emailFake,
+            authPass
+        );
+
+
+        // IMPORTANTE:
+        // só entra no aplicativo DEPOIS
+        // que o Firebase confirmou a autenticação.
+        return finishLogin(
+            clean,
+            remember
+        );
+
+
+    } catch (loginError) {
+
+        console.warn(
+            "[AUTH] Login Firebase falhou:",
+            loginError.code
+        );
+
+
+        // ==================================================
+        // VERIFICA SE A SENHA DO BANCO DH-PE ESTÁ CORRETA
+        // ==================================================
+
+        const senhaLocalCorreta =
+            localUser &&
+            (
+                localUser.pass === passRaw ||
+                localUser.adminNewPass === passRaw
+            );
+
+
+        if (!senhaLocalCorreta) {
+
+            return toast(
+                "CPF OU SENHA INCORRETOS",
+                "error"
+            );
+        }
+
+
+        // ==================================================
+        // A SENHA LOCAL ESTÁ CERTA.
+        // TENTA CRIAR/RESSINCRONIZAR O FIREBASE AUTH.
+        // ==================================================
+
+        try {
+
+            await auth.createUserWithEmailAndPassword(
+                emailFake,
+                authPass
+            );
+
+
+            console.log(
+                "[AUTH] Conta Firebase recriada com sucesso."
+            );
+
+
+            // Agora existe autenticação Firebase válida.
+            return finishLogin(
+                clean,
+                remember
+            );
+
+
+        } catch (createError) {
+
+            console.error(
+                "[AUTH] Falha ao sincronizar:",
+                createError.code
+            );
+
+
+            // Existe uma conta Firebase com esse CPF,
+            // porém a senha dela não corresponde à senha
+            // atualmente salva no DH-PE.
+            if (
+                createError.code ===
+                'auth/email-already-in-use'
+            ) {
+
+                return toast(
+                    "CONTA FIREBASE DESSINCRONIZADA. EXCLUA SOMENTE O USUÁRIO EM AUTHENTICATION E ENTRE NOVAMENTE.",
+                    "error"
+                );
+            }
+
+
+            return toast(
+                "ERRO AO SINCRONIZAR LOGIN: " +
+                (
+                    createError.message ||
+                    createError.code
+                ),
+                "error"
+            );
+        }
+    }
 };
 
 function finishLogin(cpfClean, remember) { if(cpfClean === "00000000000") ensureAdminExists();
