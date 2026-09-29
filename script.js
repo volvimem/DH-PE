@@ -1209,6 +1209,10 @@ document.querySelectorAll('.c-sec').forEach(e => { e.style.display='none'; e.cla
 } if(t === 'tempos' || t === 'ranking') populatePublicFilters(t); if(t === 'profile') { updateCardLive(); loadProfileData(); } if(t === 'adm') tryOpenAdmin(true);
 else renderContent(t); }
 
+window.abrirDHClub = function() {
+    window.location.href = 'dhclub.html';
+};
+
 // ==========================================================
 // 8. TELA DE PERFIL DO USUÁRIO
 // ==========================================================
