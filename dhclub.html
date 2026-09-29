@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  />
+
+  <meta
+    name="theme-color"
+    content="#07111f"
+  />
+
+  <title>DH-Club • DH-PE</title>
+
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+  />
+
+  <link
+    rel="stylesheet"
+    href="dhclub.css?v=1"
+  />
+</head>
+
+
+<body>
+
+  <!-- ===================================================== -->
+  <!-- TELA DE CARREGAMENTO DO DH-CLUB -->
+  <!-- ===================================================== -->
+
+  <div
+    id="club-splash"
+    class="club-splash"
+  >
+
+    <div class="club-logo-mark">
+      <i class="fa-solid fa-bolt"></i>
+    </div>
+
+    <div class="club-brand">
+      DH-CLUB<span>+</span>
+    </div>
+
+    <div class="club-loading">
+      CARREGANDO EXPERIÊNCIA PREMIUM…
+    </div>
+
+  </div>
+
+
+  <!-- ===================================================== -->
+  <!-- BLOQUEIO / ACESSO BETA -->
+  <!-- ===================================================== -->
+
+  <div
+    id="club-gate"
+    class="club-gate hidden"
+  >
+
+    <div class="gate-card glass">
+
+      <div class="club-logo-mark small">
+        <i class="fa-solid fa-crown"></i>
+      </div>
+
+      <div class="eyebrow">
+        DH-PE PREMIUM
+      </div>
+
+      <h1 id="gate-title">
+        DH-Club+
+      </h1>
+
+      <p id="gate-message">
+        Entre pelo DH-PE para acessar o Club.
+      </p>
+
+      <button
+        class="primary-btn"
+        onclick="location.href='index.html'"
+      >
+
+        <i class="fa-solid fa-arrow-left"></i>
+
+        VOLTAR AO DH-PE
+
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <!-- ===================================================== -->
+  <!-- APLICATIVO DH-CLUB -->
+  <!-- ===================================================== -->
+
+  <div
+    id="club-app"
+    class="app-shell hidden"
+  >
+
+
+    <!-- =================================================== -->
+    <!-- CABEÇALHO -->
+    <!-- =================================================== -->
+
+    <header class="topbar glass">
+
+      <div>
+
+        <div class="eyebrow">
+          DOWNHILL PERNAMBUCO
+        </div>
+
+        <div class="brand-line">
+
+          DH-CLUB<span>+</span>
+
+          <b id="club-beta-badge">
+            BETA
+          </b>
+
+        </div>
+
+      </div>
+
+
+      <div class="top-actions">
+
+        <button
+          class="icon-btn"
+          id="club-notif-btn"
+          title="Atualizar"
+        >
+
+          <i class="fa-solid fa-rotate"></i>
+
+        </button>
+
+
+        <button
+          class="avatar-btn"
+          id="club-avatar-btn"
+        >
+
+          <span id="club-avatar-initials">
+            DH
+          </span>
+
+        </button>
+
+      </div>
+
+    </header>
+
+
+    <!-- =================================================== -->
+    <!-- CONTEÚDO DAS TELAS -->
+    <!-- =================================================== -->
+
+    <main class="content">
+
+
+      <!-- HOME -->
+      <section
+        id="view-home"
+        class="club-view active"
+      >
+      </section>
+
+
+      <!-- MINHA CARREIRA -->
+      <section
+        id="view-career"
+        class="club-view"
+      >
+      </section>
+
+
+      <!-- CONQUISTAS -->
+      <section
+        id="view-achievements"
+        class="club-view"
+      >
+      </section>
+
+
+      <!-- X1 -->
+      <section
+        id="view-x1"
+        class="club-view"
+      >
+      </section>
+
+
+      <!-- BENEFÍCIOS -->
+      <section
+        id="view-benefits"
+        class="club-view"
+      >
+      </section>
+
+
+      <!-- ADMINISTRAÇÃO DH-CLUB -->
+      <section
+        id="view-admin"
+        class="club-view"
+      >
+      </section>
+
+
+    </main>
+
+
+    <!-- =================================================== -->
+    <!-- MENU INFERIOR PRÓPRIO DO DH-CLUB -->
+    <!-- =================================================== -->
+
+    <nav class="club-nav glass">
+
+
+      <button
+        class="club-nav-item active"
+        data-view="home"
+      >
+
+        <i class="fa-solid fa-house"></i>
+
+        <span>
+          INÍCIO
+        </span>
+
+      </button>
+
+
+      <button
+        class="club-nav-item"
+        data-view="career"
+      >
+
+        <i class="fa-solid fa-chart-line"></i>
+
+        <span>
+          CARREIRA
+        </span>
+
+      </button>
+
+
+      <button
+        class="club-nav-item"
+        data-view="achievements"
+      >
+
+        <i class="fa-solid fa-medal"></i>
+
+        <span>
+          CONQUISTAS
+        </span>
+
+      </button>
+
+
+      <button
+        class="club-nav-item x1-nav"
+        data-view="x1"
+      >
+
+        <i class="fa-solid fa-bolt"></i>
+
+        <span>
+          X1
+        </span>
+
+      </button>
+
+
+      <button
+        class="club-nav-item"
+        data-view="benefits"
+      >
+
+        <i class="fa-solid fa-gift"></i>
+
+        <span>
+          BENEFÍCIOS
+        </span>
+
+      </button>
+
+
+    </nav>
+
+  </div>
+
+
+  <!-- ===================================================== -->
+  <!-- MODAL DO DH-CLUB -->
+  <!-- ===================================================== -->
+
+  <div
+    id="club-modal"
+    class="modal-backdrop hidden"
+  >
+
+    <div class="modal-card glass">
+
+      <button
+        class="modal-close"
+        onclick="Club.closeModal()"
+      >
+
+        <i class="fa-solid fa-xmark"></i>
+
+      </button>
+
+
+      <div id="club-modal-content">
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ===================================================== -->
+  <!-- AVISOS / TOAST -->
+  <!-- ===================================================== -->
+
+  <div
+    id="club-toast"
+    class="toast hidden"
+  >
+  </div>
+
+
+  <!-- ===================================================== -->
+  <!-- FIREBASE -->
+  <!-- ===================================================== -->
+
+  <script
+    src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"
+  ></script>
+
+
+  <script
+    src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"
+  ></script>
+
+
+  <!-- ===================================================== -->
+  <!-- JAVASCRIPT DO DH-CLUB -->
+  <!-- ===================================================== -->
+
+  <script
+    src="dhclub.js?v=1"
+  ></script>
+
+
+</body>
+</html>
