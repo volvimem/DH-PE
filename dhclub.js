@@ -447,7 +447,7 @@ function careerStats() {
 
       if (
         p &&
-        p <= 3
+        p <= 5
       ) {
         podiums++;
       }
@@ -700,7 +700,7 @@ function renderHome() {
       ${stat(
         'PÓDIOS',
         s.podiums,
-        'top 3'
+        'top 5'
       )}
 
       ${stat(
