@@ -1390,55 +1390,297 @@ function renderCareer() {
 
     <div class="premium-card">
 
-      <b>
-        MINHA TEMPORADA
-        ${SYSTEM_YEAR}
+  <div
+    style="
+      display:flex;
+      align-items:center;
+      gap:14px;
+      margin-bottom:15px;
+    "
+  >
+
+    <img
+      src="${esc(loggedUser.selfie || 'logo.png')}"
+      crossorigin="anonymous"
+      style="
+        width:82px;
+        height:82px;
+        border-radius:18px;
+        object-fit:cover;
+        border:2px solid var(--gold);
+        background:#07111f;
+      "
+    >
+
+
+    <div style="flex:1;">
+
+      <div
+        style="
+          font-size:9px;
+          letter-spacing:2px;
+          color:var(--gold2);
+          font-weight:900;
+          margin-bottom:5px;
+        "
+      >
+        RETROSPECTIVA ${SYSTEM_YEAR}
+      </div>
+
+
+      <b
+        style="
+          display:block;
+          font-size:16px;
+        "
+      >
+        ${esc(loggedUser.nome)}
       </b>
 
-      <p
+
+      <div
         style="
           font-size:10px;
           color:var(--muted);
-          line-height:1.6
+          margin-top:4px;
         "
       >
-
-        ${s.races} etapas
-
-        •
-
-        ${s.podiums} pódios
-
-        •
-
-        ${s.wins} vitórias
-
-        •
-
-        melhor tempo
-        ${bestTimeLabel(
-          s.best
-        )}.
-
-      </p>
-
-
-      <button
-        class="primary-btn"
-        style="width:100%"
-
-        onclick="
-          Club.shareRetrospective()
-        "
-      >
-
-        <i class="fa-solid fa-share-nodes"></i>
-
-        COMPARTILHAR RETROSPECTIVA
-
-      </button>
+        ${esc(loggedUser.cat || 'ATLETA DH-PE')}
+      </div>
 
     </div>
+
+  </div>
+
+
+  <div
+    style="
+      background:rgba(255,193,7,.08);
+      border:1px solid rgba(255,193,7,.22);
+      border-radius:14px;
+      padding:12px;
+      margin-bottom:14px;
+    "
+  >
+
+    <div
+      style="
+        display:flex;
+        gap:9px;
+        align-items:flex-start;
+      "
+    >
+
+      <i
+        class="fa-solid fa-camera"
+        style="
+          color:var(--gold);
+          margin-top:2px;
+        "
+      ></i>
+
+
+      <div>
+
+        <b
+          style="
+            display:block;
+            font-size:10px;
+            color:var(--gold2);
+            margin-bottom:5px;
+          "
+        >
+          FOTO DA RETROSPECTIVA
+        </b>
+
+
+        <div
+          style="
+            font-size:10px;
+            color:var(--muted);
+            line-height:1.55;
+          "
+        >
+          A retrospectiva oficial do DH-Club será criada
+          usando a mesma foto cadastrada na sua carteirinha
+          digital.
+          <br><br>
+          Se desejar aparecer com outra foto na arte final,
+          atualize sua imagem no perfil do DH-PE antes de
+          gerar a retrospectiva.
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <div
+    style="
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:8px;
+      margin-bottom:14px;
+    "
+  >
+
+    <div
+      style="
+        padding:10px;
+        border-radius:12px;
+        background:rgba(255,255,255,.04);
+        text-align:center;
+      "
+    >
+
+      <div
+        style="
+          font-size:8px;
+          color:var(--muted);
+        "
+      >
+        ETAPAS
+      </div>
+
+      <b
+        style="
+          font-size:18px;
+          color:white;
+        "
+      >
+        ${s.races}
+      </b>
+
+    </div>
+
+
+    <div
+      style="
+        padding:10px;
+        border-radius:12px;
+        background:rgba(255,255,255,.04);
+        text-align:center;
+      "
+    >
+
+      <div
+        style="
+          font-size:8px;
+          color:var(--muted);
+        "
+      >
+        TOP 5
+      </div>
+
+      <b
+        style="
+          font-size:18px;
+          color:var(--gold2);
+        "
+      >
+        ${s.podiums}
+      </b>
+
+    </div>
+
+
+    <div
+      style="
+        padding:10px;
+        border-radius:12px;
+        background:rgba(255,255,255,.04);
+        text-align:center;
+      "
+    >
+
+      <div
+        style="
+          font-size:8px;
+          color:var(--muted);
+        "
+      >
+        VITÓRIAS
+      </div>
+
+      <b
+        style="
+          font-size:18px;
+          color:white;
+        "
+      >
+        ${s.wins}
+      </b>
+
+    </div>
+
+
+    <div
+      style="
+        padding:10px;
+        border-radius:12px;
+        background:rgba(255,255,255,.04);
+        text-align:center;
+      "
+    >
+
+      <div
+        style="
+          font-size:8px;
+          color:var(--muted);
+        "
+      >
+        MELHOR TEMPO
+      </div>
+
+      <b
+        style="
+          font-size:15px;
+          color:var(--gold2);
+        "
+      >
+        ${bestTimeLabel(s.best)}
+      </b>
+
+    </div>
+
+  </div>
+
+
+  <button
+    class="secondary-btn"
+    style="
+      width:100%;
+      margin-bottom:8px;
+    "
+    onclick="
+      Club.voltarParaAtualizarFoto()
+    "
+  >
+
+    <i class="fa-solid fa-camera"></i>
+
+    ATUALIZAR FOTO DA CARTEIRINHA
+
+  </button>
+
+
+  <button
+    class="primary-btn"
+    style="width:100%"
+    onclick="
+      Club.shareRetrospective()
+    "
+  >
+
+    <i class="fa-solid fa-image"></i>
+
+    GERAR MINHA RETROSPECTIVA
+
+  </button>
+
+</div>
 
   `;
 }
@@ -4130,6 +4372,29 @@ function openContact(
 // RETROSPECTIVA
 // ==========================================================
 
+  function voltarParaAtualizarFoto() {
+
+  const confirmou = confirm(
+    "A retrospectiva usa a mesma foto da sua carteirinha digital.\n\n" +
+    "Você será levado de volta ao DH-PE para atualizar sua foto no PERFIL."
+  );
+
+
+  if (!confirmou) {
+    return;
+  }
+
+
+  localStorage.setItem(
+    'dhclub_voltar_para_perfil',
+    '1'
+  );
+
+
+  window.location.href =
+    'index.html';
+}
+  
 async function shareRetrospective() {
 
   const s =
@@ -4651,6 +4916,8 @@ await new Promise((resolve) => {
 // ==========================================================
 
 window.Club = {
+
+  voltarParaAtualizarFoto,
 
   go,
 
