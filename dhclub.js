@@ -4943,20 +4943,10 @@ async function init() {
   loggedUser =
     sessionUser();
 
-  // Aguarda o Firebase Authentication restaurar
-// o usuário que já entrou pelo DH-PE.
-await new Promise((resolve) => {
 
-    const unsubscribe =
-        auth.onAuthStateChanged(() => {
-
-            unsubscribe();
-
-            resolve();
-
-        });
-
-});
+  // ========================================================
+  // 1. CONFIRMA SE EXISTE SESSÃO DO DH-PE
+  // ========================================================
 
   if (!loggedUser) {
 
@@ -4978,8 +4968,217 @@ await new Promise((resolve) => {
       );
 
 
+    document
+      .getElementById(
+        'gate-title'
+      )
+      .textContent =
+        'Entre pelo DH-PE';
+
+
+    document
+      .getElementById(
+        'gate-message'
+      )
+      .innerHTML =
+        'Sua sessão não foi encontrada.<br><br>Volte ao DH-PE e faça login novamente com seu CPF e senha.';
+
+
     return;
   }
+
+
+  // ========================================================
+  // 2. AGUARDA FIREBASE AUTH RESTAURAR A SESSÃO
+  // ========================================================
+
+  await new Promise(
+  resolve => {
+
+    let finalizado = false;
+
+    let unsubscribe =
+      () => {};
+
+
+    const finalizar = () => {
+
+      if (finalizado) {
+        return;
+      }
+
+
+      finalizado = true;
+
+
+      clearTimeout(
+        timer
+      );
+
+
+      unsubscribe();
+
+
+      resolve();
+    };
+
+
+    const timer =
+      setTimeout(
+        finalizar,
+        2500
+      );
+
+
+    unsubscribe =
+      auth.onAuthStateChanged(
+        () => {
+
+          finalizar();
+
+        }
+      );
+  }
+);
+
+
+  // ========================================================
+  // 3. SE FIREBASE AUTH NÃO RESTAUROU,
+  // TENTA AUTENTICAR AUTOMATICAMENTE
+  // ========================================================
+
+  if (!auth.currentUser) {
+
+    const cpfAuth =
+      cleanCPF(
+        loggedUser.cpf
+      );
+
+
+    const senhaLocal =
+      String(
+        loggedUser.pass ||
+        ''
+      );
+
+
+    if (
+      cpfAuth &&
+      senhaLocal
+    ) {
+
+      const emailFake =
+        `${cpfAuth}@dhpe.com.br`;
+
+
+      const authPass =
+        senhaLocal.length < 6
+
+          ? senhaLocal.padEnd(
+              6,
+              '0'
+            )
+
+          : senhaLocal;
+
+
+      try {
+
+        await auth
+          .signInWithEmailAndPassword(
+            emailFake,
+            authPass
+          );
+
+
+        console.log(
+          '[DH-CLUB] Firebase Auth restaurado automaticamente.'
+        );
+
+
+      } catch (authError) {
+
+        console.warn(
+          '[DH-CLUB] Não foi possível restaurar Firebase Auth:',
+          authError
+        );
+      }
+    }
+  }
+
+
+  // ========================================================
+  // 4. SE AINDA NÃO ESTÁ AUTENTICADO,
+  // FORÇA NOVO LOGIN NO DH-PE
+  // ========================================================
+
+  if (!auth.currentUser) {
+
+    localStorage.removeItem(
+      SESS_KEY
+    );
+
+
+    sessionStorage.removeItem(
+      SESS_KEY
+    );
+
+
+    document
+      .getElementById(
+        'club-splash'
+      )
+      .classList.add(
+        'hidden'
+      );
+
+
+    document
+      .getElementById(
+        'club-gate'
+      )
+      .classList.remove(
+        'hidden'
+      );
+
+
+    document
+      .getElementById(
+        'gate-title'
+      )
+      .textContent =
+        'Sessão de segurança expirada';
+
+
+    document
+      .getElementById(
+        'gate-message'
+      )
+      .innerHTML =
+        `
+          Sua sessão do Firebase precisa ser renovada.
+
+          <br><br>
+
+          Toque em
+          <b>VOLTAR AO DH-PE</b>
+          e faça login novamente com seu
+          <b>CPF e senha</b>.
+
+          <br><br>
+
+          Depois entre novamente no DH-Club.
+        `;
+
+
+    return;
+  }
+
+
+  console.log(
+    '[DH-CLUB] Firebase autenticado:',
+    auth.currentUser.uid
+  );
 
 
   document
