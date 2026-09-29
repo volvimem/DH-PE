@@ -4753,9 +4753,13 @@ async function shareRetrospective() {
 
       alert('Seu aparelho não suportou compartilhamento direto. A imagem foi baixada para você compartilhar.');
     }
-  } catch (err) {
+    } catch (err) {
     console.error(err);
-    alert('Erro ao gerar retrospectiva: ' + (err.message || err));
+    alert(
+      'Erro ao gerar retrospectiva: ' +
+      (err.message || err)
+    );
+  }
 }
 
 // ==========================================================
