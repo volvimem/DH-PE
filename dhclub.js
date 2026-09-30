@@ -5095,11 +5095,9 @@ function retroPerformanceBar(
     );
 
 
-  // Fundo da barra
-
+  // LIMPA A BARRA QUE JÁ EXISTE NA ARTE
   ctx.fillStyle =
     '#07182b';
-
 
   ctx.beginPath();
 
@@ -5114,11 +5112,36 @@ function retroPerformanceBar(
   ctx.fill();
 
 
-  // Preenchimento
+  // BORDA
+  ctx.lineWidth =
+    1.5;
 
-  if (
-    value > 0
-  ) {
+  ctx.strokeStyle =
+    'rgba(155,190,225,.65)';
+
+  ctx.stroke();
+
+
+  // NOVO PREENCHIMENTO DINÂMICO
+  if (value > 0) {
+
+    const innerX =
+      x + 3;
+
+    const innerY =
+      y + 3;
+
+    const innerWidth =
+      (
+        width - 6
+      ) *
+      (
+        value / 100
+      );
+
+    const innerHeight =
+      height - 6;
+
 
     ctx.fillStyle =
       color;
@@ -5127,20 +5150,16 @@ function retroPerformanceBar(
     ctx.beginPath();
 
     ctx.roundRect(
-      x,
-      y,
-      width *
-      (
-        value / 100
-      ),
-      height,
-      height / 2
+      innerX,
+      innerY,
+      innerWidth,
+      innerHeight,
+      innerHeight / 2
     );
 
     ctx.fill();
   }
 }
-
 
 // ==========================================================
 // FOTO DA CARTEIRINHA NO TEMPLATE
@@ -5359,33 +5378,53 @@ async function generateRetrospectiveImage() {
     scale.size;
 
 
-  // ========================================================
+    // ========================================================
   // FOTO DO ATLETA
   // ========================================================
 
   retroDrawAthletePhoto(
-
     ctx,
-
     athletePhoto,
 
     X(54),
-
     Y(476),
 
     X(131),
-
     Y(158)
-
   );
 
 
   // ========================================================
-  // NOME
+  // NÚMERO FIXO DA PLACA DA BICICLETA
   // ========================================================
 
   retroFitText(
+    ctx,
 
+    '01',
+
+    X(799),
+    Y(570),
+
+    X(95),
+
+    S(42),
+    S(28),
+
+    '#ffffff',
+
+    '900',
+
+    'center'
+  );
+
+
+  // ========================================================
+  // NOME DO ATLETA
+  // CENTRALIZADO NA CAIXA
+  // ========================================================
+
+  retroFitText(
     ctx,
 
     String(
@@ -5393,20 +5432,19 @@ async function generateRetrospectiveImage() {
       'ATLETA'
     ).toUpperCase(),
 
-    X(213),
+    X(323),
+    Y(535),
 
-    Y(538),
+    X(205),
 
-    X(280),
-
-    S(28),
-
-    S(15),
+    S(26),
+    S(13),
 
     '#ffffff',
 
-    '900'
+    '900',
 
+    'center'
   );
 
 
@@ -5415,7 +5453,6 @@ async function generateRetrospectiveImage() {
   // ========================================================
 
   retroFitText(
-
     ctx,
 
     String(
@@ -5423,20 +5460,19 @@ async function generateRetrospectiveImage() {
       '—'
     ).toUpperCase(),
 
-    X(214),
+    X(268),
+    Y(625),
 
-    Y(623),
+    X(100),
 
-    X(115),
-
-    S(22),
-
-    S(13),
+    S(20),
+    S(12),
 
     '#ffffff',
 
-    '900'
+    '900',
 
+    'center'
   );
 
 
@@ -5445,27 +5481,25 @@ async function generateRetrospectiveImage() {
   // ========================================================
 
   retroFitText(
-
     ctx,
 
     bestTimeLabel(
       s.best
     ),
 
-    X(360),
+    X(425),
+    Y(625),
 
-    Y(623),
+    X(120),
 
-    X(128),
-
-    S(22),
-
-    S(14),
+    S(20),
+    S(12),
 
     '#ffffff',
 
-    '900'
+    '900',
 
+    'center'
   );
 
 
@@ -5477,17 +5511,17 @@ async function generateRetrospectiveImage() {
     ctx,
     s.races,
     X(100),
-    Y(749),
-    S(35)
+    Y(748),
+    S(34)
   );
 
 
   retroCenterValue(
     ctx,
     s.podiums,
-    X(282),
-    Y(749),
-    S(35),
+    X(281),
+    Y(748),
+    S(34),
     '#ffcc29'
   );
 
@@ -5496,8 +5530,8 @@ async function generateRetrospectiveImage() {
     ctx,
     s.wins,
     X(462),
-    Y(749),
-    S(35)
+    Y(748),
+    S(34)
   );
 
 
@@ -5506,7 +5540,6 @@ async function generateRetrospectiveImage() {
   // ========================================================
 
   retroCenterValue(
-
     ctx,
 
     data.bestPosition
@@ -5514,54 +5547,42 @@ async function generateRetrospectiveImage() {
       : '—',
 
     X(100),
-
     Y(872),
 
-    S(34)
-
+    S(33)
   );
 
 
   retroCenterValue(
-
     ctx,
 
     data.categories,
 
-    X(282),
-
+    X(281),
     Y(872),
 
-    S(34)
-
+    S(33)
   );
 
 
   retroCenterValue(
-
     ctx,
 
     data.x1Wins,
 
     X(462),
-
     Y(872),
 
-    S(34)
-
+    S(33)
   );
 
 
   // ========================================================
   // CONQUISTAS
+  // OK DENTRO DAS CAIXAS INFERIORES
   // ========================================================
 
-  const achievementY =
-    Y(1114);
-
-
   retroCenterValue(
-
     ctx,
 
     s.podiums > 0
@@ -5569,176 +5590,160 @@ async function generateRetrospectiveImage() {
       : '—',
 
     X(136),
+    Y(1128),
 
-    achievementY,
-
-    S(17),
+    S(16),
 
     s.podiums > 0
       ? '#ffcc29'
-      : '#66758a'
-
+      : '#64748b'
   );
 
 
   retroCenterValue(
-
     ctx,
 
     data.sub230
       ? 'OK'
       : '—',
 
-    X(337),
+    X(340),
+    Y(1128),
 
-    achievementY,
-
-    S(17),
+    S(16),
 
     data.sub230
       ? '#31d07c'
-      : '#66758a'
-
+      : '#64748b'
   );
 
 
   retroCenterValue(
-
     ctx,
 
     data.consistent
       ? 'OK'
       : '—',
 
-    X(548),
+    X(538),
+    Y(1128),
 
-    achievementY,
-
-    S(17),
+    S(16),
 
     data.consistent
       ? '#ff5555'
-      : '#66758a'
-
+      : '#64748b'
   );
 
 
   retroCenterValue(
-
     ctx,
 
     data.seasonHighlight
       ? 'OK'
       : '—',
 
-    X(772),
+    X(759),
+    Y(1128),
 
-    achievementY,
-
-    S(17),
+    S(16),
 
     data.seasonHighlight
       ? '#ffcc29'
-      : '#66758a'
-
+      : '#64748b'
   );
 
 
   // ========================================================
   // LINHA DA TEMPORADA
+  // TEXTOS DENTRO DAS CAIXAS
   // ========================================================
 
   const firstEventText =
     data.firstEvent
+
       ? (
           data.firstEvent.t ||
-          'Primeiro resultado oficial'
+          'ESTREIA NA TEMPORADA'
         )
-      : 'Sem resultado oficial';
+
+      : 'SEM RESULTADO OFICIAL';
 
 
   const firstTop5Text =
     data.firstTop5Event
-      ? (
-          data.firstTop5Event.t ||
-          'Primeiro TOP 5'
-        )
-      : 'TOP 5 ainda não alcançado';
+
+      ? 'PRIMEIRO TOP 5'
+
+      : 'TOP 5 AINDA NÃO ALCANÇADO';
 
 
   retroFitText(
-
     ctx,
 
     firstEventText,
 
-    X(157),
+    X(310),
+    Y(1245),
 
-    Y(1237),
+    X(290),
 
-    X(305),
-
-    S(18),
-
-    S(11),
+    S(17),
+    S(10),
 
     '#ffffff',
 
-    '800'
+    '800',
 
+    'center'
   );
 
 
   retroFitText(
-
     ctx,
 
     firstTop5Text,
 
-    X(157),
+    X(310),
+    Y(1303),
 
-    Y(1296),
+    X(290),
 
-    X(305),
-
-    S(18),
-
-    S(11),
+    S(17),
+    S(10),
 
     '#ffffff',
 
-    '800'
+    '800',
 
+    'center'
   );
 
 
   retroFitText(
-
     ctx,
 
     `MELHOR TEMPO ${bestTimeLabel(
       s.best
     )}`,
 
-    X(157),
+    X(310),
+    Y(1362),
 
-    Y(1356),
+    X(290),
 
-    X(305),
-
-    S(18),
-
-    S(11),
+    S(17),
+    S(10),
 
     '#ffffff',
 
-    '800'
+    '800',
 
+    'center'
   );
 
 
   retroFitText(
-
     ctx,
 
     `${s.races} ETAPA${
@@ -5751,136 +5756,114 @@ async function generateRetrospectiveImage() {
         : 'S'
     }`,
 
-    X(157),
+    X(310),
+    Y(1420),
 
-    Y(1415),
+    X(290),
 
-    X(305),
-
-    S(18),
-
-    S(11),
+    S(17),
+    S(10),
 
     '#ffffff',
 
-    '800'
+    '800',
 
+    'center'
   );
 
 
   // ========================================================
-  // BARRAS DE DESEMPENHO
+  // DESEMPENHO
   // ========================================================
 
   retroPerformanceBar(
-
     ctx,
 
-    X(520),
+    X(521),
+    Y(1239),
 
-    Y(1232),
-
-    X(280),
-
-    Y(24),
+    X(286),
+    Y(28),
 
     data.regularity,
 
     '#168cff'
-
   );
 
 
   retroPerformanceBar(
-
     ctx,
 
-    X(520),
+    X(521),
+    Y(1315),
 
-    Y(1304),
-
-    X(280),
-
-    Y(24),
+    X(286),
+    Y(28),
 
     data.evolution,
 
     '#20cb79'
-
   );
 
 
   retroPerformanceBar(
-
     ctx,
 
-    X(520),
+    X(521),
+    Y(1391),
 
-    Y(1376),
-
-    X(280),
-
-    Y(24),
+    X(286),
+    Y(28),
 
     data.competitiveness,
 
     '#ed3f3f'
-
   );
 
 
   // ========================================================
-  // PERCENTUAIS
+  // PERCENTUAIS — CENTRALIZADOS NAS CAIXAS
   // ========================================================
 
   retroCenterValue(
-
     ctx,
 
     `${data.regularity}%`,
 
-    X(855),
+    X(858),
+    Y(1262),
 
-    Y(1252),
-
-    S(21),
+    S(20),
 
     '#ffffff'
-
   );
 
 
   retroCenterValue(
-
     ctx,
 
     `${data.evolution}%`,
 
-    X(855),
+    X(858),
+    Y(1338),
 
-    Y(1324),
-
-    S(21),
+    S(20),
 
     '#ffffff'
-
   );
 
 
   retroCenterValue(
-
     ctx,
 
     `${data.competitiveness}%`,
 
-    X(855),
+    X(858),
+    Y(1414),
 
-    Y(1396),
-
-    S(21),
+    S(20),
 
     '#ffffff'
-
   );
 
 
