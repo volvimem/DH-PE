@@ -4602,127 +4602,1345 @@ function drawStatCard(ctx, x, y, w, h, title, value, highlight = false) {
   drawText(ctx, value, x + 28, y + 96, 42, highlight ? '#ffd24a' : '#ffffff', '900', 'left');
 }
 
-async function generateRetrospectiveImage() {
-  const s = careerStats();
+// ==========================================================
+// DADOS DA RETROSPECTIVA PROFISSIONAL
+// ==========================================================
 
-  const canvas = document.createElement('canvas');
-  canvas.width = 1080;
-  canvas.height = 1920;
+function retroProfessionalData() {
 
-  const ctx = canvas.getContext('2d');
+  const s =
+    careerStats();
 
-  const photoSrc = (loggedUser && loggedUser.selfie) ? loggedUser.selfie : 'logo.png';
-  const logoSrc = 'logo.png';
 
-  const photoImg = await loadImageWithFallback(photoSrc, 'logo.png');
-  const logoImg = await loadImageWithFallback(logoSrc);
+  const cpf =
+    cleanCPF(
+      loggedUser.cpf
+    );
 
-  // fundo
-  const bg = ctx.createLinearGradient(0, 0, 1080, 1920);
-  bg.addColorStop(0, '#03101f');
-  bg.addColorStop(0.5, '#0a2342');
-  bg.addColorStop(1, '#020814');
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, 1080, 1920);
 
-  // brilho central
-  const glow = ctx.createRadialGradient(540, 380, 50, 540, 380, 700);
-  glow.addColorStop(0, 'rgba(40,110,220,0.22)');
-  glow.addColorStop(1, 'rgba(40,110,220,0)');
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, 1080, 1920);
+  // --------------------------------------------------------
+  // POSIÇÕES
+  // --------------------------------------------------------
 
-  // barra colorida topo
-  ctx.fillStyle = '#3559a8';
-  ctx.fillRect(80, 70, 230, 16);
+  const placements =
+    s.results
+      .map(
+        resultado =>
+          resultPlacement(
+            resultado
+          )
+      )
+      .filter(
+        pos =>
+          Number.isFinite(
+            Number(pos)
+          )
+      )
+      .map(Number);
 
-  ctx.fillStyle = '#08b44c';
-  ctx.fillRect(310, 70, 230, 16);
 
-  ctx.fillStyle = '#c6433f';
-  ctx.fillRect(540, 70, 250, 16);
+  const bestPosition =
+    placements.length
 
-  ctx.fillStyle = '#f5b611';
-  ctx.fillRect(790, 70, 210, 16);
+      ? Math.min(
+          ...placements
+        )
 
-  // logo
-  ctx.drawImage(logoImg, 90, 120, 250, 125);
+      : null;
 
-  // selo
-  drawRoundedRect(ctx, 760, 120, 240, 64, 32, 'rgba(255,193,7,0.12)', 'rgba(255,193,7,0.35)', 2);
-  drawText(ctx, 'RETROSPECTIVA OFICIAL', 880, 162, 24, '#ffd24a', '900', 'center');
 
-  // título
-  drawText(ctx, getSeasonLabel(), 90, 310, 28, '#ffd24a', '900', 'left');
-  drawText(ctx, 'MINHA TEMPORADA NO DH-PE', 90, 365, 54, '#ffffff', '900', 'left');
+  // --------------------------------------------------------
+  // CATEGORIAS DIFERENTES DISPUTADAS
+  // --------------------------------------------------------
 
-  // card principal
-  drawRoundedRect(ctx, 70, 410, 940, 1330, 42, 'rgba(5,18,35,0.70)', 'rgba(255,255,255,0.09)', 2);
+  const categories =
+    new Set(
 
-  // foto
-  drawRoundedRect(ctx, 115, 470, 240, 240, 34, '#09131f', 'rgba(255,193,7,0.35)', 3);
-  drawCoverImage(ctx, photoImg, 125, 480, 220, 220, 28);
+      s.results.map(
+        resultado =>
+          normalizeCat(
+            resultado.cat
+          )
+      )
 
-  // dados do atleta
-  drawText(ctx, getAthleteNameLabel(), 390, 545, 42, '#ffffff', '900', 'left');
-  drawText(ctx, getCategoryLabel(), 390, 595, 24, '#ffd24a', '900', 'left');
+    );
 
-  drawText(ctx, `ETAPA/ANO: ${SYSTEM_YEAR}`, 390, 645, 22, 'rgba(255,255,255,0.78)', '700', 'left');
-  drawText(ctx, `TOP 5: ${s.podiums}`, 390, 680, 22, 'rgba(255,255,255,0.78)', '700', 'left');
-  drawText(ctx, `MELHOR TEMPO: ${fmtShareTime(s.best)}`, 390, 715, 22, 'rgba(255,255,255,0.78)', '700', 'left');
 
-  // blocos de estatísticas
-  drawStatCard(ctx, 110, 780, 400, 130, 'ETAPAS', String(s.races || 0), false);
-  drawStatCard(ctx, 570, 780, 400, 130, 'TOP 5', String(s.podiums || 0), true);
+  // --------------------------------------------------------
+  // X1 VENCIDOS
+  // --------------------------------------------------------
 
-  drawStatCard(ctx, 110, 940, 400, 130, 'VITÓRIAS', String(s.wins || 0), false);
-  drawStatCard(ctx, 570, 940, 400, 130, 'MELHOR TEMPO', fmtShareTime(s.best), true);
+  const x1Wins =
+    objValues(
+      club.x1_duels
+    )
+      .filter(
+        duelo =>
 
-  // bloco conquistas
-  drawText(ctx, 'CONQUISTAS DA TEMPORADA', 110, 1155, 30, '#ffffff', '900', 'left');
+          String(
+            duelo.status || ''
+          ).toUpperCase() ===
+            'CONCLUIDO'
 
-  drawRoundedRect(ctx, 110, 1185, 860, 250, 30, 'rgba(255,255,255,0.05)', 'rgba(255,255,255,0.08)', 2);
+          &&
 
-  const achievements = getAchievementList(s);
+          cleanCPF(
+            duelo.winnerCpf
+          ) === cpf
+      )
+      .length;
 
-  achievements.forEach((item, i) => {
-    drawText(ctx, item, 145, 1250 + (i * 52), 26, i === 0 ? '#ffd24a' : '#ffffff', '700', 'left');
-  });
 
-  // bloco frase
-  drawText(ctx, 'DESTAQUE DO ATLETA', 110, 1500, 30, '#ffffff', '900', 'left');
+  // --------------------------------------------------------
+  // RESULTADOS EM ORDEM CRONOLÓGICA
+  // --------------------------------------------------------
 
-  drawRoundedRect(ctx, 110, 1530, 860, 145, 30, 'rgba(255,193,7,0.10)', 'rgba(255,193,7,0.22)', 2);
+  const orderedResults =
+    s.results
+      .slice()
+      .sort(
+        (a, b) =>
+          Number(
+            a.evtId || 0
+          ) -
+          Number(
+            b.evtId || 0
+          )
+      );
 
-  const frase = (
-    `${getAthleteNameLabel()} fez parte da temporada ${SYSTEM_YEAR} do DH-PE ` +
-    `com ${s.races || 0} participação(ões), ${s.podiums || 0} resultado(s) em TOP 5 ` +
-    `e melhor tempo de ${fmtShareTime(s.best)}.`
+
+  // --------------------------------------------------------
+  // PRIMEIRO RESULTADO
+  // --------------------------------------------------------
+
+  const firstResult =
+    orderedResults[0] ||
+    null;
+
+
+  const firstEvent =
+    firstResult
+
+      ? eventById(
+          firstResult.evtId
+        )
+
+      : null;
+
+
+  // --------------------------------------------------------
+  // PRIMEIRO TOP 5
+  // --------------------------------------------------------
+
+  const firstTop5 =
+    orderedResults.find(
+      resultado => {
+
+        const pos =
+          resultPlacement(
+            resultado
+          );
+
+
+        return (
+          pos &&
+          pos <= 5
+        );
+      }
+    );
+
+
+  const firstTop5Event =
+    firstTop5
+
+      ? eventById(
+          firstTop5.evtId
+        )
+
+      : null;
+
+
+  // --------------------------------------------------------
+  // CONQUISTAS
+  // --------------------------------------------------------
+
+  const sub230 =
+    s.results.some(
+      resultado =>
+        timeMs(
+          resultado.val
+        ) < 150000
+    );
+
+
+  const consistent =
+    s.races >= 3;
+
+
+  const seasonHighlight =
+    (
+      s.wins > 0 ||
+      s.podiums >= 2
+    );
+
+
+  // --------------------------------------------------------
+  // DESEMPENHO
+  // --------------------------------------------------------
+
+  const closedEvents =
+    core.events.filter(
+      evento =>
+        String(
+          evento.status || ''
+        ).toUpperCase() ===
+        'CLOSED'
+    ).length;
+
+
+  const regularity =
+    closedEvents > 0
+
+      ? Math.min(
+          100,
+          Math.round(
+            (
+              s.races /
+              closedEvents
+            ) * 100
+          )
+        )
+
+      : (
+          s.races > 0
+            ? 100
+            : 0
+        );
+
+
+  const achievementsList =
+    achievements();
+
+
+  const unlockedAchievements =
+    achievementsList.filter(
+      item =>
+        item.ok
+    ).length;
+
+
+  const evolution =
+    achievementsList.length
+
+      ? Math.round(
+          (
+            unlockedAchievements /
+            achievementsList.length
+          ) * 100
+        )
+
+      : 0;
+
+
+  const competitiveness =
+    s.results.length
+
+      ? Math.min(
+          100,
+          Math.round(
+            (
+              s.podiums /
+              s.results.length
+            ) * 100
+          )
+        )
+
+      : 0;
+
+
+  return {
+
+    stats:
+      s,
+
+    bestPosition,
+
+    categories:
+      categories.size,
+
+    x1Wins,
+
+    sub230,
+
+    consistent,
+
+    seasonHighlight,
+
+    regularity,
+
+    evolution,
+
+    competitiveness,
+
+    firstEvent,
+
+    firstTop5Event
+
+  };
+}
+
+
+// ==========================================================
+// ESCALA DO TEMPLATE
+// ==========================================================
+
+function retroTemplateScale(
+  canvas
+) {
+
+  const baseWidth =
+    941;
+
+  const baseHeight =
+    1672;
+
+
+  return {
+
+    x:
+      value =>
+        value *
+        (
+          canvas.width /
+          baseWidth
+        ),
+
+    y:
+      value =>
+        value *
+        (
+          canvas.height /
+          baseHeight
+        ),
+
+    size:
+      value =>
+        value *
+        Math.min(
+          canvas.width /
+          baseWidth,
+
+          canvas.height /
+          baseHeight
+        )
+
+  };
+}
+
+
+// ==========================================================
+// TEXTO AUTOMÁTICO QUE REDUZ SE FOR MUITO GRANDE
+// ==========================================================
+
+function retroFitText(
+  ctx,
+  text,
+  x,
+  y,
+  maxWidth,
+  startSize,
+  minSize,
+  color = '#ffffff',
+  weight = '900',
+  align = 'left'
+) {
+
+  let size =
+    startSize;
+
+
+  const value =
+    String(
+      text || ''
+    );
+
+
+  ctx.textAlign =
+    align;
+
+
+  while (
+    size > minSize
+  ) {
+
+    ctx.font =
+      `${weight} ${size}px Arial`;
+
+
+    if (
+      ctx.measureText(
+        value
+      ).width <=
+      maxWidth
+    ) {
+
+      break;
+    }
+
+
+    size -= 1;
+  }
+
+
+  ctx.font =
+    `${weight} ${size}px Arial`;
+
+
+  ctx.fillStyle =
+    color;
+
+
+  ctx.textAlign =
+    align;
+
+
+  ctx.shadowColor =
+    'rgba(0,0,0,.65)';
+
+
+  ctx.shadowBlur =
+    4;
+
+
+  ctx.fillText(
+    value,
+    x,
+    y
   );
 
-  drawMultilineText(ctx, frase, 145, 1590, 790, 40, 25, '#ffffff', '700', 'left');
 
-  // rodapé
-  drawText(ctx, 'DH-PE • DOWNHILL PERNAMBUCO', 540, 1815, 28, 'rgba(255,255,255,0.92)', '900', 'center');
-  drawText(ctx, 'Retrospectiva oficial gerada pelo DH-Club', 540, 1858, 22, 'rgba(255,255,255,0.55)', '700', 'center');
+  ctx.shadowBlur =
+    0;
+}
 
-  return await new Promise((resolve, reject) => {
-    canvas.toBlob(async (blob) => {
-      try {
-        if (!blob) {
-          reject(new Error('Não foi possível gerar a imagem.'));
-          return;
-        }
 
-        resolve({
-          blob,
-          dataUrl: await blobToDataURL(blob)
-        });
-      } catch (err) {
-        reject(err);
-      }
-    }, 'image/png');
-  });
+// ==========================================================
+// TEXTO CENTRAL
+// ==========================================================
+
+function retroCenterValue(
+  ctx,
+  text,
+  x,
+  y,
+  size,
+  color = '#ffffff'
+) {
+
+  ctx.textAlign =
+    'center';
+
+
+  ctx.font =
+    `900 ${size}px Arial`;
+
+
+  ctx.fillStyle =
+    color;
+
+
+  ctx.shadowColor =
+    'rgba(0,0,0,.55)';
+
+
+  ctx.shadowBlur =
+    3;
+
+
+  ctx.fillText(
+    String(
+      text ?? ''
+    ),
+    x,
+    y
+  );
+
+
+  ctx.shadowBlur =
+    0;
+}
+
+
+// ==========================================================
+// BARRA DE DESEMPENHO
+// ==========================================================
+
+function retroPerformanceBar(
+  ctx,
+  x,
+  y,
+  width,
+  height,
+  percent,
+  color
+) {
+
+  const value =
+    Math.max(
+      0,
+      Math.min(
+        100,
+        Number(percent) || 0
+      )
+    );
+
+
+  // Fundo da barra
+
+  ctx.fillStyle =
+    '#07182b';
+
+
+  ctx.beginPath();
+
+  ctx.roundRect(
+    x,
+    y,
+    width,
+    height,
+    height / 2
+  );
+
+  ctx.fill();
+
+
+  // Preenchimento
+
+  if (
+    value > 0
+  ) {
+
+    ctx.fillStyle =
+      color;
+
+
+    ctx.beginPath();
+
+    ctx.roundRect(
+      x,
+      y,
+      width *
+      (
+        value / 100
+      ),
+      height,
+      height / 2
+    );
+
+    ctx.fill();
+  }
+}
+
+
+// ==========================================================
+// FOTO DA CARTEIRINHA NO TEMPLATE
+// ==========================================================
+
+function retroDrawAthletePhoto(
+  ctx,
+  img,
+  x,
+  y,
+  width,
+  height
+) {
+
+  ctx.save();
+
+
+  ctx.beginPath();
+
+  ctx.roundRect(
+    x,
+    y,
+    width,
+    height,
+    16
+  );
+
+
+  ctx.clip();
+
+
+  const imgRatio =
+    img.width /
+    img.height;
+
+
+  const boxRatio =
+    width /
+    height;
+
+
+  let drawWidth;
+  let drawHeight;
+  let drawX;
+  let drawY;
+
+
+  if (
+    imgRatio >
+    boxRatio
+  ) {
+
+    drawHeight =
+      height;
+
+
+    drawWidth =
+      height *
+      imgRatio;
+
+
+    drawX =
+      x -
+      (
+        drawWidth -
+        width
+      ) / 2;
+
+
+    drawY =
+      y;
+
+  } else {
+
+    drawWidth =
+      width;
+
+
+    drawHeight =
+      width /
+      imgRatio;
+
+
+    drawX =
+      x;
+
+
+    drawY =
+      y -
+      (
+        drawHeight -
+        height
+      ) / 2;
+  }
+
+
+  ctx.drawImage(
+    img,
+    drawX,
+    drawY,
+    drawWidth,
+    drawHeight
+  );
+
+
+  ctx.restore();
+}
+
+
+// ==========================================================
+// GERA A RETROSPECTIVA USANDO O TEMPLATE PROFISSIONAL
+// ==========================================================
+
+async function generateRetrospectiveImage() {
+
+  const data =
+    retroProfessionalData();
+
+
+  const s =
+    data.stats;
+
+
+  // --------------------------------------------------------
+  // CARREGA O TEMPLATE OFICIAL
+  // --------------------------------------------------------
+
+  const template =
+    await loadImageWithFallback(
+      'retrospectiva-template.png'
+    );
+
+
+  // --------------------------------------------------------
+  // FOTO DA CARTEIRINHA
+  // --------------------------------------------------------
+
+  const photoSrc =
+    (
+      loggedUser &&
+      loggedUser.selfie
+    )
+
+      ? loggedUser.selfie
+
+      : 'logo.png';
+
+
+  const athletePhoto =
+    await loadImageWithFallback(
+      photoSrc,
+      'logo.png'
+    );
+
+
+  // --------------------------------------------------------
+  // CANVAS DO MESMO TAMANHO DO TEMPLATE
+  // --------------------------------------------------------
+
+  const canvas =
+    document.createElement(
+      'canvas'
+    );
+
+
+  canvas.width =
+    template.naturalWidth ||
+    template.width;
+
+
+  canvas.height =
+    template.naturalHeight ||
+    template.height;
+
+
+  const ctx =
+    canvas.getContext(
+      '2d'
+    );
+
+
+  ctx.imageSmoothingEnabled =
+    true;
+
+
+  ctx.imageSmoothingQuality =
+    'high';
+
+
+  // --------------------------------------------------------
+  // DESENHA O TEMPLATE
+  // --------------------------------------------------------
+
+  ctx.drawImage(
+    template,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+
+  const scale =
+    retroTemplateScale(
+      canvas
+    );
+
+
+  const X =
+    scale.x;
+
+  const Y =
+    scale.y;
+
+  const S =
+    scale.size;
+
+
+  // ========================================================
+  // FOTO DO ATLETA
+  // ========================================================
+
+  retroDrawAthletePhoto(
+
+    ctx,
+
+    athletePhoto,
+
+    X(54),
+
+    Y(476),
+
+    X(131),
+
+    Y(158)
+
+  );
+
+
+  // ========================================================
+  // NOME
+  // ========================================================
+
+  retroFitText(
+
+    ctx,
+
+    String(
+      loggedUser.nome ||
+      'ATLETA'
+    ).toUpperCase(),
+
+    X(213),
+
+    Y(538),
+
+    X(280),
+
+    S(28),
+
+    S(15),
+
+    '#ffffff',
+
+    '900'
+
+  );
+
+
+  // ========================================================
+  // CATEGORIA
+  // ========================================================
+
+  retroFitText(
+
+    ctx,
+
+    String(
+      loggedUser.cat ||
+      '—'
+    ).toUpperCase(),
+
+    X(214),
+
+    Y(623),
+
+    X(115),
+
+    S(22),
+
+    S(13),
+
+    '#ffffff',
+
+    '900'
+
+  );
+
+
+  // ========================================================
+  // MELHOR TEMPO
+  // ========================================================
+
+  retroFitText(
+
+    ctx,
+
+    bestTimeLabel(
+      s.best
+    ),
+
+    X(360),
+
+    Y(623),
+
+    X(128),
+
+    S(22),
+
+    S(14),
+
+    '#ffffff',
+
+    '900'
+
+  );
+
+
+  // ========================================================
+  // ESTATÍSTICAS — PRIMEIRA LINHA
+  // ========================================================
+
+  retroCenterValue(
+    ctx,
+    s.races,
+    X(100),
+    Y(749),
+    S(35)
+  );
+
+
+  retroCenterValue(
+    ctx,
+    s.podiums,
+    X(282),
+    Y(749),
+    S(35),
+    '#ffcc29'
+  );
+
+
+  retroCenterValue(
+    ctx,
+    s.wins,
+    X(462),
+    Y(749),
+    S(35)
+  );
+
+
+  // ========================================================
+  // ESTATÍSTICAS — SEGUNDA LINHA
+  // ========================================================
+
+  retroCenterValue(
+
+    ctx,
+
+    data.bestPosition
+      ? `${data.bestPosition}º`
+      : '—',
+
+    X(100),
+
+    Y(872),
+
+    S(34)
+
+  );
+
+
+  retroCenterValue(
+
+    ctx,
+
+    data.categories,
+
+    X(282),
+
+    Y(872),
+
+    S(34)
+
+  );
+
+
+  retroCenterValue(
+
+    ctx,
+
+    data.x1Wins,
+
+    X(462),
+
+    Y(872),
+
+    S(34)
+
+  );
+
+
+  // ========================================================
+  // CONQUISTAS
+  // ========================================================
+
+  const achievementY =
+    Y(1114);
+
+
+  retroCenterValue(
+
+    ctx,
+
+    s.podiums > 0
+      ? 'OK'
+      : '—',
+
+    X(136),
+
+    achievementY,
+
+    S(17),
+
+    s.podiums > 0
+      ? '#ffcc29'
+      : '#66758a'
+
+  );
+
+
+  retroCenterValue(
+
+    ctx,
+
+    data.sub230
+      ? 'OK'
+      : '—',
+
+    X(337),
+
+    achievementY,
+
+    S(17),
+
+    data.sub230
+      ? '#31d07c'
+      : '#66758a'
+
+  );
+
+
+  retroCenterValue(
+
+    ctx,
+
+    data.consistent
+      ? 'OK'
+      : '—',
+
+    X(548),
+
+    achievementY,
+
+    S(17),
+
+    data.consistent
+      ? '#ff5555'
+      : '#66758a'
+
+  );
+
+
+  retroCenterValue(
+
+    ctx,
+
+    data.seasonHighlight
+      ? 'OK'
+      : '—',
+
+    X(772),
+
+    achievementY,
+
+    S(17),
+
+    data.seasonHighlight
+      ? '#ffcc29'
+      : '#66758a'
+
+  );
+
+
+  // ========================================================
+  // LINHA DA TEMPORADA
+  // ========================================================
+
+  const firstEventText =
+    data.firstEvent
+      ? (
+          data.firstEvent.t ||
+          'Primeiro resultado oficial'
+        )
+      : 'Sem resultado oficial';
+
+
+  const firstTop5Text =
+    data.firstTop5Event
+      ? (
+          data.firstTop5Event.t ||
+          'Primeiro TOP 5'
+        )
+      : 'TOP 5 ainda não alcançado';
+
+
+  retroFitText(
+
+    ctx,
+
+    firstEventText,
+
+    X(157),
+
+    Y(1237),
+
+    X(305),
+
+    S(18),
+
+    S(11),
+
+    '#ffffff',
+
+    '800'
+
+  );
+
+
+  retroFitText(
+
+    ctx,
+
+    firstTop5Text,
+
+    X(157),
+
+    Y(1296),
+
+    X(305),
+
+    S(18),
+
+    S(11),
+
+    '#ffffff',
+
+    '800'
+
+  );
+
+
+  retroFitText(
+
+    ctx,
+
+    `MELHOR TEMPO ${bestTimeLabel(
+      s.best
+    )}`,
+
+    X(157),
+
+    Y(1356),
+
+    X(305),
+
+    S(18),
+
+    S(11),
+
+    '#ffffff',
+
+    '800'
+
+  );
+
+
+  retroFitText(
+
+    ctx,
+
+    `${s.races} ETAPA${
+      s.races === 1
+        ? ''
+        : 'S'
+    } DISPUTADA${
+      s.races === 1
+        ? ''
+        : 'S'
+    }`,
+
+    X(157),
+
+    Y(1415),
+
+    X(305),
+
+    S(18),
+
+    S(11),
+
+    '#ffffff',
+
+    '800'
+
+  );
+
+
+  // ========================================================
+  // BARRAS DE DESEMPENHO
+  // ========================================================
+
+  retroPerformanceBar(
+
+    ctx,
+
+    X(520),
+
+    Y(1232),
+
+    X(280),
+
+    Y(24),
+
+    data.regularity,
+
+    '#168cff'
+
+  );
+
+
+  retroPerformanceBar(
+
+    ctx,
+
+    X(520),
+
+    Y(1304),
+
+    X(280),
+
+    Y(24),
+
+    data.evolution,
+
+    '#20cb79'
+
+  );
+
+
+  retroPerformanceBar(
+
+    ctx,
+
+    X(520),
+
+    Y(1376),
+
+    X(280),
+
+    Y(24),
+
+    data.competitiveness,
+
+    '#ed3f3f'
+
+  );
+
+
+  // ========================================================
+  // PERCENTUAIS
+  // ========================================================
+
+  retroCenterValue(
+
+    ctx,
+
+    `${data.regularity}%`,
+
+    X(855),
+
+    Y(1252),
+
+    S(21),
+
+    '#ffffff'
+
+  );
+
+
+  retroCenterValue(
+
+    ctx,
+
+    `${data.evolution}%`,
+
+    X(855),
+
+    Y(1324),
+
+    S(21),
+
+    '#ffffff'
+
+  );
+
+
+  retroCenterValue(
+
+    ctx,
+
+    `${data.competitiveness}%`,
+
+    X(855),
+
+    Y(1396),
+
+    S(21),
+
+    '#ffffff'
+
+  );
+
+
+  // ========================================================
+  // CONVERTE PARA PNG
+  // ========================================================
+
+  return await new Promise(
+
+    (
+      resolve,
+      reject
+    ) => {
+
+      canvas.toBlob(
+
+        async blob => {
+
+          try {
+
+            if (!blob) {
+
+              reject(
+                new Error(
+                  'Não foi possível gerar a retrospectiva.'
+                )
+              );
+
+              return;
+            }
+
+
+            resolve({
+
+              blob,
+
+              dataUrl:
+                await blobToDataURL(
+                  blob
+                )
+
+            });
+
+
+          } catch (err) {
+
+            reject(
+              err
+            );
+          }
+
+        },
+
+        'image/png',
+
+        1
+
+      );
+    }
+  );
 }
 
 async function shareRetrospective() {
