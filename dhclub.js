@@ -425,59 +425,678 @@ function resultPlacement(t) {
 
 function careerStats() {
 
-  const results =
-    myOfficialResults();
+  // ==========================================================
+// COMPARATIVOS DA TEMPORADA — DH-CLUB
+// ==========================================================
 
-  let wins = 0;
+function officialResultsAll() {
 
-  let podiums = 0;
-
-  let best = Infinity;
-
-
-  results.forEach(
-    t => {
-
-      const p =
-        resultPlacement(t);
-
-      if (p === 1) {
-        wins++;
-      }
-
-      if (
-        p &&
-        p <= 5
-      ) {
-        podiums++;
-      }
-
-      best =
-        Math.min(
-          best,
-          timeMs(t.val)
-        );
-    }
+  return core.tempos.filter(
+    t =>
+      t &&
+      (
+        t.runType === '1st' ||
+        !t.runType
+      ) &&
+      Number.isFinite(
+        timeMs(t.val)
+      )
   );
+}
+
+
+// ==========================================================
+// GRID / POSIÇÃO DE UM RESULTADO
+// ==========================================================
+
+function resultComparisonInfo(t) {
+
+  if (!t) {
+    return null;
+  }
+
+
+  const cat =
+    normalizeCat(
+      t.cat
+    );
+
+
+  const same =
+    officialResultsAll()
+      .filter(
+        x =>
+          String(x.evtId) ===
+            String(t.evtId) &&
+
+          normalizeCat(x.cat) ===
+            cat
+      )
+      .sort(
+        (a, b) =>
+          timeMs(a.val) -
+          timeMs(b.val)
+      );
+
+
+  const cpf =
+    cleanCPF(
+      t.cpf
+    );
+
+
+  const index =
+    same.findIndex(
+      x =>
+        cleanCPF(x.cpf) ===
+        cpf
+    );
+
+
+  if (index < 0) {
+    return null;
+  }
+
+
+  const position =
+    index + 1;
+
+
+  const fieldSize =
+    same.length;
+
+
+  // 1º = 100%
+  // último = 0%
+  // se só existir 1 atleta = 100%
+  const performancePct =
+    fieldSize <= 1
+
+      ? 100
+
+      : (
+          (
+            fieldSize -
+            position
+          ) /
+          (
+            fieldSize -
+            1
+          )
+        ) * 100;
 
 
   return {
 
-    races:
-      new Set(
-        results.map(
-          r =>
-            String(r.evtId)
+    position,
+
+    fieldSize,
+
+    performancePct:
+      Math.max(
+        0,
+        Math.min(
+          100,
+          performancePct
         )
-      ).size,
+      )
 
-    wins,
+  };
+}
 
-    podiums,
 
-    best,
+// ==========================================================
+// RESULTADOS DE UM CPF
+// ==========================================================
 
+function athleteOfficialResults(
+  cpf,
+  category = null
+) {
+
+  const clean =
+    cleanCPF(
+      cpf
+    );
+
+
+  return officialResultsAll()
+    .filter(
+      t => {
+
+        if (
+          cleanCPF(t.cpf) !==
+          clean
+        ) {
+          return false;
+        }
+
+
+        if (
+          category &&
+          normalizeCat(t.cat) !==
+          normalizeCat(category)
+        ) {
+          return false;
+        }
+
+
+        return true;
+      }
+    );
+}
+
+
+// ==========================================================
+// PERFIL COMPARATIVO DE UM ATLETA
+// ==========================================================
+
+function athleteSeasonProfile(
+  cpf,
+  category = null
+) {
+
+  const results =
+    athleteOfficialResults(
+      cpf,
+      category
+    );
+
+
+  const valid =
     results
+      .map(
+        result => {
+
+          const comparison =
+            resultComparisonInfo(
+              result
+            );
+
+
+          if (!comparison) {
+            return null;
+          }
+
+
+          return {
+
+            result,
+
+            ...comparison
+
+          };
+        }
+      )
+      .filter(Boolean);
+
+
+  if (!valid.length) {
+
+    return {
+
+      cpf:
+        cleanCPF(cpf),
+
+      races:
+        0,
+
+      score:
+        0,
+
+      firstPct:
+        0,
+
+      lastPct:
+        0,
+
+      improvement:
+        0,
+
+      topHalfCount:
+        0,
+
+      topHalfPct:
+        0,
+
+      avgField:
+        0,
+
+      bestPosition:
+        null
+
+    };
+  }
+
+
+  // Ordenação das etapas
+  const ordered =
+    valid
+      .slice()
+      .sort(
+        (a, b) =>
+          Number(
+            a.result.evtId || 0
+          ) -
+          Number(
+            b.result.evtId || 0
+          )
+      );
+
+
+  const score =
+    valid.reduce(
+      (
+        total,
+        item
+      ) =>
+        total +
+        item.performancePct,
+      0
+    ) /
+    valid.length;
+
+
+  const firstPct =
+    ordered[0]
+      .performancePct;
+
+
+  const lastPct =
+    ordered[
+      ordered.length - 1
+    ].performancePct;
+
+
+  const improvement =
+    lastPct -
+    firstPct;
+
+
+  const topHalfCount =
+    valid.filter(
+      item =>
+        item.position <=
+        Math.ceil(
+          item.fieldSize / 2
+        )
+    ).length;
+
+
+  const topHalfPct =
+    (
+      topHalfCount /
+      valid.length
+    ) * 100;
+
+
+  const avgField =
+    valid.reduce(
+      (
+        total,
+        item
+      ) =>
+        total +
+        item.fieldSize,
+      0
+    ) /
+    valid.length;
+
+
+  const bestPosition =
+    Math.min(
+      ...valid.map(
+        item =>
+          item.position
+      )
+    );
+
+
+  return {
+
+    cpf:
+      cleanCPF(cpf),
+
+    races:
+      valid.length,
+
+    score,
+
+    firstPct,
+
+    lastPct,
+
+    improvement,
+
+    topHalfCount,
+
+    topHalfPct,
+
+    avgField,
+
+    bestPosition
+
+  };
+}
+
+
+// ==========================================================
+// TODOS OS CPFs COM RESULTADO OFICIAL
+// ==========================================================
+
+function seasonAthleteCpfs(
+  category = null
+) {
+
+  return [
+    ...new Set(
+
+      officialResultsAll()
+        .filter(
+          t =>
+            !category ||
+            normalizeCat(t.cat) ===
+              normalizeCat(category)
+        )
+        .map(
+          t =>
+            cleanCPF(
+              t.cpf
+            )
+        )
+        .filter(Boolean)
+
+    )
+  ];
+}
+
+
+// ==========================================================
+// CLASSIFICAÇÃO COMPARATIVA
+// ==========================================================
+
+function comparativeRanking(
+  category = null
+) {
+
+  const cpfs =
+    seasonAthleteCpfs(
+      category
+    );
+
+
+  return cpfs
+    .map(
+      cpf =>
+        athleteSeasonProfile(
+          cpf,
+          category
+        )
+    )
+    .filter(
+      athlete =>
+        athlete.races > 0
+    )
+    .sort(
+      (
+        a,
+        b
+      ) => {
+
+        // Maior índice primeiro
+        if (
+          b.score !==
+          a.score
+        ) {
+
+          return (
+            b.score -
+            a.score
+          );
+        }
+
+
+        // Desempate:
+        // quem participou de mais etapas
+        if (
+          b.races !==
+          a.races
+        ) {
+
+          return (
+            b.races -
+            a.races
+          );
+        }
+
+
+        // Segundo desempate:
+        // melhor colocação
+        return (
+          (
+            a.bestPosition ||
+            9999
+          ) -
+          (
+            b.bestPosition ||
+            9999
+          )
+        );
+      }
+    );
+}
+
+
+// ==========================================================
+// DADOS COMPARATIVOS DO USUÁRIO LOGADO
+// ==========================================================
+
+function mySeasonComparison() {
+
+  if (!loggedUser) {
+    return null;
+  }
+
+
+  const cpf =
+    cleanCPF(
+      loggedUser.cpf
+    );
+
+
+  const category =
+    normalizeCat(
+      loggedUser.cat
+    );
+
+
+  // --------------------------------------------------------
+  // GERAL
+  // --------------------------------------------------------
+
+  const generalRanking =
+    comparativeRanking();
+
+
+  const generalIndex =
+    generalRanking.findIndex(
+      athlete =>
+        athlete.cpf ===
+        cpf
+    );
+
+
+  // --------------------------------------------------------
+  // CATEGORIA
+  // --------------------------------------------------------
+
+  const categoryRanking =
+    comparativeRanking(
+      category
+    );
+
+
+  const categoryIndex =
+    categoryRanking.findIndex(
+      athlete =>
+        athlete.cpf ===
+        cpf
+    );
+
+
+  const me =
+    athleteSeasonProfile(
+      cpf,
+      category
+    );
+
+
+  // --------------------------------------------------------
+  // MÉDIA DA CATEGORIA
+  // --------------------------------------------------------
+
+  const categoryProfiles =
+    categoryRanking;
+
+
+  const categoryAverageScore =
+    categoryProfiles.length
+
+      ? categoryProfiles.reduce(
+          (
+            total,
+            athlete
+          ) =>
+            total +
+            athlete.score,
+          0
+        ) /
+        categoryProfiles.length
+
+      : 0;
+
+
+  // --------------------------------------------------------
+  // EVOLUÇÃO MÉDIA DA CATEGORIA
+  // Apenas atletas com pelo menos 2 resultados
+  // --------------------------------------------------------
+
+  const categoryWithEvolution =
+    categoryProfiles.filter(
+      athlete =>
+        athlete.races >= 2
+    );
+
+
+  const categoryAverageImprovement =
+    categoryWithEvolution.length
+
+      ? categoryWithEvolution.reduce(
+          (
+            total,
+            athlete
+          ) =>
+            total +
+            athlete.improvement,
+          0
+        ) /
+        categoryWithEvolution.length
+
+      : 0;
+
+
+  const improvementVsCategory =
+    me.improvement -
+    categoryAverageImprovement;
+
+
+  // --------------------------------------------------------
+  // PERCENTUAL DE ATLETAS SUPERADOS NA CATEGORIA
+  // --------------------------------------------------------
+
+  let categoryBeatPct =
+    0;
+
+
+  if (
+    categoryRanking.length > 1 &&
+    categoryIndex >= 0
+  ) {
+
+    categoryBeatPct =
+      (
+        (
+          categoryRanking.length -
+          categoryIndex -
+          1
+        ) /
+        (
+          categoryRanking.length -
+          1
+        )
+      ) * 100;
+  }
+
+
+  return {
+
+    category,
+
+    // geral
+    generalPosition:
+      generalIndex >= 0
+        ? generalIndex + 1
+        : null,
+
+    generalTotal:
+      generalRanking.length,
+
+    // categoria
+    categoryPosition:
+      categoryIndex >= 0
+        ? categoryIndex + 1
+        : null,
+
+    categoryTotal:
+      categoryRanking.length,
+
+    // índice pessoal
+    score:
+      me.score,
+
+    bestPosition:
+      me.bestPosition,
+
+    races:
+      me.races,
+
+    avgField:
+      me.avgField,
+
+    topHalfCount:
+      me.topHalfCount,
+
+    topHalfPct:
+      me.topHalfPct,
+
+    firstPct:
+      me.firstPct,
+
+    lastPct:
+      me.lastPct,
+
+    improvement:
+      me.improvement,
+
+    // média da categoria
+    categoryAverageScore,
+
+    categoryAverageImprovement,
+
+    improvementVsCategory,
+
+    categoryBeatPct
+
   };
 }
 
@@ -1302,6 +1921,8 @@ function renderCareer() {
   const s =
     careerStats();
 
+    const comparison =
+    mySeasonComparison();
 
   const rows =
     s.results
@@ -1474,7 +2095,335 @@ function renderCareer() {
 
     </div>
 
+    <div class="section-title">
 
+      <h3>
+        MINHA TEMPORADA
+      </h3>
+
+      <span>
+        COMPARATIVO DH-CLUB
+      </span>
+
+    </div>
+
+
+    <div class="premium-card">
+
+      <div
+        style="
+          font-size:9px;
+          letter-spacing:1.5px;
+          color:var(--gold2);
+          font-weight:900;
+          margin-bottom:8px;
+        "
+      >
+        CLASSIFICAÇÃO COMPARATIVA
+      </div>
+
+
+      <div
+        style="
+          font-size:34px;
+          font-weight:1000;
+          color:white;
+          line-height:1;
+        "
+      >
+        ${comparison?.generalPosition || '—'}º
+      </div>
+
+
+      <div
+        style="
+          font-size:11px;
+          color:var(--muted);
+          margin-top:7px;
+        "
+      >
+        de
+        <b style="color:white">
+          ${comparison?.generalTotal || 0}
+        </b>
+        atletas com resultado oficial
+        na temporada
+      </div>
+
+
+      <div
+        style="
+          height:1px;
+          background:rgba(255,255,255,.08);
+          margin:16px 0;
+        "
+      ></div>
+
+
+      <div
+        style="
+          display:grid;
+          grid-template-columns:1fr 1fr;
+          gap:10px;
+        "
+      >
+
+        <div
+          style="
+            background:rgba(255,255,255,.04);
+            border-radius:13px;
+            padding:12px;
+          "
+        >
+
+          <small
+            style="
+              color:var(--muted);
+              font-size:8px;
+            "
+          >
+            NA SUA CATEGORIA
+          </small>
+
+          <div
+            style="
+              font-size:21px;
+              font-weight:900;
+              color:var(--gold2);
+              margin-top:4px;
+            "
+          >
+            ${comparison?.categoryPosition || '—'}º
+            /
+            ${comparison?.categoryTotal || 0}
+          </div>
+
+        </div>
+
+
+        <div
+          style="
+            background:rgba(255,255,255,.04);
+            border-radius:13px;
+            padding:12px;
+          "
+        >
+
+          <small
+            style="
+              color:var(--muted);
+              font-size:8px;
+            "
+          >
+            ATLETAS SUPERADOS
+          </small>
+
+          <div
+            style="
+              font-size:21px;
+              font-weight:900;
+              color:var(--green);
+              margin-top:4px;
+            "
+          >
+            ${Math.round(
+              comparison?.categoryBeatPct || 0
+            )}%
+          </div>
+
+        </div>
+
+
+        <div
+          style="
+            background:rgba(255,255,255,.04);
+            border-radius:13px;
+            padding:12px;
+          "
+        >
+
+          <small
+            style="
+              color:var(--muted);
+              font-size:8px;
+            "
+          >
+            EVOLUÇÃO
+          </small>
+
+          <div
+            style="
+              font-size:21px;
+              font-weight:900;
+              color:${
+                (
+                  comparison?.improvement ||
+                  0
+                ) >= 0
+                  ? 'var(--green)'
+                  : '#ff6464'
+              };
+              margin-top:4px;
+            "
+          >
+            ${
+              (
+                comparison?.improvement ||
+                0
+              ) > 0
+                ? '+'
+                : ''
+            }${Math.round(
+              comparison?.improvement || 0
+            )} pts
+          </div>
+
+        </div>
+
+
+        <div
+          style="
+            background:rgba(255,255,255,.04);
+            border-radius:13px;
+            padding:12px;
+          "
+        >
+
+          <small
+            style="
+              color:var(--muted);
+              font-size:8px;
+            "
+          >
+            METADE SUPERIOR
+          </small>
+
+          <div
+            style="
+              font-size:21px;
+              font-weight:900;
+              color:white;
+              margin-top:4px;
+            "
+          >
+            ${comparison?.topHalfCount || 0}
+            /
+            ${comparison?.races || 0}
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        style="
+          margin-top:14px;
+          padding:12px;
+          border-radius:13px;
+          border:1px solid rgba(255,193,7,.22);
+          background:rgba(255,193,7,.06);
+        "
+      >
+
+        <div
+          style="
+            font-size:9px;
+            color:var(--gold2);
+            font-weight:900;
+            margin-bottom:5px;
+          "
+        >
+          VOCÊ X SUA CATEGORIA
+        </div>
+
+
+        <div
+          style="
+            font-size:11px;
+            color:#d6deea;
+            line-height:1.55;
+          "
+        >
+
+          Seu índice de desempenho:
+          <b>
+            ${Math.round(
+              comparison?.score || 0
+            )}%
+          </b>.
+
+          <br>
+
+          Média da
+          ${esc(
+            comparison?.category ||
+            loggedUser.cat ||
+            'categoria'
+          )}:
+          <b>
+            ${Math.round(
+              comparison?.categoryAverageScore ||
+              0
+            )}%
+          </b>.
+
+          <br>
+
+          Sua evolução ficou
+
+          <b
+            style="
+              color:${
+                (
+                  comparison
+                    ?.improvementVsCategory ||
+                  0
+                ) >= 0
+                  ? 'var(--green)'
+                  : '#ff6464'
+              }
+            "
+          >
+            ${
+              (
+                comparison
+                  ?.improvementVsCategory ||
+                0
+              ) >= 0
+                ? '+'
+                : ''
+            }${Math.round(
+              comparison
+                ?.improvementVsCategory ||
+              0
+            )}
+            pts
+          </b>
+
+          em relação à evolução média
+          da sua categoria.
+
+        </div>
+
+      </div>
+
+
+      <div
+        style="
+          margin-top:10px;
+          font-size:8px;
+          color:var(--muted);
+          line-height:1.45;
+        "
+      >
+        * Comparativo DH-Club calculado a partir
+        dos resultados oficiais da temporada.
+        Não substitui o ranking oficial do campeonato.
+      </div>
+
+    </div>
+ 
     <div class="section-title">
 
       <h3>
