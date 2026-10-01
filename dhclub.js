@@ -491,8 +491,10 @@ function achievements() {
   const s =
     careerStats();
 
+
   const races =
     s.results.length;
+
 
   const allClosed =
     core.events.filter(
@@ -502,14 +504,82 @@ function achievements() {
     ).length;
 
 
+  // Todas as posições oficiais do atleta
+  const positions =
+    s.results
+      .map(
+        t =>
+          resultPlacement(t)
+      )
+      .filter(
+        p =>
+          Number.isFinite(
+            Number(p)
+          )
+      )
+      .map(Number);
+
+
+  const hasPosition =
+    pos =>
+      positions.includes(
+        pos
+      );
+
+
+  const hasTop =
+    limit =>
+      positions.some(
+        pos =>
+          pos <= limit
+      );
+
+
+  const hasTimeBelow =
+    milliseconds =>
+      s.results.some(
+        t =>
+          timeMs(t.val) <
+          milliseconds
+      );
+
+
   return [
+
+    // ======================================================
+    // INÍCIO
+    // ======================================================
 
     {
       id: 'first',
       icon: 'fa-flag-checkered',
       title: 'PRIMEIRO RESULTADO',
-      desc: 'Registrou o primeiro resultado oficial no DH-PE.',
-      ok: races >= 1
+      desc: 'Registrou seu primeiro resultado oficial no DH-PE.',
+      ok:
+        races >= 1
+    },
+
+
+    // ======================================================
+    // FAIXAS DE CLASSIFICAÇÃO
+    // ======================================================
+
+    {
+      id: 'top20',
+      icon: 'fa-ranking-star',
+      title: 'TOP 20',
+      desc: 'Terminou uma etapa entre os 20 melhores da categoria.',
+      ok:
+        hasTop(20)
+    },
+
+    {
+      id: 'top15',
+      icon: 'fa-ranking-star',
+      title: 'TOP 15',
+      desc: 'Terminou uma etapa entre os 15 melhores da categoria.',
+      ok:
+        hasTop(15)
     },
 
     {
@@ -518,54 +588,82 @@ function achievements() {
       title: 'TOP 10',
       desc: 'Terminou uma etapa entre os 10 melhores da categoria.',
       ok:
-        s.results.some(
-          t => {
-
-            const p =
-              resultPlacement(t);
-
-            return (
-              p &&
-              p <= 10
-            );
-          }
-        )
+        hasTop(10)
     },
 
     {
-      id: 'top5',
-      icon: 'fa-fire',
-      title: 'TOP 5',
-      desc: 'Terminou uma etapa entre os 5 melhores da categoria.',
+      id: 'top6',
+      icon: 'fa-ranking-star',
+      title: 'TOP 6',
+      desc: 'Chegou ao grupo dos 6 melhores da categoria.',
       ok:
-        s.results.some(
-          t => {
-
-            const p =
-              resultPlacement(t);
-
-            return (
-              p &&
-              p <= 5
-            );
-          }
-        )
+        hasTop(6)
     },
 
+
+    // ======================================================
+    // COLOCAÇÕES — 5º ATÉ CAMPEÃO
+    // ======================================================
+
     {
-      id: 'podium',
+      id: 'fifth',
       icon: 'fa-medal',
-      title: 'PÓDIO',
-      desc: 'Terminou uma etapa entre os 5 primeiros da categoria.',
-      ok: s.podiums > 0
+      title: '5º LUGAR',
+      desc: 'Conquistou o 5º lugar em uma etapa oficial.',
+      ok:
+        hasPosition(5)
     },
 
     {
-      id: 'win',
+      id: 'fourth',
+      icon: 'fa-medal',
+      title: '4º LUGAR',
+      desc: 'Conquistou o 4º lugar em uma etapa oficial.',
+      ok:
+        hasPosition(4)
+    },
+
+    {
+      id: 'third',
+      icon: 'fa-medal',
+      title: '3º LUGAR',
+      desc: 'Subiu ao 3º lugar em uma etapa oficial.',
+      ok:
+        hasPosition(3)
+    },
+
+    {
+      id: 'second',
+      icon: 'fa-medal',
+      title: '2º LUGAR',
+      desc: 'Conquistou o 2º lugar em uma etapa oficial.',
+      ok:
+        hasPosition(2)
+    },
+
+    {
+      id: 'champion',
       icon: 'fa-trophy',
-      title: 'VITÓRIA',
-      desc: 'Venceu uma etapa na categoria.',
-      ok: s.wins > 0
+      title: 'CAMPEÃO — 1º LUGAR',
+      desc: 'Venceu uma etapa oficial da sua categoria.',
+      ok:
+        hasPosition(1)
+    },
+
+
+    // ======================================================
+    // MARCAS DE TEMPO
+    // ======================================================
+
+    {
+      id: 'sub3',
+      icon: 'fa-stopwatch',
+      title: '-3:00 MIN',
+      desc: 'Registrou uma descida oficial abaixo de 3 minutos.',
+      ok:
+        hasTimeBelow(
+          180000
+        )
     },
 
     {
@@ -574,12 +672,40 @@ function achievements() {
       title: '-2:30 MIN',
       desc: 'Registrou uma descida oficial abaixo de 2 minutos e 30 segundos.',
       ok:
-        s.results.some(
-          t =>
-            timeMs(t.val) <
-            150000
+        hasTimeBelow(
+          150000
         )
     },
+
+    {
+      id: 'sub2',
+      icon: 'fa-gauge-high',
+      title: '-2:00 MIN',
+      desc: 'Registrou uma descida oficial abaixo de 2 minutos.',
+      ok:
+        hasTimeBelow(
+          120000
+        )
+    },
+
+
+    // ======================================================
+    // CONSISTÊNCIA
+    // ======================================================
+
+    {
+      id: 'consistent3',
+      icon: 'fa-chart-line',
+      title: 'CONSISTÊNCIA',
+      desc: 'Registrou resultado oficial em pelo menos 3 etapas.',
+      ok:
+        s.races >= 3
+    },
+
+
+    // ======================================================
+    // TEMPORADA
+    // ======================================================
 
     {
       id: 'season',
@@ -591,17 +717,22 @@ function achievements() {
         s.races >= allClosed
     },
 
+
+    // ======================================================
+    // CLUB
+    // ======================================================
+
     {
       id: 'club',
       icon: 'fa-crown',
       title: 'MEMBRO DH-CLUB',
-      desc: 'Faz parte da primeira geração do DH-Club+.',
-      ok: hasClubAccess()
+      desc: 'Faz parte da comunidade DH-Club.',
+      ok:
+        hasClubAccess()
     }
 
   ];
 }
-
 
 // ==========================================================
 // HOME
@@ -752,7 +883,7 @@ function renderHome() {
       ${quick(
         'fa-bolt',
         'X1 PREMIUM',
-        'Taxa DH-Club R$ 0,00',
+'Desafios entre atletas',
         'x1',
         ''
       )}
@@ -1888,38 +2019,26 @@ function renderX1() {
 
       <p>
 
-        Desafie outro atleta.
+  Desafie outro atleta,
+  combine o confronto
+  e acompanhe tudo
+  pelo DH-Club.
 
-        No DH-Club
-        a taxa de serviço
-        de R$ 5,00
-        por participante
-        é
-
-        <b
-          style="
-            color:var(--green)
-          "
-        >
-          ISENTA
-        </b>.
-
-      </p>
+</p>
 
 
       <div class="member-chip">
 
-        <i
-          class="
-            fa-solid
-            fa-circle-check
-          "
-        ></i>
+  <i
+    class="
+      fa-solid
+      fa-bolt
+    "
+  ></i>
 
-        TAXA DH-CLUB:
-        R$ 0,00
+  DESAFIOS ENTRE ATLETAS
 
-      </div>
+</div>
 
     </div>
 
@@ -3490,7 +3609,7 @@ async function createX1() {
 
     `${
       loggedUser.nome
-    } desafiou você para um X1. Taxa DH-Club: R$ 0,00.`
+    } desafiou você para um X1 no DH-Club.`
 
   );
 
@@ -3700,11 +3819,10 @@ async function payX1(
       );
 
 
-  const msg = `Olá! Registro do X1 DH-Club.
+ const msg = `Olá! Registro do X1 DH-Club.
 
 Combate: ${d.challengerName} VS ${d.challengedName}
 Valor combinado: ${brl(d.betValue)}
-Taxa DH-Club: R$ 0,00
 
 Segue o comprovante:`;
 
@@ -3724,8 +3842,8 @@ Segue o comprovante:`;
 
 
   toast(
-    'Pagamento registrado. Taxa do Club isenta.'
-  );
+  'Pagamento registrado.'
+);
 }
 
 
