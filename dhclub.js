@@ -5509,19 +5509,15 @@ let wrappedIndex = 0;
 let wrappedSlides = [];
   
 // ==========================================================
-// ÁUDIO DO WRAPPED
-// ==========================================================
-
-// ==========================================================
-// ÁUDIO CONTÍNUO DO WRAPPED
-// ==========================================================
-
-// ==========================================================
-// ÁUDIO CONTÍNUO DO WRAPPED — V2
+// ÁUDIO CONTÍNUO DO WRAPPED — SEGURO
 // ==========================================================
 
 const WRAPPED_SOUND_KEY =
-  'dhclub_wrapped_music_v2';
+  'dhclub_wrapped_music_v3';
+
+
+const WRAPPED_AUDIO_URL =
+  './sounds/wrapped/wrapped-theme.mp3?v=3';
 
 
 let wrappedSoundEnabled =
@@ -5530,56 +5526,66 @@ let wrappedSoundEnabled =
   ) !== 'off';
 
 
-const WRAPPED_AUDIO_URL =
-  './sounds/wrapped/wrapped-theme.mp3?v=2';
-
-
-const wrappedAudio =
-  new Audio();
-
-
-wrappedAudio.src =
-  WRAPPED_AUDIO_URL;
-
-
-wrappedAudio.preload =
-  'auto';
-
-
-wrappedAudio.volume =
-  0.40;
-
-
-wrappedAudio.loop =
-  true;
+let wrappedAudio =
+  null;
 
 
 // ==========================================================
-// DEBUG DO ARQUIVO
+// CRIA O ÁUDIO SOMENTE QUANDO NECESSÁRIO
 // ==========================================================
 
-wrappedAudio.addEventListener(
-  'canplay',
-  () => {
+function ensureWrappedAudio() {
 
-    console.log(
-      '[DH-CLUB] Música pronta para tocar.'
-    );
+  if (wrappedAudio) {
+
+    return wrappedAudio;
   }
-);
 
 
-wrappedAudio.addEventListener(
-  'error',
-  () => {
-
-    console.error(
-      '[DH-CLUB] ERRO AO CARREGAR MÚSICA:',
-      WRAPPED_AUDIO_URL,
-      wrappedAudio.error
+  wrappedAudio =
+    new Audio(
+      WRAPPED_AUDIO_URL
     );
-  }
-);
+
+
+  wrappedAudio.preload =
+    'auto';
+
+
+  wrappedAudio.volume =
+    0.40;
+
+
+  wrappedAudio.loop =
+    true;
+
+
+  wrappedAudio.addEventListener(
+    'canplay',
+    () => {
+
+      console.log(
+        '[DH-CLUB] Música pronta para tocar.'
+      );
+    }
+  );
+
+
+  wrappedAudio.addEventListener(
+    'error',
+    () => {
+
+      console.error(
+        '[DH-CLUB] ERRO AO CARREGAR MÚSICA:',
+        WRAPPED_AUDIO_URL,
+        wrappedAudio?.error || null
+      );
+    }
+  );
+
+
+  return wrappedAudio;
+}
 
 
 // ==========================================================
@@ -5595,6 +5601,7 @@ function updateWrappedSoundButton() {
 
 
   if (!btn) {
+
     return;
   }
 
@@ -5631,18 +5638,24 @@ function playWrappedSound() {
   if (
     !wrappedSoundEnabled
   ) {
+
     return;
   }
+
+
+  const audio =
+    ensureWrappedAudio();
 
 
   if (
-    !wrappedAudio.paused
+    !audio.paused
   ) {
+
     return;
   }
 
 
-  wrappedAudio
+  audio
     .play()
     .then(
       () => {
@@ -5656,7 +5669,7 @@ function playWrappedSound() {
       err => {
 
         console.warn(
-          '[DH-CLUB] Navegador bloqueou reprodução:',
+          '[DH-CLUB] Reprodução aguardando interação:',
           err
         );
       }
@@ -5665,7 +5678,7 @@ function playWrappedSound() {
 
 
 // ==========================================================
-// LIGA / DESLIGA
+// LIGA / DESLIGA A MÚSICA
 // ==========================================================
 
 function toggleWrappedSound() {
@@ -5692,13 +5705,18 @@ function toggleWrappedSound() {
 
     playWrappedSound();
 
+
     toast(
       'MÚSICA ATIVADA'
     );
 
   } else {
 
-    wrappedAudio.pause();
+    if (wrappedAudio) {
+
+      wrappedAudio.pause();
+    }
+
 
     toast(
       'MÚSICA DESATIVADA'
@@ -6994,30 +7012,27 @@ function renderWrappedSlide() {
     updateWrappedSoundButton();
 
 
+if (
+  wrappedSoundEnabled
+) {
+
+  const audio =
+    ensureWrappedAudio();
+
+
+  try {
+
+    audio.currentTime =
+      0;
+
+  } catch {}
+
+
   playWrappedSound();
 }
 
 
-// ==========================================================
-// NAVEGAÇÃO
-// ==========================================================
-
-function wrappedNext() {
-
-  if (
-    wrappedIndex <
-    wrappedSlides.length - 1
-  ) {
-
-    wrappedIndex++;
-
-  } else {
-
-    wrappedIndex = 0;
-  }
-
-
-  renderWrappedSlide();
+renderWrappedSlide();
 }
 
 
@@ -7041,15 +7056,18 @@ function wrappedPrev() {
 
 function closeWrapped() {
 
-  wrappedAudio.pause();
+  if (wrappedAudio) {
+
+    wrappedAudio.pause();
 
 
-  try {
+    try {
 
-    wrappedAudio.currentTime =
-      0;
+      wrappedAudio.currentTime =
+        0;
 
-  } catch {}
+    } catch {}
+  }
 
 
   const overlay =
