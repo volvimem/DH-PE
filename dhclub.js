@@ -424,6 +424,68 @@ function resultPlacement(t) {
 // ==========================================================
 
 function careerStats() {
+    const results =
+    myOfficialResults();
+
+
+  let wins = 0;
+
+  let podiums = 0;
+
+  let best = Infinity;
+
+
+  results.forEach(
+    t => {
+
+      const p =
+        resultPlacement(t);
+
+
+      if (p === 1) {
+
+        wins++;
+      }
+
+
+      if (
+        p &&
+        p <= 5
+      ) {
+
+        podiums++;
+      }
+
+
+      best =
+        Math.min(
+          best,
+          timeMs(t.val)
+        );
+    }
+  );
+
+
+  return {
+
+    races:
+      new Set(
+        results.map(
+          r =>
+            String(r.evtId)
+        )
+      ).size,
+
+    wins,
+
+    podiums,
+
+    best,
+
+    results
+
+  };
+}
 
   // ==========================================================
 // COMPARATIVOS DA TEMPORADA — DH-CLUB
