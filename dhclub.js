@@ -5505,6 +5505,9 @@ function openContact(
 // RETROSPECTIVA WRAPPED — DH-CLUB
 // ==========================================================
 
+let wrappedIndex = 0;
+let wrappedSlides = [];
+  
 // ==========================================================
 // ÁUDIO DO WRAPPED
 // ==========================================================
@@ -5513,8 +5516,12 @@ function openContact(
 // ÁUDIO CONTÍNUO DO WRAPPED
 // ==========================================================
 
+// ==========================================================
+// ÁUDIO CONTÍNUO DO WRAPPED — V2
+// ==========================================================
+
 const WRAPPED_SOUND_KEY =
-  'dhclub_wrapped_sound';
+  'dhclub_wrapped_music_v2';
 
 
 let wrappedSoundEnabled =
@@ -5523,10 +5530,16 @@ let wrappedSoundEnabled =
   ) !== 'off';
 
 
+const WRAPPED_AUDIO_URL =
+  './sounds/wrapped/wrapped-theme.mp3?v=2';
+
+
 const wrappedAudio =
-  new Audio(
-    'sounds/wrapped/wrapped-theme.mp3'
-  );
+  new Audio();
+
+
+wrappedAudio.src =
+  WRAPPED_AUDIO_URL;
 
 
 wrappedAudio.preload =
@@ -5534,11 +5547,39 @@ wrappedAudio.preload =
 
 
 wrappedAudio.volume =
-  0.35;
+  0.40;
 
 
 wrappedAudio.loop =
   true;
+
+
+// ==========================================================
+// DEBUG DO ARQUIVO
+// ==========================================================
+
+wrappedAudio.addEventListener(
+  'canplay',
+  () => {
+
+    console.log(
+      '[DH-CLUB] Música pronta para tocar.'
+    );
+  }
+);
+
+
+wrappedAudio.addEventListener(
+  'error',
+  () => {
+
+    console.error(
+      '[DH-CLUB] ERRO AO CARREGAR MÚSICA:',
+      WRAPPED_AUDIO_URL,
+      wrappedAudio.error
+    );
+  }
+);
 
 
 // ==========================================================
@@ -5582,7 +5623,7 @@ function updateWrappedSoundButton() {
 
 
 // ==========================================================
-// INICIA / CONTINUA A MÚSICA
+// TOCA / CONTINUA A MÚSICA
 // ==========================================================
 
 function playWrappedSound() {
@@ -5594,8 +5635,6 @@ function playWrappedSound() {
   }
 
 
-  // Se já estiver tocando,
-  // não reinicia ao mudar de Story.
   if (
     !wrappedAudio.paused
   ) {
@@ -5605,21 +5644,28 @@ function playWrappedSound() {
 
   wrappedAudio
     .play()
+    .then(
+      () => {
+
+        console.log(
+          '[DH-CLUB] Música tocando.'
+        );
+      }
+    )
     .catch(
       err => {
 
-        console.log(
-          '[DH-CLUB] Música aguardando interação:',
-          err?.message || err
+        console.warn(
+          '[DH-CLUB] Navegador bloqueou reprodução:',
+          err
         );
-
       }
     );
 }
 
 
 // ==========================================================
-// LIGA / DESLIGA A MÚSICA
+// LIGA / DESLIGA
 // ==========================================================
 
 function toggleWrappedSound() {
@@ -6822,15 +6868,44 @@ function openWrapped() {
 
 
   document.body.appendChild(
-    overlay
-  );
+  overlay
+);
 
 
-  document.body.style.overflow =
-    'hidden';
+document.body.style.overflow =
+  'hidden';
 
 
-  renderWrappedSlide();
+updateWrappedSoundButton();
+
+
+if (
+  wrappedSoundEnabled
+) {
+
+  try {
+
+    wrappedAudio.currentTime =
+      0;
+
+  } catch {}
+
+
+  wrappedAudio
+    .play()
+    .catch(
+      err => {
+
+        console.warn(
+          '[DH-CLUB] Primeiro play bloqueado:',
+          err
+        );
+      }
+    );
+}
+
+
+renderWrappedSlide();
 }
 
 
