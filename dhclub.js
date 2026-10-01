@@ -5509,6 +5509,10 @@ function openContact(
 // ÁUDIO DO WRAPPED
 // ==========================================================
 
+// ==========================================================
+// ÁUDIO CONTÍNUO DO WRAPPED
+// ==========================================================
+
 const WRAPPED_SOUND_KEY =
   'dhclub_wrapped_sound';
 
@@ -5520,7 +5524,9 @@ let wrappedSoundEnabled =
 
 
 const wrappedAudio =
-  new Audio();
+  new Audio(
+    'sounds/wrapped/wrapped-theme.mp3'
+  );
 
 
 wrappedAudio.preload =
@@ -5528,35 +5534,15 @@ wrappedAudio.preload =
 
 
 wrappedAudio.volume =
-  0.55;
+  0.35;
 
 
 wrappedAudio.loop =
-  false;
-
-
-// Um som correspondente a cada Story atual
-const wrappedSounds = [
-
-  'sounds/wrapped/01-intro.mp3',
-
-  'sounds/wrapped/02-numeros.mp3',
-
-  'sounds/wrapped/03-ranking.mp3',
-
-  'sounds/wrapped/04-evolucao.mp3',
-
-  'sounds/wrapped/05-velocidade.mp3',
-
-  'sounds/wrapped/06-conquistas.mp3',
-
-  'sounds/wrapped/07-final.mp3'
-
-];
+  true;
 
 
 // ==========================================================
-// ATUALIZA ÍCONE DO SOM
+// ATUALIZA BOTÃO DO SOM
 // ==========================================================
 
 function updateWrappedSoundButton() {
@@ -5590,49 +5576,31 @@ function updateWrappedSoundButton() {
 
   btn.title =
     wrappedSoundEnabled
-      ? 'Desativar som'
-      : 'Ativar som';
+      ? 'Desativar música'
+      : 'Ativar música';
 }
 
 
 // ==========================================================
-// TOCA O SOM DA TELA ATUAL
+// INICIA / CONTINUA A MÚSICA
 // ==========================================================
 
 function playWrappedSound() {
 
-  wrappedAudio.pause();
-
-
-  try {
-
-    wrappedAudio.currentTime =
-      0;
-
-  } catch {}
-
-
   if (
     !wrappedSoundEnabled
   ) {
-
     return;
   }
 
 
-  const sound =
-    wrappedSounds[
-      wrappedIndex
-    ];
-
-
-  if (!sound) {
+  // Se já estiver tocando,
+  // não reinicia ao mudar de Story.
+  if (
+    !wrappedAudio.paused
+  ) {
     return;
   }
-
-
-  wrappedAudio.src =
-    sound;
 
 
   wrappedAudio
@@ -5640,10 +5608,8 @@ function playWrappedSound() {
     .catch(
       err => {
 
-        // Não trava o Wrapped se o navegador
-        // bloquear áudio ou se o arquivo não existir.
         console.log(
-          '[DH-CLUB] Áudio não iniciado:',
+          '[DH-CLUB] Música aguardando interação:',
           err?.message || err
         );
 
@@ -5653,7 +5619,7 @@ function playWrappedSound() {
 
 
 // ==========================================================
-// LIGA / DESLIGA SOM
+// LIGA / DESLIGA A MÚSICA
 // ==========================================================
 
 function toggleWrappedSound() {
@@ -5681,7 +5647,7 @@ function toggleWrappedSound() {
     playWrappedSound();
 
     toast(
-      'SOM DA RETROSPECTIVA ATIVADO'
+      'MÚSICA ATIVADA'
     );
 
   } else {
@@ -5689,41 +5655,9 @@ function toggleWrappedSound() {
     wrappedAudio.pause();
 
     toast(
-      'SOM DA RETROSPECTIVA DESATIVADO'
+      'MÚSICA DESATIVADA'
     );
   }
-}
-  
-let wrappedIndex = 0;
-let wrappedSlides = [];
-
-
-// ==========================================================
-// VOLTAR AO PERFIL PARA ATUALIZAR FOTO
-// ==========================================================
-
-function voltarParaAtualizarFoto() {
-
-  const confirmou =
-    confirm(
-      "A retrospectiva usa a mesma foto da sua carteirinha digital.\n\n" +
-      "Você será levado ao DH-PE para atualizar sua foto no PERFIL."
-    );
-
-
-  if (!confirmou) {
-    return;
-  }
-
-
-  localStorage.setItem(
-    'dhclub_voltar_para_perfil',
-    '1'
-  );
-
-
-  window.location.href =
-    'index.html';
 }
 
 
