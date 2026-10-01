@@ -2809,18 +2809,22 @@ function renderCareer() {
 
 
   <button
-    class="primary-btn"
-    style="width:100%"
-    onclick="
-      Club.shareRetrospective()
-    "
-  >
+  class="primary-btn"
+  style="
+    width:100%;
+    min-height:54px;
+    font-size:12px;
+  "
+  onclick="
+    Club.openWrapped()
+  "
+>
 
-    <i class="fa-solid fa-image"></i>
+  <i class="fa-solid fa-play"></i>
 
-    GERAR MINHA RETROSPECTIVA
+  VER MINHA RETROSPECTIVA ${SYSTEM_YEAR}
 
-  </button>
+</button>
 
 </div>
 
@@ -5498,15 +5502,24 @@ function openContact(
 
 
 // ==========================================================
-// RETROSPECTIVA
+// RETROSPECTIVA WRAPPED — DH-CLUB
 // ==========================================================
 
-  function voltarParaAtualizarFoto() {
+let wrappedIndex = 0;
+let wrappedSlides = [];
 
-  const confirmou = confirm(
-    "A retrospectiva usa a mesma foto da sua carteirinha digital.\n\n" +
-    "Você será levado de volta ao DH-PE para atualizar sua foto no PERFIL."
-  );
+
+// ==========================================================
+// VOLTAR AO PERFIL PARA ATUALIZAR FOTO
+// ==========================================================
+
+function voltarParaAtualizarFoto() {
+
+  const confirmou =
+    confirm(
+      "A retrospectiva usa a mesma foto da sua carteirinha digital.\n\n" +
+      "Você será levado ao DH-PE para atualizar sua foto no PERFIL."
+    );
 
 
   if (!confirmou) {
@@ -5523,1571 +5536,1380 @@ function openContact(
   window.location.href =
     'index.html';
 }
-  
-function fmtShareTime(v) {
-  if (v == null || v === '' || Number.isNaN(Number(v))) {
-    return '--:--.---';
-  }
 
-  const ms = Number(v);
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  const millis = ms % 1000;
-
-  return (
-    String(minutes).padStart(2, '0') + ':' +
-    String(seconds).padStart(2, '0') + '.' +
-    String(millis).padStart(3, '0')
-  );
-}
-
-function getAchievementList(stats) {
-  const arr = [];
-
-  if ((stats.wins || 0) >= 1) {
-    arr.push('🏆 Venceu etapa na temporada');
-  }
-
-  if ((stats.podiums || 0) >= 1) {
-    arr.push('🥇 Conquistou TOP 5 em etapa');
-  }
-
-  if ((stats.races || 0) >= 3) {
-    arr.push('🚵 Participou de 3 ou mais etapas');
-  }
-
-  if (stats.best != null && Number(stats.best) > 0 && Number(stats.best) <= 150000) {
-    arr.push('⚡ Baixou de 2:30 min');
-  }
-
-  if (!arr.length) {
-    arr.push('🔥 Fez parte da temporada oficial DH-PE');
-  }
-
-  return arr.slice(0, 4);
-}
-
-function getSeasonLabel() {
-  return `TEMPORADA ${SYSTEM_YEAR}`;
-}
-
-function getCategoryLabel() {
-  return (loggedUser && loggedUser.cat)
-    ? String(loggedUser.cat).toUpperCase()
-    : 'ATLETA DH-PE';
-}
-
-function getAthleteNameLabel() {
-  return (loggedUser && loggedUser.nome)
-    ? String(loggedUser.nome).toUpperCase()
-    : 'ATLETA';
-}
-
-function safeLoadImage(src) {
-  return new Promise((resolve, reject) => {
-    if (!src) {
-      reject(new Error('Imagem não informada.'));
-      return;
-    }
-
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('Falha ao carregar imagem: ' + src));
-
-    img.src = src;
-  });
-}
-
-async function blobToDataURL(blob) {
-  return await new Promise((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onloadend = () => resolve(reader.result);
-    reader.onerror = reject;
-
-    reader.readAsDataURL(blob);
-  });
-}
-
-async function loadImageWithFallback(src, fallback = '') {
-  try {
-    return await safeLoadImage(src);
-  } catch (_) {
-    if (fallback && fallback !== src) {
-      return await safeLoadImage(fallback);
-    }
-    throw _;
-  }
-}
-
-function drawRoundedRect(ctx, x, y, w, h, r, fillStyle, strokeStyle = null, lineWidth = 1) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-
-  if (fillStyle) {
-    ctx.fillStyle = fillStyle;
-    ctx.fill();
-  }
-
-  if (strokeStyle) {
-    ctx.lineWidth = lineWidth;
-    ctx.strokeStyle = strokeStyle;
-    ctx.stroke();
-  }
-}
-
-function drawCoverImage(ctx, img, x, y, w, h, radius = 0) {
-  ctx.save();
-
-  if (radius > 0) {
-    drawRoundedRect(ctx, x, y, w, h, radius, null);
-    ctx.clip();
-  }
-
-  const imgRatio = img.width / img.height;
-  const boxRatio = w / h;
-
-  let drawW, drawH, dx, dy;
-
-  if (imgRatio > boxRatio) {
-    drawH = h;
-    drawW = h * imgRatio;
-    dx = x - (drawW - w) / 2;
-    dy = y;
-  } else {
-    drawW = w;
-    drawH = w / imgRatio;
-    dx = x;
-    dy = y - (drawH - h) / 2;
-  }
-
-  ctx.drawImage(img, dx, dy, drawW, drawH);
-  ctx.restore();
-}
-
-function drawText(ctx, text, x, y, size, color, weight = '400', align = 'left') {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px Arial`;
-  ctx.textAlign = align;
-  ctx.fillText(text, x, y);
-}
-
-function drawMultilineText(ctx, text, x, y, maxWidth, lineHeight, size, color, weight = '400', align = 'left') {
-  ctx.fillStyle = color;
-  ctx.font = `${weight} ${size}px Arial`;
-  ctx.textAlign = align;
-
-  const words = String(text || '').split(' ');
-  let line = '';
-  const lines = [];
-
-  for (let n = 0; n < words.length; n++) {
-    const testLine = line + words[n] + ' ';
-    const metrics = ctx.measureText(testLine);
-
-    if (metrics.width > maxWidth && n > 0) {
-      lines.push(line.trim());
-      line = words[n] + ' ';
-    } else {
-      line = testLine;
-    }
-  }
-
-  if (line.trim()) {
-    lines.push(line.trim());
-  }
-
-  lines.forEach((ln, i) => {
-    ctx.fillText(ln, x, y + (i * lineHeight));
-  });
-}
-
-function drawStatCard(ctx, x, y, w, h, title, value, highlight = false) {
-  drawRoundedRect(
-    ctx,
-    x,
-    y,
-    w,
-    h,
-    28,
-    highlight ? 'rgba(255,193,7,0.14)' : 'rgba(255,255,255,0.06)',
-    highlight ? 'rgba(255,193,7,0.32)' : 'rgba(255,255,255,0.10)',
-    2
-  );
-
-  drawText(ctx, title, x + 28, y + 42, 24, 'rgba(255,255,255,0.70)', '700', 'left');
-  drawText(ctx, value, x + 28, y + 96, 42, highlight ? '#ffd24a' : '#ffffff', '900', 'left');
-}
 
 // ==========================================================
-// DADOS DA RETROSPECTIVA PROFISSIONAL
+// ESTILOS DO WRAPPED
 // ==========================================================
 
-function retroProfessionalData() {
+function ensureWrappedStyles() {
 
-  const s =
-    careerStats();
+  if (
+    document.getElementById(
+      'dhclub-wrapped-style'
+    )
+  ) {
+    return;
+  }
 
 
-  const cpf =
-    cleanCPF(
-      loggedUser.cpf
+  const style =
+    document.createElement(
+      'style'
     );
 
 
-  // --------------------------------------------------------
-  // POSIÇÕES
-  // --------------------------------------------------------
+  style.id =
+    'dhclub-wrapped-style';
 
-  const placements =
-    s.results
+
+  style.textContent = `
+
+    .wrapped-overlay {
+      position:fixed;
+      inset:0;
+      z-index:99999;
+      background:#020914;
+      color:white;
+      display:flex;
+      flex-direction:column;
+      font-family:Arial, sans-serif;
+      overflow:hidden;
+    }
+
+    .wrapped-bg {
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(34,116,255,.28), transparent 38%),
+        radial-gradient(circle at 85% 25%, rgba(255,190,20,.18), transparent 32%),
+        radial-gradient(circle at 50% 100%, rgba(0,196,120,.14), transparent 40%),
+        linear-gradient(160deg,#061426,#020914 65%);
+      pointer-events:none;
+    }
+
+    .wrapped-lines {
+      position:absolute;
+      inset:0;
+      opacity:.12;
+      background-image:
+        linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px);
+      background-size:42px 42px;
+      pointer-events:none;
+    }
+
+    .wrapped-progress {
+      position:relative;
+      z-index:3;
+      display:flex;
+      gap:5px;
+      padding:14px 14px 8px;
+    }
+
+    .wrapped-progress span {
+      flex:1;
+      height:3px;
+      border-radius:10px;
+      background:rgba(255,255,255,.18);
+      overflow:hidden;
+    }
+
+    .wrapped-progress span.active {
+      background:#ffc72c;
+    }
+
+    .wrapped-top {
+      position:relative;
+      z-index:3;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:8px 16px;
+    }
+
+    .wrapped-brand {
+      font-weight:1000;
+      letter-spacing:1px;
+      font-size:14px;
+    }
+
+    .wrapped-brand strong {
+      color:#ffc72c;
+    }
+
+    .wrapped-close {
+      width:38px;
+      height:38px;
+      border-radius:50%;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.07);
+      color:white;
+      font-size:17px;
+    }
+
+    .wrapped-stage {
+      position:relative;
+      z-index:2;
+      flex:1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px 22px 90px;
+      overflow:auto;
+    }
+
+    .wrapped-slide {
+      width:100%;
+      max-width:470px;
+      animation:wrappedIn .38s ease;
+    }
+
+    @keyframes wrappedIn {
+      from {
+        opacity:0;
+        transform:translateY(18px) scale(.98);
+      }
+      to {
+        opacity:1;
+        transform:none;
+      }
+    }
+
+    .wrapped-eyebrow {
+      color:#ffc72c;
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:2px;
+      margin-bottom:12px;
+    }
+
+    .wrapped-title {
+      font-size:40px;
+      line-height:.98;
+      font-weight:1000;
+      margin:0 0 14px;
+      letter-spacing:-1.5px;
+    }
+
+    .wrapped-subtitle {
+      color:#9eabc0;
+      font-size:14px;
+      line-height:1.55;
+    }
+
+    .wrapped-photo {
+      width:132px;
+      height:132px;
+      border-radius:32px;
+      object-fit:cover;
+      border:3px solid #ffc72c;
+      box-shadow:0 20px 50px rgba(0,0,0,.45);
+      margin-bottom:22px;
+    }
+
+    .wrapped-hero-number {
+      font-size:82px;
+      line-height:.92;
+      font-weight:1000;
+      color:#ffc72c;
+      letter-spacing:-4px;
+    }
+
+    .wrapped-big-label {
+      font-size:18px;
+      font-weight:900;
+      margin-top:7px;
+    }
+
+    .wrapped-grid {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-top:22px;
+    }
+
+    .wrapped-card {
+      background:rgba(255,255,255,.065);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:20px;
+      padding:17px;
+      backdrop-filter:blur(10px);
+    }
+
+    .wrapped-card small {
+      display:block;
+      color:#8796ac;
+      font-size:9px;
+      font-weight:900;
+      letter-spacing:1px;
+      margin-bottom:7px;
+    }
+
+    .wrapped-card b {
+      display:block;
+      font-size:27px;
+      color:white;
+    }
+
+    .wrapped-card.gold b {
+      color:#ffc72c;
+    }
+
+    .wrapped-card.green b {
+      color:#35d48a;
+    }
+
+    .wrapped-card.red b {
+      color:#ff6262;
+    }
+
+    .wrapped-rank-box {
+      margin-top:18px;
+      padding:20px;
+      border-radius:24px;
+      background:linear-gradient(135deg,rgba(255,199,44,.16),rgba(255,199,44,.04));
+      border:1px solid rgba(255,199,44,.28);
+    }
+
+    .wrapped-meter {
+      margin-top:16px;
+    }
+
+    .wrapped-meter-head {
+      display:flex;
+      justify-content:space-between;
+      font-size:11px;
+      font-weight:900;
+      margin-bottom:7px;
+    }
+
+    .wrapped-meter-track {
+      height:12px;
+      background:rgba(255,255,255,.10);
+      border-radius:20px;
+      overflow:hidden;
+    }
+
+    .wrapped-meter-fill {
+      height:100%;
+      border-radius:20px;
+      background:linear-gradient(90deg,#19b7ff,#33da86);
+    }
+
+    .wrapped-medals {
+      display:grid;
+      grid-template-columns:repeat(5,1fr);
+      gap:7px;
+      margin-top:20px;
+    }
+
+    .wrapped-medal {
+      border-radius:16px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      padding:12px 4px;
+      text-align:center;
+    }
+
+    .wrapped-medal strong {
+      display:block;
+      font-size:23px;
+      color:#ffc72c;
+    }
+
+    .wrapped-medal small {
+      font-size:8px;
+      color:#9aa8bc;
+    }
+
+    .wrapped-achievements {
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:18px;
+    }
+
+    .wrapped-achievement {
+      padding:9px 12px;
+      border-radius:50px;
+      background:rgba(255,199,44,.10);
+      border:1px solid rgba(255,199,44,.24);
+      color:#ffd75e;
+      font-size:10px;
+      font-weight:900;
+    }
+
+    .wrapped-speed {
+      display:flex;
+      flex-direction:column;
+      gap:11px;
+      margin-top:24px;
+    }
+
+    .wrapped-speed-item {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:16px;
+      border-radius:18px;
+      background:rgba(255,255,255,.055);
+      border:1px solid rgba(255,255,255,.09);
+    }
+
+    .wrapped-speed-item.unlocked {
+      border-color:rgba(255,199,44,.42);
+      background:rgba(255,199,44,.09);
+    }
+
+    .wrapped-speed-item strong {
+      font-size:21px;
+    }
+
+    .wrapped-speed-item span {
+      font-size:10px;
+      font-weight:900;
+      color:#7d8da4;
+    }
+
+    .wrapped-speed-item.unlocked span {
+      color:#ffc72c;
+    }
+
+    .wrapped-actions {
+      position:absolute;
+      z-index:4;
+      bottom:18px;
+      left:14px;
+      right:14px;
+      display:flex;
+      gap:10px;
+    }
+
+    .wrapped-btn {
+      flex:1;
+      min-height:48px;
+      border:none;
+      border-radius:16px;
+      font-weight:1000;
+      font-size:12px;
+      cursor:pointer;
+    }
+
+    .wrapped-btn.secondary {
+      background:rgba(255,255,255,.08);
+      color:white;
+      border:1px solid rgba(255,255,255,.12);
+    }
+
+    .wrapped-btn.primary {
+      background:#ffc72c;
+      color:#06101e;
+    }
+
+    .wrapped-share {
+      width:100%;
+      min-height:54px;
+      margin-top:22px;
+      border:0;
+      border-radius:17px;
+      background:#ffc72c;
+      color:#06101e;
+      font-weight:1000;
+      font-size:13px;
+    }
+
+    @media (max-height:700px) {
+      .wrapped-title {
+        font-size:32px;
+      }
+
+      .wrapped-hero-number {
+        font-size:65px;
+      }
+
+      .wrapped-stage {
+        align-items:flex-start;
+      }
+    }
+
+  `;
+
+
+  document.head.appendChild(
+    style
+  );
+}
+
+
+// ==========================================================
+// DADOS DO WRAPPED
+// ==========================================================
+
+function wrappedData() {
+
+  const stats =
+    careerStats();
+
+
+  const comparison =
+    typeof mySeasonComparison ===
+      'function'
+
+      ? mySeasonComparison()
+
+      : null;
+
+
+  const positions =
+    stats.results
       .map(
-        resultado =>
+        result =>
           resultPlacement(
-            resultado
+            result
           )
       )
       .filter(
-        pos =>
+        p =>
           Number.isFinite(
-            Number(pos)
+            Number(p)
           )
       )
       .map(Number);
 
 
-  const bestPosition =
-    placements.length
-
-      ? Math.min(
-          ...placements
-        )
-
-      : null;
+  const countPosition =
+    position =>
+      positions.filter(
+        p =>
+          p === position
+      ).length;
 
 
-  // --------------------------------------------------------
-  // CATEGORIAS DIFERENTES DISPUTADAS
-  // --------------------------------------------------------
-
-  const categories =
-    new Set(
-
-      s.results.map(
-        resultado =>
-          normalizeCat(
-            resultado.cat
-          )
-      )
-
-    );
-
-
-  // --------------------------------------------------------
-  // X1 VENCIDOS
-  // --------------------------------------------------------
-
-  const x1Wins =
-    objValues(
-      club.x1_duels
-    )
+  const unlocked =
+    achievements()
       .filter(
-        duelo =>
-
-          String(
-            duelo.status || ''
-          ).toUpperCase() ===
-            'CONCLUIDO'
-
-          &&
-
-          cleanCPF(
-            duelo.winnerCpf
-          ) === cpf
-      )
-      .length;
-
-
-  // --------------------------------------------------------
-  // RESULTADOS EM ORDEM CRONOLÓGICA
-  // --------------------------------------------------------
-
-  const orderedResults =
-    s.results
-      .slice()
-      .sort(
-        (a, b) =>
-          Number(
-            a.evtId || 0
-          ) -
-          Number(
-            b.evtId || 0
-          )
+        item =>
+          item.ok
       );
 
 
-  // --------------------------------------------------------
-  // PRIMEIRO RESULTADO
-  // --------------------------------------------------------
-
-  const firstResult =
-    orderedResults[0] ||
-    null;
-
-
-  const firstEvent =
-    firstResult
-
-      ? eventById(
-          firstResult.evtId
-        )
-
-      : null;
-
-
-  // --------------------------------------------------------
-  // PRIMEIRO TOP 5
-  // --------------------------------------------------------
-
-  const firstTop5 =
-    orderedResults.find(
-      resultado => {
-
-        const pos =
-          resultPlacement(
-            resultado
-          );
-
-
-        return (
-          pos &&
-          pos <= 5
-        );
-      }
-    );
-
-
-  const firstTop5Event =
-    firstTop5
-
-      ? eventById(
-          firstTop5.evtId
-        )
-
-      : null;
-
-
-  // --------------------------------------------------------
-  // CONQUISTAS
-  // --------------------------------------------------------
-
-  const sub230 =
-    s.results.some(
-      resultado =>
-        timeMs(
-          resultado.val
-        ) < 150000
-    );
-
-
-  const consistent =
-    s.races >= 3;
-
-
-  const seasonHighlight =
-    (
-      s.wins > 0 ||
-      s.podiums >= 2
-    );
-
-
-  // --------------------------------------------------------
-  // DESEMPENHO
-  // --------------------------------------------------------
-
-  const closedEvents =
-    core.events.filter(
-      evento =>
-        String(
-          evento.status || ''
-        ).toUpperCase() ===
-        'CLOSED'
-    ).length;
-
-
-  const regularity =
-    closedEvents > 0
-
-      ? Math.min(
-          100,
-          Math.round(
-            (
-              s.races /
-              closedEvents
-            ) * 100
-          )
-        )
-
-      : (
-          s.races > 0
-            ? 100
-            : 0
-        );
-
-
-  const achievementsList =
-    achievements();
-
-
-  const unlockedAchievements =
-    achievementsList.filter(
-      item =>
-        item.ok
-    ).length;
-
-
-  const evolution =
-    achievementsList.length
-
-      ? Math.round(
-          (
-            unlockedAchievements /
-            achievementsList.length
-          ) * 100
-        )
-
-      : 0;
-
-
-  const competitiveness =
-    s.results.length
-
-      ? Math.min(
-          100,
-          Math.round(
-            (
-              s.podiums /
-              s.results.length
-            ) * 100
-          )
-        )
-
-      : 0;
+  const best =
+    stats.best;
 
 
   return {
 
-    stats:
-      s,
+    stats,
 
-    bestPosition,
+    comparison,
 
-    categories:
-      categories.size,
+    name:
+      String(
+        loggedUser.nome ||
+        'ATLETA'
+      ),
 
-    x1Wins,
+    category:
+      normalizeCat(
+        loggedUser.cat ||
+        'GERAL'
+      ),
 
-    sub230,
+    photo:
+      loggedUser.selfie ||
+      'logo.png',
 
-    consistent,
+    first:
+      countPosition(1),
 
-    seasonHighlight,
+    second:
+      countPosition(2),
 
-    regularity,
+    third:
+      countPosition(3),
 
-    evolution,
+    fourth:
+      countPosition(4),
 
-    competitiveness,
+    fifth:
+      countPosition(5),
 
-    firstEvent,
+    unlocked,
 
-    firstTop5Event
+    sub3:
+      Number.isFinite(best) &&
+      best < 180000,
+
+    sub230:
+      Number.isFinite(best) &&
+      best < 150000,
+
+    sub2:
+      Number.isFinite(best) &&
+      best < 120000
 
   };
 }
 
 
 // ==========================================================
-// ESCALA DO TEMPLATE
+// MONTA AS TELAS
 // ==========================================================
 
-function retroTemplateScale(
-  canvas
-) {
+function buildWrappedSlides() {
 
-  const baseWidth =
-    941;
-
-  const baseHeight =
-    1672;
-
-
-  return {
-
-    x:
-      value =>
-        value *
-        (
-          canvas.width /
-          baseWidth
-        ),
-
-    y:
-      value =>
-        value *
-        (
-          canvas.height /
-          baseHeight
-        ),
-
-    size:
-      value =>
-        value *
-        Math.min(
-          canvas.width /
-          baseWidth,
-
-          canvas.height /
-          baseHeight
-        )
-
-  };
-}
-
-
-// ==========================================================
-// TEXTO AUTOMÁTICO QUE REDUZ SE FOR MUITO GRANDE
-// ==========================================================
-
-function retroFitText(
-  ctx,
-  text,
-  x,
-  y,
-  maxWidth,
-  startSize,
-  minSize,
-  color = '#ffffff',
-  weight = '900',
-  align = 'left'
-) {
-
-  let size =
-    startSize;
-
-
-  const value =
-    String(
-      text || ''
-    );
-
-
-  ctx.textAlign =
-    align;
-
-
-  while (
-    size > minSize
-  ) {
-
-    ctx.font =
-      `${weight} ${size}px Arial`;
-
-
-    if (
-      ctx.measureText(
-        value
-      ).width <=
-      maxWidth
-    ) {
-
-      break;
-    }
-
-
-    size -= 1;
-  }
-
-
-  ctx.font =
-    `${weight} ${size}px Arial`;
-
-
-  ctx.fillStyle =
-    color;
-
-
-  ctx.textAlign =
-    align;
-
-
-  ctx.shadowColor =
-    'rgba(0,0,0,.65)';
-
-
-  ctx.shadowBlur =
-    4;
-
-
-  ctx.fillText(
-    value,
-    x,
-    y
-  );
-
-
-  ctx.shadowBlur =
-    0;
-}
-
-
-// ==========================================================
-// TEXTO CENTRAL
-// ==========================================================
-
-function retroCenterValue(
-  ctx,
-  text,
-  x,
-  y,
-  size,
-  color = '#ffffff'
-) {
-
-  ctx.textAlign =
-    'center';
-
-
-  ctx.font =
-    `900 ${size}px Arial`;
-
-
-  ctx.fillStyle =
-    color;
-
-
-  ctx.shadowColor =
-    'rgba(0,0,0,.55)';
-
-
-  ctx.shadowBlur =
-    3;
-
-
-  ctx.fillText(
-    String(
-      text ?? ''
-    ),
-    x,
-    y
-  );
-
-
-  ctx.shadowBlur =
-    0;
-}
-
-
-// ==========================================================
-// BARRA DE DESEMPENHO
-// ==========================================================
-
-function retroPerformanceBar(
-  ctx,
-  x,
-  y,
-  width,
-  height,
-  percent,
-  color
-) {
-
-  const value =
-    Math.max(
-      0,
-      Math.min(
-        100,
-        Number(percent) || 0
-      )
-    );
-
-
-  // LIMPA A BARRA QUE JÁ EXISTE NA ARTE
-  ctx.fillStyle =
-    '#07182b';
-
-  ctx.beginPath();
-
-  ctx.roundRect(
-    x,
-    y,
-    width,
-    height,
-    height / 2
-  );
-
-  ctx.fill();
-
-
-  // BORDA
-  ctx.lineWidth =
-    1.5;
-
-  ctx.strokeStyle =
-    'rgba(155,190,225,.65)';
-
-  ctx.stroke();
-
-
-  // NOVO PREENCHIMENTO DINÂMICO
-  if (value > 0) {
-
-    const innerX =
-      x + 3;
-
-    const innerY =
-      y + 3;
-
-    const innerWidth =
-      (
-        width - 6
-      ) *
-      (
-        value / 100
-      );
-
-    const innerHeight =
-      height - 6;
-
-
-    ctx.fillStyle =
-      color;
-
-
-    ctx.beginPath();
-
-    ctx.roundRect(
-      innerX,
-      innerY,
-      innerWidth,
-      innerHeight,
-      innerHeight / 2
-    );
-
-    ctx.fill();
-  }
-}
-
-// ==========================================================
-// FOTO DA CARTEIRINHA NO TEMPLATE
-// ==========================================================
-
-function retroDrawAthletePhoto(
-  ctx,
-  img,
-  x,
-  y,
-  width,
-  height
-) {
-
-  ctx.save();
-
-
-  ctx.beginPath();
-
-  ctx.roundRect(
-    x,
-    y,
-    width,
-    height,
-    16
-  );
-
-
-  ctx.clip();
-
-
-  const imgRatio =
-    img.width /
-    img.height;
-
-
-  const boxRatio =
-    width /
-    height;
-
-
-  let drawWidth;
-  let drawHeight;
-  let drawX;
-  let drawY;
-
-
-  if (
-    imgRatio >
-    boxRatio
-  ) {
-
-    drawHeight =
-      height;
-
-
-    drawWidth =
-      height *
-      imgRatio;
-
-
-    drawX =
-      x -
-      (
-        drawWidth -
-        width
-      ) / 2;
-
-
-    drawY =
-      y;
-
-  } else {
-
-    drawWidth =
-      width;
-
-
-    drawHeight =
-      width /
-      imgRatio;
-
-
-    drawX =
-      x;
-
-
-    drawY =
-      y -
-      (
-        drawHeight -
-        height
-      ) / 2;
-  }
-
-
-  ctx.drawImage(
-    img,
-    drawX,
-    drawY,
-    drawWidth,
-    drawHeight
-  );
-
-
-  ctx.restore();
-}
-
-
-// ==========================================================
-// GERA A RETROSPECTIVA USANDO O TEMPLATE PROFISSIONAL
-// ==========================================================
-
-async function generateRetrospectiveImage() {
-
-  const data =
-    retroProfessionalData();
+  const d =
+    wrappedData();
 
 
   const s =
-    data.stats;
+    d.stats;
 
 
-  // --------------------------------------------------------
-  // CARREGA O TEMPLATE OFICIAL
-  // --------------------------------------------------------
+  const c =
+    d.comparison;
 
-  const template =
-    await loadImageWithFallback(
-      "./retrospectiva-template.png"
+
+  const beatPct =
+    Math.round(
+      c?.categoryBeatPct ||
+      0
     );
 
 
-  // --------------------------------------------------------
-  // FOTO DA CARTEIRINHA
-  // --------------------------------------------------------
-
-  const photoSrc =
-    (
-      loggedUser &&
-      loggedUser.selfie
-    )
-
-      ? loggedUser.selfie
-
-      : 'logo.png';
-
-
-  const athletePhoto =
-    await loadImageWithFallback(
-      photoSrc,
-      'logo.png'
+  const score =
+    Math.round(
+      c?.score ||
+      0
     );
 
 
-  // --------------------------------------------------------
-  // CANVAS DO MESMO TAMANHO DO TEMPLATE
-  // --------------------------------------------------------
-
-  const canvas =
-    document.createElement(
-      'canvas'
+  const avgScore =
+    Math.round(
+      c?.categoryAverageScore ||
+      0
     );
 
 
-  canvas.width =
-    template.naturalWidth ||
-    template.width;
-
-
-  canvas.height =
-    template.naturalHeight ||
-    template.height;
-
-
-  const ctx =
-    canvas.getContext(
-      '2d'
+  const improvement =
+    Math.round(
+      c?.improvement ||
+      0
     );
 
 
-  ctx.imageSmoothingEnabled =
-    true;
-
-
-  ctx.imageSmoothingQuality =
-    'high';
-
-
-  // --------------------------------------------------------
-  // DESENHA O TEMPLATE
-  // --------------------------------------------------------
-
-  ctx.drawImage(
-    template,
-    0,
-    0,
-    canvas.width,
-    canvas.height
-  );
-
-
-  const scale =
-    retroTemplateScale(
-      canvas
+  const improvementVsCategory =
+    Math.round(
+      c?.improvementVsCategory ||
+      0
     );
 
 
-  const X =
-    scale.x;
+  const unlockedNames =
+    d.unlocked
+      .slice(0, 6)
+      .map(
+        item => `
+          <span class="wrapped-achievement">
+            ${esc(item.title)}
+          </span>
+        `
+      )
+      .join('');
 
-  const Y =
-    scale.y;
 
-  const S =
-    scale.size;
+  return [
 
+    // ------------------------------------------------------
+    // TELA 1
+    // ------------------------------------------------------
 
-    // ========================================================
-  // FOTO DO ATLETA
-  // ========================================================
+    `
+      <div class="wrapped-slide">
 
-  retroDrawAthletePhoto(
-    ctx,
-    athletePhoto,
+        <div class="wrapped-eyebrow">
+          DH-CLUB • TEMPORADA ${SYSTEM_YEAR}
+        </div>
 
-    X(54),
-    Y(476),
+        <img
+          class="wrapped-photo"
+          src="${esc(d.photo)}"
+          alt="Foto do atleta"
+        >
 
-    X(131),
-    Y(158)
-  );
+        <h1 class="wrapped-title">
+          ESSA FOI<br>
+          A SUA TEMPORADA.
+        </h1>
 
+        <div class="wrapped-subtitle">
+          <b style="color:white">
+            ${esc(d.name)}
+          </b>
 
-  // ========================================================
-  // NÚMERO FIXO DA PLACA DA BICICLETA
-  // ========================================================
+          <br>
 
-  retroFitText(
-    ctx,
+          ${esc(d.category)}
 
-    '01',
+          <br><br>
 
-    X(799),
-    Y(570),
+          Seus números, evolução
+          e conquistas no DH-PE.
+        </div>
 
-    X(95),
+      </div>
+    `,
 
-    S(42),
-    S(28),
 
-    '#ffffff',
+    // ------------------------------------------------------
+    // TELA 2
+    // ------------------------------------------------------
 
-    '900',
+    `
+      <div class="wrapped-slide">
 
-    'center'
-  );
+        <div class="wrapped-eyebrow">
+          SEUS NÚMEROS
+        </div>
 
+        <h1 class="wrapped-title">
+          VOCÊ ESTEVE<br>
+          NA PISTA.
+        </h1>
 
-  // ========================================================
-  // NOME DO ATLETA
-  // CENTRALIZADO NA CAIXA
-  // ========================================================
+        <div class="wrapped-grid">
 
-  retroFitText(
-    ctx,
+          <div class="wrapped-card">
+            <small>ETAPAS</small>
+            <b>${s.races}</b>
+          </div>
 
-    String(
-      loggedUser.nome ||
-      'ATLETA'
-    ).toUpperCase(),
+          <div class="wrapped-card gold">
+            <small>TOP 5</small>
+            <b>${s.podiums}</b>
+          </div>
 
-    X(323),
-    Y(535),
+          <div class="wrapped-card">
+            <small>VITÓRIAS</small>
+            <b>${s.wins}</b>
+          </div>
 
-    X(205),
+          <div class="wrapped-card gold">
+            <small>MELHOR TEMPO</small>
+            <b style="font-size:19px">
+              ${bestTimeLabel(s.best)}
+            </b>
+          </div>
 
-    S(26),
-    S(13),
+        </div>
 
-    '#ffffff',
+        <div class="wrapped-rank-box">
 
-    '900',
+          <div class="wrapped-subtitle">
+            MELHOR POSIÇÃO EM ETAPA
+          </div>
 
-    'center'
-  );
+          <div class="wrapped-hero-number">
+            ${c?.bestPosition
+              ? `${c.bestPosition}º`
+              : '—'}
+          </div>
 
+        </div>
 
-  // ========================================================
-  // CATEGORIA
-  // ========================================================
+      </div>
+    `,
 
-  retroFitText(
-    ctx,
 
-    String(
-      loggedUser.cat ||
-      '—'
-    ).toUpperCase(),
+    // ------------------------------------------------------
+    // TELA 3
+    // ------------------------------------------------------
 
-    X(268),
-    Y(625),
+    `
+      <div class="wrapped-slide">
 
-    X(100),
+        <div class="wrapped-eyebrow">
+          ONDE VOCÊ CHEGOU
+        </div>
 
-    S(20),
-    S(12),
+        <h1 class="wrapped-title">
+          SUA POSIÇÃO<br>
+          NA TEMPORADA.
+        </h1>
 
-    '#ffffff',
+        <div class="wrapped-rank-box">
+
+          <div class="wrapped-hero-number">
+            ${c?.generalPosition
+              ? `${c.generalPosition}º`
+              : '—'}
+          </div>
 
-    '900',
+          <div class="wrapped-big-label">
+            DE ${c?.generalTotal || 0}
+            ATLETAS
+          </div>
 
-    'center'
-  );
-
-
-  // ========================================================
-  // MELHOR TEMPO
-  // ========================================================
-
-  retroFitText(
-    ctx,
-
-    bestTimeLabel(
-      s.best
-    ),
-
-    X(425),
-    Y(625),
-
-    X(120),
-
-    S(20),
-    S(12),
-
-    '#ffffff',
-
-    '900',
-
-    'center'
-  );
-
-
-  // ========================================================
-  // ESTATÍSTICAS — PRIMEIRA LINHA
-  // ========================================================
-
-  retroCenterValue(
-    ctx,
-    s.races,
-    X(100),
-    Y(748),
-    S(34)
-  );
-
-
-  retroCenterValue(
-    ctx,
-    s.podiums,
-    X(281),
-    Y(748),
-    S(34),
-    '#ffcc29'
-  );
-
-
-  retroCenterValue(
-    ctx,
-    s.wins,
-    X(462),
-    Y(748),
-    S(34)
-  );
-
-
-  // ========================================================
-  // ESTATÍSTICAS — SEGUNDA LINHA
-  // ========================================================
-
-  retroCenterValue(
-    ctx,
-
-    data.bestPosition
-      ? `${data.bestPosition}º`
-      : '—',
-
-    X(100),
-    Y(872),
-
-    S(33)
-  );
-
-
-  retroCenterValue(
-    ctx,
-
-    data.categories,
-
-    X(281),
-    Y(872),
-
-    S(33)
-  );
-
-
-  retroCenterValue(
-    ctx,
-
-    data.x1Wins,
-
-    X(462),
-    Y(872),
-
-    S(33)
-  );
-
-
-  // ========================================================
-  // CONQUISTAS
-  // OK DENTRO DAS CAIXAS INFERIORES
-  // ========================================================
-
-  retroCenterValue(
-    ctx,
-
-    s.podiums > 0
-      ? 'OK'
-      : '—',
-
-    X(136),
-    Y(1128),
-
-    S(16),
-
-    s.podiums > 0
-      ? '#ffcc29'
-      : '#64748b'
-  );
-
-
-  retroCenterValue(
-    ctx,
-
-    data.sub230
-      ? 'OK'
-      : '—',
-
-    X(340),
-    Y(1128),
-
-    S(16),
-
-    data.sub230
-      ? '#31d07c'
-      : '#64748b'
-  );
-
-
-  retroCenterValue(
-    ctx,
-
-    data.consistent
-      ? 'OK'
-      : '—',
-
-    X(538),
-    Y(1128),
-
-    S(16),
-
-    data.consistent
-      ? '#ff5555'
-      : '#64748b'
-  );
-
-
-  retroCenterValue(
-    ctx,
-
-    data.seasonHighlight
-      ? 'OK'
-      : '—',
-
-    X(759),
-    Y(1128),
-
-    S(16),
-
-    data.seasonHighlight
-      ? '#ffcc29'
-      : '#64748b'
-  );
-
-
-  // ========================================================
-  // LINHA DA TEMPORADA
-  // TEXTOS DENTRO DAS CAIXAS
-  // ========================================================
-
-  const firstEventText =
-    data.firstEvent
-
-      ? (
-          data.firstEvent.t ||
-          'ESTREIA NA TEMPORADA'
-        )
-
-      : 'SEM RESULTADO OFICIAL';
-
-
-  const firstTop5Text =
-    data.firstTop5Event
-
-      ? 'PRIMEIRO TOP 5'
-
-      : 'TOP 5 AINDA NÃO ALCANÇADO';
-
-
-  retroFitText(
-    ctx,
-
-    firstEventText,
-
-    X(310),
-    Y(1245),
-
-    X(290),
-
-    S(17),
-    S(10),
-
-    '#ffffff',
-
-    '800',
-
-    'center'
-  );
-
-
-  retroFitText(
-    ctx,
-
-    firstTop5Text,
-
-    X(310),
-    Y(1303),
-
-    X(290),
-
-    S(17),
-    S(10),
-
-    '#ffffff',
-
-    '800',
-
-    'center'
-  );
-
-
-  retroFitText(
-    ctx,
-
-    `MELHOR TEMPO ${bestTimeLabel(
-      s.best
-    )}`,
-
-    X(310),
-    Y(1362),
-
-    X(290),
-
-    S(17),
-    S(10),
-
-    '#ffffff',
-
-    '800',
-
-    'center'
-  );
-
-
-  retroFitText(
-    ctx,
-
-    `${s.races} ETAPA${
-      s.races === 1
-        ? ''
-        : 'S'
-    } DISPUTADA${
-      s.races === 1
-        ? ''
-        : 'S'
-    }`,
-
-    X(310),
-    Y(1420),
-
-    X(290),
-
-    S(17),
-    S(10),
-
-    '#ffffff',
-
-    '800',
-
-    'center'
-  );
-
-
-  // ========================================================
-  // DESEMPENHO
-  // ========================================================
-
-  retroPerformanceBar(
-    ctx,
-
-    X(521),
-    Y(1239),
-
-    X(286),
-    Y(28),
-
-    data.regularity,
-
-    '#168cff'
-  );
-
-
-  retroPerformanceBar(
-    ctx,
-
-    X(521),
-    Y(1315),
-
-    X(286),
-    Y(28),
-
-    data.evolution,
-
-    '#20cb79'
-  );
-
-
-  retroPerformanceBar(
-    ctx,
-
-    X(521),
-    Y(1391),
-
-    X(286),
-    Y(28),
-
-    data.competitiveness,
-
-    '#ed3f3f'
-  );
-
-
-  // ========================================================
-  // PERCENTUAIS — CENTRALIZADOS NAS CAIXAS
-  // ========================================================
-
-  retroCenterValue(
-    ctx,
-
-    `${data.regularity}%`,
-
-    X(858),
-    Y(1262),
-
-    S(20),
-
-    '#ffffff'
-  );
-
-
-  retroCenterValue(
-    ctx,
-
-    `${data.evolution}%`,
-
-    X(858),
-    Y(1338),
-
-    S(20),
-
-    '#ffffff'
-  );
-
-
-  retroCenterValue(
-    ctx,
-
-    `${data.competitiveness}%`,
-
-    X(858),
-    Y(1414),
-
-    S(20),
-
-    '#ffffff'
-  );
-
-
-  // ========================================================
-  // CONVERTE PARA PNG
-  // ========================================================
-
-  return await new Promise(
-
-    (
-      resolve,
-      reject
-    ) => {
-
-      canvas.toBlob(
-
-        async blob => {
-
-          try {
-
-            if (!blob) {
-
-              reject(
-                new Error(
-                  'Não foi possível gerar a retrospectiva.'
-                )
-              );
-
-              return;
-            }
-
-
-            resolve({
-
-              blob,
-
-              dataUrl:
-                await blobToDataURL(
-                  blob
-                )
-
-            });
-
-
-          } catch (err) {
-
-            reject(
-              err
-            );
+          <div class="wrapped-subtitle">
+            classificação comparativa
+            do DH-Club
+          </div>
+
+        </div>
+
+        <div class="wrapped-grid">
+
+          <div class="wrapped-card gold">
+            <small>
+              ${esc(d.category)}
+            </small>
+
+            <b>
+              ${c?.categoryPosition
+                ? `${c.categoryPosition}º`
+                : '—'}
+            </b>
+
+            <div class="wrapped-subtitle">
+              de ${c?.categoryTotal || 0}
+            </div>
+          </div>
+
+          <div class="wrapped-card green">
+            <small>ATLETAS SUPERADOS</small>
+            <b>${beatPct}%</b>
+          </div>
+
+        </div>
+
+      </div>
+    `,
+
+
+    // ------------------------------------------------------
+    // TELA 4
+    // ------------------------------------------------------
+
+    `
+      <div class="wrapped-slide">
+
+        <div class="wrapped-eyebrow">
+          VOCÊ X SUA CATEGORIA
+        </div>
+
+        <h1 class="wrapped-title">
+          COMO FOI<br>
+          SUA EVOLUÇÃO?
+        </h1>
+
+        <div class="wrapped-card green">
+          <small>SEU ÍNDICE</small>
+          <b>${score}%</b>
+        </div>
+
+        <div class="wrapped-meter">
+
+          <div class="wrapped-meter-head">
+            <span>SEU DESEMPENHO</span>
+            <span>${score}%</span>
+          </div>
+
+          <div class="wrapped-meter-track">
+            <div
+              class="wrapped-meter-fill"
+              style="width:${Math.max(0, Math.min(100, score))}%"
+            ></div>
+          </div>
+
+        </div>
+
+        <div class="wrapped-meter">
+
+          <div class="wrapped-meter-head">
+            <span>MÉDIA DA CATEGORIA</span>
+            <span>${avgScore}%</span>
+          </div>
+
+          <div class="wrapped-meter-track">
+            <div
+              class="wrapped-meter-fill"
+              style="
+                width:${Math.max(0, Math.min(100, avgScore))}%;
+                background:#68788e;
+              "
+            ></div>
+          </div>
+
+        </div>
+
+        <div class="wrapped-grid">
+
+          <div class="wrapped-card ${
+            improvement >= 0
+              ? 'green'
+              : 'red'
+          }">
+            <small>EVOLUÇÃO</small>
+            <b>
+              ${improvement > 0 ? '+' : ''}
+              ${improvement} pts
+            </b>
+          </div>
+
+          <div class="wrapped-card ${
+            improvementVsCategory >= 0
+              ? 'green'
+              : 'red'
+          }">
+            <small>VS. CATEGORIA</small>
+            <b>
+              ${improvementVsCategory > 0 ? '+' : ''}
+              ${improvementVsCategory} pts
+            </b>
+          </div>
+
+        </div>
+
+      </div>
+    `,
+
+
+    // ------------------------------------------------------
+    // TELA 5
+    // ------------------------------------------------------
+
+    `
+      <div class="wrapped-slide">
+
+        <div class="wrapped-eyebrow">
+          MARCAS DE VELOCIDADE
+        </div>
+
+        <h1 class="wrapped-title">
+          CONTRA<br>
+          O CRONÔMETRO.
+        </h1>
+
+        <div class="wrapped-speed">
+
+          <div class="wrapped-speed-item ${d.sub3 ? 'unlocked' : ''}">
+            <strong>-3:00 MIN</strong>
+            <span>
+              ${d.sub3 ? 'DESBLOQUEADA' : 'A CONQUISTAR'}
+            </span>
+          </div>
+
+          <div class="wrapped-speed-item ${d.sub230 ? 'unlocked' : ''}">
+            <strong>-2:30 MIN</strong>
+            <span>
+              ${d.sub230 ? 'DESBLOQUEADA' : 'A CONQUISTAR'}
+            </span>
+          </div>
+
+          <div class="wrapped-speed-item ${d.sub2 ? 'unlocked' : ''}">
+            <strong>-2:00 MIN</strong>
+            <span>
+              ${d.sub2 ? 'DESBLOQUEADA' : 'A CONQUISTAR'}
+            </span>
+          </div>
+
+        </div>
+
+        <div class="wrapped-rank-box">
+
+          <div class="wrapped-subtitle">
+            SEU MELHOR TEMPO OFICIAL
+          </div>
+
+          <div
+            class="wrapped-hero-number"
+            style="font-size:47px"
+          >
+            ${bestTimeLabel(s.best)}
+          </div>
+
+        </div>
+
+      </div>
+    `,
+
+
+    // ------------------------------------------------------
+    // TELA 6
+    // ------------------------------------------------------
+
+    `
+      <div class="wrapped-slide">
+
+        <div class="wrapped-eyebrow">
+          PÓDIOS & CONQUISTAS
+        </div>
+
+        <h1 class="wrapped-title">
+          CADA POSIÇÃO<br>
+          CONTA UMA HISTÓRIA.
+        </h1>
+
+        <div class="wrapped-medals">
+
+          <div class="wrapped-medal">
+            <strong>${d.first}</strong>
+            <small>1º</small>
+          </div>
+
+          <div class="wrapped-medal">
+            <strong>${d.second}</strong>
+            <small>2º</small>
+          </div>
+
+          <div class="wrapped-medal">
+            <strong>${d.third}</strong>
+            <small>3º</small>
+          </div>
+
+          <div class="wrapped-medal">
+            <strong>${d.fourth}</strong>
+            <small>4º</small>
+          </div>
+
+          <div class="wrapped-medal">
+            <strong>${d.fifth}</strong>
+            <small>5º</small>
+          </div>
+
+        </div>
+
+        <div class="wrapped-rank-box">
+
+          <div class="wrapped-subtitle">
+            CONQUISTAS DESBLOQUEADAS
+          </div>
+
+          <div class="wrapped-hero-number">
+            ${d.unlocked.length}
+          </div>
+
+        </div>
+
+        <div class="wrapped-achievements">
+          ${
+            unlockedNames ||
+            '<span class="wrapped-subtitle">Continue competindo para desbloquear conquistas.</span>'
           }
+        </div>
 
-        },
+      </div>
+    `,
 
-        'image/png',
 
-        1
+    // ------------------------------------------------------
+    // TELA 7
+    // ------------------------------------------------------
 
-      );
-    }
-  );
+    `
+      <div class="wrapped-slide">
+
+        <div class="wrapped-eyebrow">
+          DH-PE • ${SYSTEM_YEAR}
+        </div>
+
+        <h1 class="wrapped-title">
+          ESSA TEMPORADA<br>
+          É SUA.
+        </h1>
+
+        <div class="wrapped-rank-box">
+
+          <div class="wrapped-subtitle">
+            ${esc(d.name)}
+          </div>
+
+          <div
+            style="
+              font-size:21px;
+              font-weight:1000;
+              margin-top:7px;
+            "
+          >
+            ${s.races} etapas •
+            ${s.podiums} Top 5 •
+            ${bestTimeLabel(s.best)}
+          </div>
+
+          <div
+            class="wrapped-subtitle"
+            style="margin-top:12px"
+          >
+            Mais que uma pista,
+            uma comunidade.
+          </div>
+
+        </div>
+
+        <button
+          class="wrapped-share"
+          onclick="Club.shareWrapped()"
+        >
+          <i class="fa-solid fa-share-nodes"></i>
+          COMPARTILHAR MINHA TEMPORADA
+        </button>
+
+      </div>
+    `
+
+  ];
 }
 
-async function shareRetrospective() {
-  try {
-    toast("GERANDO SUA RETROSPECTIVA...");
 
-    const result = await generateRetrospectiveImage();
+// ==========================================================
+// ABRIR WRAPPED
+// ==========================================================
 
-    const file = new File(
-      [result.blob],
-      `retrospectiva-dhpe-${Date.now()}.png`,
-      { type: 'image/png' }
+function openWrapped() {
+
+  ensureWrappedStyles();
+
+
+  wrappedSlides =
+    buildWrappedSlides();
+
+
+  wrappedIndex =
+    0;
+
+
+  const antigo =
+    document.getElementById(
+      'dhclub-wrapped'
     );
 
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({
-        title: `Retrospectiva ${SYSTEM_YEAR} - DH-PE`,
-        text: 'Minha retrospectiva oficial da temporada no DH-PE.',
-        files: [file]
-      });
-    } else {
-      const a = document.createElement('a');
-      a.href = result.dataUrl;
-      a.download = `retrospectiva-dhpe-${SYSTEM_YEAR}.png`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
 
-      alert('Seu aparelho não suportou compartilhamento direto. A imagem foi baixada para você compartilhar.');
+  if (antigo) {
+    antigo.remove();
+  }
+
+
+  const overlay =
+    document.createElement(
+      'div'
+    );
+
+
+  overlay.id =
+    'dhclub-wrapped';
+
+
+  overlay.className =
+    'wrapped-overlay';
+
+
+  overlay.innerHTML = `
+
+    <div class="wrapped-bg"></div>
+    <div class="wrapped-lines"></div>
+
+    <div
+      id="wrapped-progress"
+      class="wrapped-progress"
+    ></div>
+
+    <div class="wrapped-top">
+
+      <div class="wrapped-brand">
+        DH-CLUB<strong>+</strong>
+      </div>
+
+      <button
+        class="wrapped-close"
+        onclick="Club.closeWrapped()"
+      >
+        ×
+      </button>
+
+    </div>
+
+    <div
+      id="wrapped-stage"
+      class="wrapped-stage"
+    ></div>
+
+    <div class="wrapped-actions">
+
+      <button
+        id="wrapped-prev"
+        class="wrapped-btn secondary"
+        onclick="Club.wrappedPrev()"
+      >
+        ← VOLTAR
+      </button>
+
+      <button
+        id="wrapped-next"
+        class="wrapped-btn primary"
+        onclick="Club.wrappedNext()"
+      >
+        PRÓXIMO →
+      </button>
+
+    </div>
+
+  `;
+
+
+  document.body.appendChild(
+    overlay
+  );
+
+
+  document.body.style.overflow =
+    'hidden';
+
+
+  renderWrappedSlide();
+}
+
+
+// ==========================================================
+// MOSTRAR TELA ATUAL
+// ==========================================================
+
+function renderWrappedSlide() {
+
+  const stage =
+    document.getElementById(
+      'wrapped-stage'
+    );
+
+
+  const progress =
+    document.getElementById(
+      'wrapped-progress'
+    );
+
+
+  const prev =
+    document.getElementById(
+      'wrapped-prev'
+    );
+
+
+  const next =
+    document.getElementById(
+      'wrapped-next'
+    );
+
+
+  if (
+    !stage ||
+    !progress
+  ) {
+    return;
+  }
+
+
+  stage.innerHTML =
+    wrappedSlides[
+      wrappedIndex
+    ] || '';
+
+
+  progress.innerHTML =
+    wrappedSlides
+      .map(
+        (_, i) =>
+          `<span class="${
+            i <= wrappedIndex
+              ? 'active'
+              : ''
+          }"></span>`
+      )
+      .join('');
+
+
+  if (prev) {
+
+    prev.style.visibility =
+      wrappedIndex === 0
+        ? 'hidden'
+        : 'visible';
+  }
+
+
+  if (next) {
+
+    if (
+      wrappedIndex ===
+      wrappedSlides.length - 1
+    ) {
+
+      next.textContent =
+        'VER NOVAMENTE';
+
+    } else {
+
+      next.textContent =
+        'PRÓXIMO →';
     }
-    } catch (err) {
-    console.error(err);
+  }
+}
+
+
+// ==========================================================
+// NAVEGAÇÃO
+// ==========================================================
+
+function wrappedNext() {
+
+  if (
+    wrappedIndex <
+    wrappedSlides.length - 1
+  ) {
+
+    wrappedIndex++;
+
+  } else {
+
+    wrappedIndex = 0;
+  }
+
+
+  renderWrappedSlide();
+}
+
+
+function wrappedPrev() {
+
+  if (
+    wrappedIndex > 0
+  ) {
+
+    wrappedIndex--;
+  }
+
+
+  renderWrappedSlide();
+}
+
+
+// ==========================================================
+// FECHAR
+// ==========================================================
+
+function closeWrapped() {
+
+  const overlay =
+    document.getElementById(
+      'dhclub-wrapped'
+    );
+
+
+  if (overlay) {
+
+    overlay.remove();
+  }
+
+
+  document.body.style.overflow =
+    '';
+}
+
+
+// ==========================================================
+// COMPARTILHAR TEXTO DA TEMPORADA
+// ==========================================================
+
+async function shareWrapped() {
+
+  const d =
+    wrappedData();
+
+
+  const s =
+    d.stats;
+
+
+  const c =
+    d.comparison;
+
+
+  const texto =
+`🏁 MINHA TEMPORADA DH-PE ${SYSTEM_YEAR}
+
+🚵 ${s.races} etapas disputadas
+⭐ ${s.podiums} resultados em TOP 5
+🏆 ${s.wins} vitória(s)
+⏱️ Melhor tempo: ${bestTimeLabel(s.best)}
+📊 Melhor posição: ${c?.bestPosition ? `${c.bestPosition}º` : '—'}
+
+${c?.categoryPosition
+  ? `🔥 ${c.categoryPosition}º de ${c.categoryTotal} na ${d.category}`
+  : ''}
+
+Mais que uma pista, uma comunidade.
+DH-PE • Downhill Pernambuco`;
+
+
+  try {
+
+    if (
+      navigator.share
+    ) {
+
+      await navigator.share({
+        title:
+          `Minha temporada DH-PE ${SYSTEM_YEAR}`,
+
+        text:
+          texto
+      });
+
+
+      return;
+    }
+
+
+    if (
+      navigator.clipboard
+    ) {
+
+      await navigator.clipboard
+        .writeText(
+          texto
+        );
+
+
+      toast(
+        'RETROSPECTIVA COPIADA!'
+      );
+
+
+      return;
+    }
+
+
     alert(
-      'Erro ao gerar retrospectiva: ' +
-      (err.message || err)
+      texto
+    );
+
+
+  } catch (err) {
+
+    if (
+      err &&
+      err.name === 'AbortError'
+    ) {
+      return;
+    }
+
+
+    console.error(
+      err
+    );
+
+
+    alert(
+      texto
     );
   }
 }
@@ -7791,7 +7613,15 @@ window.Club = {
 
   openContact,
 
-  shareRetrospective
+  openWrapped,
+
+closeWrapped,
+
+wrappedNext,
+
+wrappedPrev,
+
+shareWrapped
 
 };
 
