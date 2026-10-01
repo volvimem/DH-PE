@@ -6797,6 +6797,7 @@ function openWrapped() {
 
 
   if (antigo) {
+
     antigo.remove();
   }
 
@@ -6818,49 +6819,63 @@ function openWrapped() {
   overlay.innerHTML = `
 
     <div class="wrapped-bg"></div>
+
     <div class="wrapped-lines"></div>
+
 
     <div
       id="wrapped-progress"
       class="wrapped-progress"
     ></div>
 
+
     <div class="wrapped-top">
 
-  <div class="wrapped-brand">
-    DH-CLUB<strong>+</strong>
-  </div>
+      <div class="wrapped-brand">
+
+        DH-CLUB<strong>+</strong>
+
+      </div>
 
 
-  <div class="wrapped-top-actions">
+      <div class="wrapped-top-actions">
 
-    <button
-      id="wrapped-sound"
-      class="wrapped-sound"
-      onclick="Club.toggleWrappedSound()"
-      title="Som da retrospectiva"
-    >
+        <button
+          id="wrapped-sound"
+          class="wrapped-sound"
+          onclick="Club.toggleWrappedSound()"
+          title="Som da retrospectiva"
+        >
 
-      <i class="fa-solid fa-volume-high"></i>
+          <i
+            class="
+              fa-solid
+              fa-volume-high
+            "
+          ></i>
 
-    </button>
+        </button>
 
 
-    <button
-      class="wrapped-close"
-      onclick="Club.closeWrapped()"
-    >
-      ×
-    </button>
+        <button
+          class="wrapped-close"
+          onclick="Club.closeWrapped()"
+        >
 
-  </div>
+          ×
 
-</div>
+        </button>
+
+      </div>
+
+    </div>
+
 
     <div
       id="wrapped-stage"
       class="wrapped-stage"
     ></div>
+
 
     <div class="wrapped-actions">
 
@@ -6869,15 +6884,20 @@ function openWrapped() {
         class="wrapped-btn secondary"
         onclick="Club.wrappedPrev()"
       >
+
         ← VOLTAR
+
       </button>
+
 
       <button
         id="wrapped-next"
         class="wrapped-btn primary"
         onclick="Club.wrappedNext()"
       >
+
         PRÓXIMO →
+
       </button>
 
     </div>
@@ -6886,49 +6906,40 @@ function openWrapped() {
 
 
   document.body.appendChild(
-  overlay
-);
+    overlay
+  );
 
 
-document.body.style.overflow =
-  'hidden';
+  document.body.style.overflow =
+    'hidden';
 
 
-updateWrappedSoundButton();
+  updateWrappedSoundButton();
 
 
-if (
-  wrappedSoundEnabled
-) {
+  if (
+    wrappedSoundEnabled
+  ) {
 
-  try {
-
-    wrappedAudio.currentTime =
-      0;
-
-  } catch {}
+    const audio =
+      ensureWrappedAudio();
 
 
-  wrappedAudio
-    .play()
-    .catch(
-      err => {
+    try {
 
-        console.warn(
-          '[DH-CLUB] Primeiro play bloqueado:',
-          err
-        );
-      }
-    );
-}
+      audio.currentTime =
+        0;
+
+    } catch {}
+  }
 
 
-renderWrappedSlide();
+  renderWrappedSlide();
 }
 
 
 // ==========================================================
-// MOSTRAR TELA ATUAL
+// MOSTRAR STORY ATUAL
 // ==========================================================
 
 function renderWrappedSlide() {
@@ -6961,6 +6972,7 @@ function renderWrappedSlide() {
     !stage ||
     !progress
   ) {
+
     return;
   }
 
@@ -6975,11 +6987,13 @@ function renderWrappedSlide() {
     wrappedSlides
       .map(
         (_, i) =>
+
           `<span class="${
             i <= wrappedIndex
               ? 'active'
               : ''
           }"></span>`
+
       )
       .join('');
 
@@ -7009,32 +7023,47 @@ function renderWrappedSlide() {
         'PRÓXIMO →';
     }
   }
-    updateWrappedSoundButton();
 
 
-if (
-  wrappedSoundEnabled
-) {
-
-  const audio =
-    ensureWrappedAudio();
+  updateWrappedSoundButton();
 
 
-  try {
+  if (
+    wrappedSoundEnabled
+  ) {
 
-    audio.currentTime =
+    playWrappedSound();
+  }
+}
+
+
+// ==========================================================
+// PRÓXIMO STORY
+// ==========================================================
+
+function wrappedNext() {
+
+  if (
+    wrappedIndex <
+    wrappedSlides.length - 1
+  ) {
+
+    wrappedIndex++;
+
+  } else {
+
+    wrappedIndex =
       0;
+  }
 
-  } catch {}
 
-
-  playWrappedSound();
+  renderWrappedSlide();
 }
 
 
-renderWrappedSlide();
-}
-
+// ==========================================================
+// STORY ANTERIOR
+// ==========================================================
 
 function wrappedPrev() {
 
