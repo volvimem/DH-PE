@@ -5289,7 +5289,7 @@ async function generateRetrospectiveImage() {
 
   const template =
     await loadImageWithFallback(
-      'retrospectiva-template.png'
+      "./retrospectiva-template.png"
     );
 
 
