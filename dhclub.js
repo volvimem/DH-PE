@@ -5505,6 +5505,195 @@ function openContact(
 // RETROSPECTIVA WRAPPED — DH-CLUB
 // ==========================================================
 
+// ==========================================================
+// ÁUDIO DO WRAPPED
+// ==========================================================
+
+const WRAPPED_SOUND_KEY =
+  'dhclub_wrapped_sound';
+
+
+let wrappedSoundEnabled =
+  localStorage.getItem(
+    WRAPPED_SOUND_KEY
+  ) !== 'off';
+
+
+const wrappedAudio =
+  new Audio();
+
+
+wrappedAudio.preload =
+  'auto';
+
+
+wrappedAudio.volume =
+  0.55;
+
+
+wrappedAudio.loop =
+  false;
+
+
+// Um som correspondente a cada Story atual
+const wrappedSounds = [
+
+  'sounds/wrapped/01-intro.mp3',
+
+  'sounds/wrapped/02-numeros.mp3',
+
+  'sounds/wrapped/03-ranking.mp3',
+
+  'sounds/wrapped/04-evolucao.mp3',
+
+  'sounds/wrapped/05-velocidade.mp3',
+
+  'sounds/wrapped/06-conquistas.mp3',
+
+  'sounds/wrapped/07-final.mp3'
+
+];
+
+
+// ==========================================================
+// ATUALIZA ÍCONE DO SOM
+// ==========================================================
+
+function updateWrappedSoundButton() {
+
+  const btn =
+    document.getElementById(
+      'wrapped-sound'
+    );
+
+
+  if (!btn) {
+    return;
+  }
+
+
+  btn.innerHTML = `
+
+    <i
+      class="
+        fa-solid
+        ${
+          wrappedSoundEnabled
+            ? 'fa-volume-high'
+            : 'fa-volume-xmark'
+        }
+      "
+    ></i>
+
+  `;
+
+
+  btn.title =
+    wrappedSoundEnabled
+      ? 'Desativar som'
+      : 'Ativar som';
+}
+
+
+// ==========================================================
+// TOCA O SOM DA TELA ATUAL
+// ==========================================================
+
+function playWrappedSound() {
+
+  wrappedAudio.pause();
+
+
+  try {
+
+    wrappedAudio.currentTime =
+      0;
+
+  } catch {}
+
+
+  if (
+    !wrappedSoundEnabled
+  ) {
+
+    return;
+  }
+
+
+  const sound =
+    wrappedSounds[
+      wrappedIndex
+    ];
+
+
+  if (!sound) {
+    return;
+  }
+
+
+  wrappedAudio.src =
+    sound;
+
+
+  wrappedAudio
+    .play()
+    .catch(
+      err => {
+
+        // Não trava o Wrapped se o navegador
+        // bloquear áudio ou se o arquivo não existir.
+        console.log(
+          '[DH-CLUB] Áudio não iniciado:',
+          err?.message || err
+        );
+
+      }
+    );
+}
+
+
+// ==========================================================
+// LIGA / DESLIGA SOM
+// ==========================================================
+
+function toggleWrappedSound() {
+
+  wrappedSoundEnabled =
+    !wrappedSoundEnabled;
+
+
+  localStorage.setItem(
+    WRAPPED_SOUND_KEY,
+
+    wrappedSoundEnabled
+      ? 'on'
+      : 'off'
+  );
+
+
+  updateWrappedSoundButton();
+
+
+  if (
+    wrappedSoundEnabled
+  ) {
+
+    playWrappedSound();
+
+    toast(
+      'SOM DA RETROSPECTIVA ATIVADO'
+    );
+
+  } else {
+
+    wrappedAudio.pause();
+
+    toast(
+      'SOM DA RETROSPECTIVA DESATIVADO'
+    );
+  }
+}
+  
 let wrappedIndex = 0;
 let wrappedSlides = [];
 
@@ -5636,6 +5825,30 @@ function ensureWrappedStyles() {
 
     .wrapped-brand strong {
       color:#ffc72c;
+    }
+
+    .wrapped-top-actions {
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
+    .wrapped-sound {
+      width:38px;
+      height:38px;
+      border-radius:50%;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.07);
+      color:white;
+      font-size:14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+    }
+
+    .wrapped-sound:active {
+      transform:scale(.94);
     }
 
     .wrapped-close {
@@ -6616,18 +6829,35 @@ function openWrapped() {
 
     <div class="wrapped-top">
 
-      <div class="wrapped-brand">
-        DH-CLUB<strong>+</strong>
-      </div>
+  <div class="wrapped-brand">
+    DH-CLUB<strong>+</strong>
+  </div>
 
-      <button
-        class="wrapped-close"
-        onclick="Club.closeWrapped()"
-      >
-        ×
-      </button>
 
-    </div>
+  <div class="wrapped-top-actions">
+
+    <button
+      id="wrapped-sound"
+      class="wrapped-sound"
+      onclick="Club.toggleWrappedSound()"
+      title="Som da retrospectiva"
+    >
+
+      <i class="fa-solid fa-volume-high"></i>
+
+    </button>
+
+
+    <button
+      class="wrapped-close"
+      onclick="Club.closeWrapped()"
+    >
+      ×
+    </button>
+
+  </div>
+
+</div>
 
     <div
       id="wrapped-stage"
@@ -6752,6 +6982,10 @@ function renderWrappedSlide() {
         'PRÓXIMO →';
     }
   }
+    updateWrappedSoundButton();
+
+
+  playWrappedSound();
 }
 
 
@@ -6797,6 +7031,17 @@ function wrappedPrev() {
 // ==========================================================
 
 function closeWrapped() {
+
+  wrappedAudio.pause();
+
+
+  try {
+
+    wrappedAudio.currentTime =
+      0;
+
+  } catch {}
+
 
   const overlay =
     document.getElementById(
@@ -7613,13 +7858,15 @@ window.Club = {
 
   openContact,
 
-  openWrapped,
+ openWrapped,
 
 closeWrapped,
 
 wrappedNext,
 
 wrappedPrev,
+
+toggleWrappedSound,
 
 shareWrapped
 
