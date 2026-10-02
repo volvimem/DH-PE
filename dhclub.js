@@ -1226,8 +1226,41 @@ function officialPointsRanking() {
 
 
       if (
-        !pointsMap[key]
-      ) {
+  !pointsMap[key]
+) {
+
+  pointsMap[key] = {
+
+    cpf,
+
+    name:
+      result.name ||
+      '',
+
+    city:
+      result.city ||
+      '',
+
+    cat:
+      category,
+
+    totalPts:
+      0,
+
+    qPts:
+      0,
+
+    oPts:
+      0,
+
+    evts:
+      [],
+
+    pointsByEvent:
+      {}
+
+  };
+}
 
         pointsMap[key] = {
 
