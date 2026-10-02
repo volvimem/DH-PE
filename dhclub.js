@@ -1162,6 +1162,1021 @@ function mySeasonComparison() {
   };
 }
 
+  // ==========================================================
+// RANKING OFICIAL POR PONTOS — DH-PE
+// ==========================================================
+
+function officialPointsRanking() {
+
+  const pointsMap =
+    {};
+
+
+  if (
+    !core.events ||
+    !core.tempos
+  ) {
+
+    return [];
+  }
+
+
+  // ========================================================
+  // ADICIONA PONTOS AO ATLETA
+  // ========================================================
+
+  const addPoints =
+    (
+      result,
+      points,
+      isQualify,
+      eventName
+    ) => {
+
+      const pts =
+        Number(
+          points || 0
+        );
+
+
+      if (
+        !Number.isFinite(pts) ||
+        pts === 0
+      ) {
+
+        return;
+      }
+
+
+      const cpf =
+        cleanCPF(
+          result.cpf
+        );
+
+
+      const category =
+        normalizeCat(
+          result.cat
+        );
+
+
+      const key =
+        `${cpf}_${category}`;
+
+
+      if (
+        !pointsMap[key]
+      ) {
+
+        pointsMap[key] = {
+
+          cpf,
+
+          name:
+            result.name ||
+            '',
+
+          city:
+            result.city ||
+            '',
+
+          cat:
+            category,
+
+          totalPts:
+            0,
+
+          qPts:
+            0,
+
+          oPts:
+            0,
+
+          evts:
+            []
+
+        };
+      }
+
+
+      pointsMap[key]
+        .totalPts +=
+        pts;
+
+
+      if (
+        isQualify
+      ) {
+
+        pointsMap[key]
+          .qPts +=
+          pts;
+
+      } else {
+
+        pointsMap[key]
+          .oPts +=
+          pts;
+      }
+
+
+      if (
+        eventName &&
+        !pointsMap[key]
+          .evts
+          .includes(
+            eventName
+          )
+      ) {
+
+        pointsMap[key]
+          .evts
+          .push(
+            eventName
+          );
+      }
+    };
+
+
+  // ========================================================
+  // PERCORRE TODAS AS ETAPAS
+  // ========================================================
+
+  core.events.forEach(
+    event => {
+
+      if (
+        !event ||
+        event.status ===
+          'CANCELLED'
+      ) {
+
+        return;
+      }
+
+
+      const eventResults =
+        core.tempos.filter(
+          result =>
+            result &&
+            String(
+              result.evtId
+            ) ===
+            String(
+              event.id
+            )
+        );
+
+
+      const officialByCategory =
+        {};
+
+
+      const qualifyByCategory =
+        {};
+
+
+      eventResults.forEach(
+        result => {
+
+          const category =
+            normalizeCat(
+              result.cat
+            );
+
+
+          if (
+            !officialByCategory[
+              category
+            ]
+          ) {
+
+            officialByCategory[
+              category
+            ] = [];
+          }
+
+
+          if (
+            !qualifyByCategory[
+              category
+            ]
+          ) {
+
+            qualifyByCategory[
+              category
+            ] = [];
+          }
+
+
+          // DESCIDA OFICIAL
+          if (
+            result.runType ===
+              '1st' ||
+            !result.runType
+          ) {
+
+            officialByCategory[
+              category
+            ].push(
+              result
+            );
+          }
+
+
+          // CLASSIFICATÓRIA
+          if (
+            result.runType ===
+              'qualify'
+          ) {
+
+            qualifyByCategory[
+              category
+            ].push(
+              result
+            );
+          }
+        }
+      );
+
+
+      // ====================================================
+      // ORDENA TEMPOS
+      // ====================================================
+
+      const sortResults =
+        (
+          a,
+          b
+        ) => {
+
+          if (
+            a.val === 'DNF' &&
+            b.val !== 'DNF'
+          ) {
+
+            return 1;
+          }
+
+
+          if (
+            b.val === 'DNF' &&
+            a.val !== 'DNF'
+          ) {
+
+            return -1;
+          }
+
+
+          return (
+            timeMs(a.val) -
+            timeMs(b.val)
+          );
+        };
+
+
+      // ====================================================
+      // MELHOR RESULTADO ÚNICO POR CPF
+      // ====================================================
+
+      const uniqueResults =
+        list => {
+
+          const map =
+            {};
+
+
+          list
+            .slice()
+            .sort(
+              sortResults
+            )
+            .forEach(
+              result => {
+
+                const cpf =
+                  cleanCPF(
+                    result.cpf
+                  );
+
+
+                if (!cpf) {
+
+                  return;
+                }
+
+
+                if (
+                  !map[cpf]
+                ) {
+
+                  map[cpf] =
+                    result;
+
+                  return;
+                }
+
+
+                const current =
+                  map[cpf];
+
+
+                if (
+                  current.val ===
+                    'DNF' &&
+                  result.val !==
+                    'DNF'
+                ) {
+
+                  map[cpf] =
+                    result;
+
+                  return;
+                }
+
+
+                if (
+                  result.val !==
+                    'DNF' &&
+                  timeMs(
+                    result.val
+                  ) <
+                  timeMs(
+                    current.val
+                  )
+                ) {
+
+                  map[cpf] =
+                    result;
+                }
+              }
+            );
+
+
+          return Object
+            .values(
+              map
+            )
+            .sort(
+              sortResults
+            );
+        };
+
+
+      // ====================================================
+      // PONTOS DA DESCIDA OFICIAL
+      // ====================================================
+
+      Object
+        .keys(
+          officialByCategory
+        )
+        .forEach(
+          category => {
+
+            const results =
+              uniqueResults(
+                officialByCategory[
+                  category
+                ]
+              );
+
+
+            results.forEach(
+              (
+                result,
+                index
+              ) => {
+
+                let points =
+                  0;
+
+
+                if (
+                  result.val !==
+                    'DNF' &&
+                  Array.isArray(
+                    event.points
+                  ) &&
+                  index <
+                    event.points.length &&
+                  event.points[
+                    index
+                  ] !== ''
+                ) {
+
+                  points =
+                    parseInt(
+                      event.points[
+                        index
+                      ],
+                      10
+                    ) || 0;
+                }
+
+
+                addPoints(
+                  result,
+                  points,
+                  false,
+                  event.t
+                );
+              }
+            );
+          }
+        );
+
+
+      // ====================================================
+      // PONTOS DA CLASSIFICATÓRIA
+      // ====================================================
+
+      Object
+        .keys(
+          qualifyByCategory
+        )
+        .forEach(
+          category => {
+
+            const results =
+              uniqueResults(
+                qualifyByCategory[
+                  category
+                ]
+              );
+
+
+            results.forEach(
+              (
+                result,
+                index
+              ) => {
+
+                let points =
+                  0;
+
+
+                if (
+                  result.val !==
+                    'DNF' &&
+                  Array.isArray(
+                    event.qPoints
+                  ) &&
+                  index <
+                    event.qPoints.length &&
+                  event.qPoints[
+                    index
+                  ] !== ''
+                ) {
+
+                  points =
+                    parseInt(
+                      event.qPoints[
+                        index
+                      ],
+                      10
+                    ) || 0;
+                }
+
+
+                addPoints(
+                  result,
+                  points,
+                  true,
+                  event.t
+                );
+              }
+            );
+          }
+        );
+    }
+  );
+
+
+  return Object
+    .values(
+      pointsMap
+    )
+    .sort(
+      (
+        a,
+        b
+      ) =>
+        b.totalPts -
+        a.totalPts
+    );
+}
+
+
+// ==========================================================
+// CIDADE OFICIAL DO ATLETA
+// ==========================================================
+
+function officialAthleteCity(
+  cpf,
+  fallbackCity = ''
+) {
+
+  const user =
+    core.users.find(
+      athlete =>
+        cleanCPF(
+          athlete.cpf
+        ) ===
+        cleanCPF(
+          cpf
+        )
+    );
+
+
+  const city =
+    String(
+      user?.city ||
+      user?.cidade ||
+      fallbackCity ||
+      ''
+    )
+      .trim()
+      .toUpperCase();
+
+
+  const uf =
+    String(
+      user?.uf ||
+      ''
+    )
+      .trim()
+      .toUpperCase();
+
+
+  if (
+    city &&
+    uf
+  ) {
+
+    return (
+      `${city}-${uf}`
+    );
+  }
+
+
+  return city;
+}
+
+
+// ==========================================================
+// CHAVE DE CIDADE — IGNORA ACENTOS
+// ==========================================================
+
+function officialCityKey(
+  city
+) {
+
+  return String(
+    city ||
+    ''
+  )
+    .trim()
+    .toUpperCase()
+    .replace(
+      /\s*-\s*/g,
+      '-'
+    )
+    .normalize(
+      'NFD'
+    )
+    .replace(
+      /[\u0300-\u036f]/g,
+      ''
+    );
+}
+
+
+// ==========================================================
+// RANKING OFICIAL POR CIDADES
+// ==========================================================
+
+function officialCityRanking(
+  ranking = null
+) {
+
+  const list =
+    ranking ||
+    officialPointsRanking();
+
+
+  const cityMap =
+    {};
+
+
+  list.forEach(
+    athlete => {
+
+      if (
+        !athlete ||
+        Number(
+          athlete.totalPts ||
+          0
+        ) <= 0
+      ) {
+
+        return;
+      }
+
+
+      const city =
+        officialAthleteCity(
+          athlete.cpf,
+          athlete.city
+        );
+
+
+      const key =
+        officialCityKey(
+          city
+        );
+
+
+      if (!key) {
+
+        return;
+      }
+
+
+      if (
+        !cityMap[key]
+      ) {
+
+        cityMap[key] = {
+
+          city,
+
+          totalPts:
+            0,
+
+          athletes:
+            {}
+
+        };
+      }
+
+
+      cityMap[key]
+        .totalPts +=
+        Number(
+          athlete.totalPts ||
+          0
+        );
+
+
+      const cpf =
+        cleanCPF(
+          athlete.cpf
+        );
+
+
+      if (
+        !cityMap[key]
+          .athletes[
+            cpf
+          ]
+      ) {
+
+        cityMap[key]
+          .athletes[
+            cpf
+          ] = {
+
+            cpf,
+
+            name:
+              athlete.name ||
+              '',
+
+            totalPts:
+              0
+
+          };
+      }
+
+
+      cityMap[key]
+        .athletes[
+          cpf
+        ]
+        .totalPts +=
+        Number(
+          athlete.totalPts ||
+          0
+        );
+    }
+  );
+
+
+  return Object
+    .values(
+      cityMap
+    )
+    .map(
+      city => ({
+
+        city:
+          city.city,
+
+        totalPts:
+          city.totalPts,
+
+        athletes:
+          Object
+            .values(
+              city.athletes
+            )
+            .sort(
+              (
+                a,
+                b
+              ) =>
+                b.totalPts -
+                a.totalPts
+            )
+
+      })
+    )
+    .sort(
+      (
+        a,
+        b
+      ) =>
+        b.totalPts -
+        a.totalPts
+    );
+}
+
+
+// ==========================================================
+// DADOS OFICIAIS DO ATLETA LOGADO
+// ==========================================================
+
+function myOfficialRankingData() {
+
+  if (!loggedUser) {
+
+    return null;
+  }
+
+
+  const cpf =
+    cleanCPF(
+      loggedUser.cpf
+    );
+
+
+  const category =
+    normalizeCat(
+      loggedUser.cat
+    );
+
+
+  const ranking =
+    officialPointsRanking();
+
+
+  // ========================================================
+  // RANKING DA CATEGORIA
+  // ========================================================
+
+  const categoryRanking =
+    ranking.filter(
+      athlete =>
+        normalizeCat(
+          athlete.cat
+        ) ===
+        category
+    );
+
+
+  const categoryIndex =
+    categoryRanking
+      .findIndex(
+        athlete =>
+          cleanCPF(
+            athlete.cpf
+          ) ===
+          cpf
+      );
+
+
+  const categoryEntry =
+    categoryIndex >= 0
+
+      ? categoryRanking[
+          categoryIndex
+        ]
+
+      : null;
+
+
+  // ========================================================
+  // RANKING GERAL OFICIAL
+  // ========================================================
+
+  const generalIndex =
+    ranking.findIndex(
+      athlete =>
+        cleanCPF(
+          athlete.cpf
+        ) ===
+          cpf &&
+        normalizeCat(
+          athlete.cat
+        ) ===
+          category
+    );
+
+
+  // ========================================================
+  // RANKING DAS CIDADES
+  // ========================================================
+
+  const cityRanking =
+    officialCityRanking(
+      ranking
+    );
+
+
+  const myCity =
+    officialAthleteCity(
+      cpf,
+      loggedUser.city
+    );
+
+
+  const myCityKey =
+    officialCityKey(
+      myCity
+    );
+
+
+  const cityIndex =
+    cityRanking.findIndex(
+      city =>
+        officialCityKey(
+          city.city
+        ) ===
+        myCityKey
+    );
+
+
+  const cityEntry =
+    cityIndex >= 0
+
+      ? cityRanking[
+          cityIndex
+        ]
+
+      : null;
+
+
+  // ========================================================
+  // POSIÇÃO DO ATLETA DENTRO DA CIDADE
+  // ========================================================
+
+  const cityAthleteIndex =
+    cityEntry
+
+      ? cityEntry
+          .athletes
+          .findIndex(
+            athlete =>
+              cleanCPF(
+                athlete.cpf
+              ) ===
+              cpf
+          )
+
+      : -1;
+
+
+  const cityAthlete =
+    cityAthleteIndex >= 0
+
+      ? cityEntry
+          .athletes[
+            cityAthleteIndex
+          ]
+
+      : null;
+
+
+  return {
+
+    category,
+
+    // ------------------------------------------------------
+    // PONTOS DO ATLETA
+    // ------------------------------------------------------
+
+    totalPts:
+      categoryEntry
+        ?.totalPts ||
+      0,
+
+    officialPts:
+      categoryEntry
+        ?.oPts ||
+      0,
+
+    qualifyPts:
+      categoryEntry
+        ?.qPts ||
+      0,
+
+
+    // ------------------------------------------------------
+    // RANKING DA CATEGORIA
+    // ------------------------------------------------------
+
+    categoryPosition:
+      categoryIndex >= 0
+        ? categoryIndex + 1
+        : null,
+
+    categoryTotal:
+      categoryRanking.length,
+
+
+    // ------------------------------------------------------
+    // RANKING GERAL
+    // ------------------------------------------------------
+
+    generalPosition:
+      generalIndex >= 0
+        ? generalIndex + 1
+        : null,
+
+    generalTotal:
+      ranking.length,
+
+
+    // ------------------------------------------------------
+    // CIDADE
+    // ------------------------------------------------------
+
+    city:
+      myCity,
+
+    cityPosition:
+      cityIndex >= 0
+        ? cityIndex + 1
+        : null,
+
+    cityTotal:
+      cityRanking.length,
+
+    cityPoints:
+      cityEntry
+        ?.totalPts ||
+      0,
+
+    cityAthleteCount:
+      cityEntry
+        ?.athletes
+        ?.length ||
+      0,
+
+
+    // ------------------------------------------------------
+    // POSIÇÃO ENTRE ATLETAS DA PRÓPRIA CIDADE
+    // ------------------------------------------------------
+
+    athleteCityPosition:
+      cityAthleteIndex >= 0
+        ? cityAthleteIndex + 1
+        : null,
+
+    athleteCityTotal:
+      cityEntry
+        ?.athletes
+        ?.length ||
+      0,
+
+    athleteCityPoints:
+      cityAthlete
+        ?.totalPts ||
+      0,
+
+
+    // ------------------------------------------------------
+    // LISTA DOS ATLETAS DA CIDADE
+    // ------------------------------------------------------
+
+    cityAthletes:
+      cityEntry
+        ?.athletes ||
+      []
+
+  };
+}
 
 // ==========================================================
 // CONQUISTAS
