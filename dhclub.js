@@ -9280,6 +9280,162 @@ function buildWrappedSlides() {
 
       : '';
 
+  // ========================================================
+  // DETALHAMENTO DOS PONTOS POR ETAPA
+  // ========================================================
+
+  const pointsByEvent =
+    Array.isArray(
+      o.pointsByEvent
+    )
+
+      ? o.pointsByEvent
+
+      : [];
+
+
+  const bestPointsEvent =
+    pointsByEvent.length
+
+      ? pointsByEvent
+          .slice()
+          .sort(
+            (
+              a,
+              b
+            ) =>
+              Number(
+                b.totalPts || 0
+              ) -
+              Number(
+                a.totalPts || 0
+              )
+          )[0]
+
+      : null;
+
+
+  const pointsByEventHtml =
+    pointsByEvent
+      .slice(
+        0,
+        5
+      )
+      .map(
+        (
+          item,
+          index
+        ) => `
+
+          <div
+            style="
+              padding:12px 0;
+              border-bottom:
+                1px solid
+                rgba(255,255,255,.07);
+            "
+          >
+
+            <div
+              style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                gap:10px;
+              "
+            >
+
+              <div
+                style="
+                  font-size:11px;
+                  font-weight:1000;
+                  color:white;
+                "
+              >
+
+                ${esc(
+                  item.eventName ||
+                  `ETAPA ${index + 1}`
+                )}
+
+              </div>
+
+
+              <div
+                style="
+                  color:#ffc72c;
+                  font-size:14px;
+                  font-weight:1000;
+                  white-space:nowrap;
+                "
+              >
+
+                ${
+                  Number(
+                    item.totalPts ||
+                    0
+                  )
+                }
+                pts
+
+              </div>
+
+            </div>
+
+
+            <div
+              style="
+                margin-top:6px;
+                display:flex;
+                gap:12px;
+                flex-wrap:wrap;
+                font-size:9px;
+                color:#93a1b5;
+              "
+            >
+
+              <span>
+
+                OFICIAL:
+                <b style="color:white">
+
+                  ${
+                    Number(
+                      item.officialPts ||
+                      0
+                    )
+                  }
+
+                </b>
+
+              </span>
+
+
+              <span>
+
+                CLASSIFICATÓRIA:
+                <b style="color:white">
+
+                  ${
+                    Number(
+                      item.qualifyPts ||
+                      0
+                    )
+                  }
+
+                </b>
+
+              </span>
+
+            </div>
+
+          </div>
+
+        `
+      )
+      .join('');
+  
+
   const beatPct =
     Math.round(
       c?.categoryBeatPct ||
@@ -9985,6 +10141,152 @@ function buildWrappedSlides() {
 
     `,
 
+
+        // ======================================================
+    // NOVO STORY — DE ONDE VIERAM OS PONTOS
+    // ======================================================
+
+    `
+
+      <div class="wrapped-slide">
+
+        <div class="wrapped-eyebrow">
+          SUA PONTUAÇÃO
+        </div>
+
+
+        <h1 class="wrapped-title">
+
+          DE ONDE VIERAM<br>
+          SEUS PONTOS?
+
+        </h1>
+
+
+        <div
+          class="wrapped-card"
+          style="
+            margin-top:18px;
+            padding:16px;
+          "
+        >
+
+          ${
+            pointsByEventHtml ||
+
+            `
+
+              <div
+                class="wrapped-subtitle"
+                style="
+                  padding:18px 0;
+                "
+              >
+
+                Ainda não há pontuação
+                por etapa disponível.
+
+              </div>
+
+            `
+          }
+
+        </div>
+
+
+        ${
+          pointsByEvent.length > 5
+
+            ? `
+
+              <div
+                class="wrapped-subtitle"
+                style="
+                  margin-top:10px;
+                  text-align:center;
+                "
+              >
+
+                + ${
+                  pointsByEvent.length - 5
+                } etapa(s)
+                com pontuação.
+
+              </div>
+
+            `
+
+            : ''
+        }
+
+
+        ${
+          bestPointsEvent
+
+            ? `
+
+              <div
+                class="wrapped-rank-box"
+                style="
+                  margin-top:16px;
+                "
+              >
+
+                <div class="wrapped-subtitle">
+                  ETAPA QUE MAIS RENDEU PONTOS
+                </div>
+
+
+                <div
+                  style="
+                    margin-top:8px;
+                    color:white;
+                    font-size:17px;
+                    font-weight:1000;
+                  "
+                >
+
+                  ${esc(
+                    bestPointsEvent.eventName ||
+                    'ETAPA'
+                  )}
+
+                </div>
+
+
+                <div
+                  class="wrapped-hero-number"
+                  style="
+                    font-size:53px;
+                    margin-top:7px;
+                  "
+                >
+
+                  ${
+                    Number(
+                      bestPointsEvent.totalPts ||
+                      0
+                    )
+                  }
+
+                </div>
+
+
+                <div class="wrapped-big-label">
+                  PONTOS
+                </div>
+
+              </div>
+
+            `
+
+            : ''
+        }
+
+      </div>
+
+    `,
+    
 
     // ======================================================
     // NOVO STORY — RANKING OFICIAL
