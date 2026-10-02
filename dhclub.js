@@ -3838,8 +3838,6 @@ function renderCareer() {
 
 
   const rows =
-
-  const rows =
     s.results
       .slice()
       .sort(
