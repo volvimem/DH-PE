@@ -7388,53 +7388,157 @@ function bind() {
 
 
 // ==========================================================
-// INICIALIZAÇÃO
+// INICIALIZAÇÃO — ROBUSTA / COM DIAGNÓSTICO
+// ==========================================================
+
+function setClubLoading(text) {
+
+  const el =
+    document.querySelector(
+      '.club-loading'
+    );
+
+
+  if (el) {
+
+    el.textContent =
+      text;
+  }
+}
+
+
+function showClubGate(
+  title,
+  message
+) {
+
+  const splash =
+    document.getElementById(
+      'club-splash'
+    );
+
+
+  const gate =
+    document.getElementById(
+      'club-gate'
+    );
+
+
+  const gateTitle =
+    document.getElementById(
+      'gate-title'
+    );
+
+
+  const gateMessage =
+    document.getElementById(
+      'gate-message'
+    );
+
+
+  if (splash) {
+
+    splash.classList.add(
+      'hidden'
+    );
+  }
+
+
+  if (gate) {
+
+    gate.classList.remove(
+      'hidden'
+    );
+  }
+
+
+  if (gateTitle) {
+
+    gateTitle.textContent =
+      title;
+  }
+
+
+  if (gateMessage) {
+
+    gateMessage.innerHTML =
+      message;
+  }
+}
+
+
+// ==========================================================
+// LIMITE DE TEMPO PARA PROMISES
+// ==========================================================
+
+function withTimeout(
+  promise,
+  milliseconds,
+  code
+) {
+
+  return Promise.race([
+
+    promise,
+
+    new Promise(
+      (
+        _,
+        reject
+      ) => {
+
+        setTimeout(
+          () => {
+
+            const error =
+              new Error(
+                `${code}: operação excedeu ${milliseconds / 1000}s`
+              );
+
+
+            error.code =
+              code;
+
+
+            reject(
+              error
+            );
+
+          },
+          milliseconds
+        );
+      }
+    )
+
+  ]);
+}
+
+
+// ==========================================================
+// INIT
 // ==========================================================
 
 async function init() {
+
+  setClubLoading(
+    'VERIFICANDO SESSÃO…'
+  );
+
 
   loggedUser =
     sessionUser();
 
 
   // ========================================================
-  // 1. CONFIRMA SE EXISTE SESSÃO DO DH-PE
+  // 1. CONFIRMA SESSÃO DO DH-PE
   // ========================================================
 
   if (!loggedUser) {
 
-    document
-      .getElementById(
-        'club-splash'
-      )
-      .classList.add(
-        'hidden'
-      );
-
-
-    document
-      .getElementById(
-        'club-gate'
-      )
-      .classList.remove(
-        'hidden'
-      );
-
-
-    document
-      .getElementById(
-        'gate-title'
-      )
-      .textContent =
-        'Entre pelo DH-PE';
-
-
-    document
-      .getElementById(
-        'gate-message'
-      )
-      .innerHTML =
-        'Sua sessão não foi encontrada.<br><br>Volte ao DH-PE e faça login novamente com seu CPF e senha.';
+    showClubGate(
+      'Entre pelo DH-PE',
+      'Sua sessão não foi encontrada.<br><br>Volte ao DH-PE e faça login novamente com seu CPF e senha.'
+    );
 
 
     return;
@@ -7442,62 +7546,74 @@ async function init() {
 
 
   // ========================================================
-  // 2. AGUARDA FIREBASE AUTH RESTAURAR A SESSÃO
+  // 2. AGUARDA FIREBASE AUTH
   // ========================================================
+
+  setClubLoading(
+    'VALIDANDO ACESSO…'
+  );
+
 
   await new Promise(
-  resolve => {
+    resolve => {
 
-    let finalizado = false;
-
-    let unsubscribe =
-      () => {};
+      let finished =
+        false;
 
 
-    const finalizar = () => {
-
-      if (finalizado) {
-        return;
-      }
+      let unsubscribe =
+        () => {};
 
 
-      finalizado = true;
-
-
-      clearTimeout(
-        timer
-      );
-
-
-      unsubscribe();
-
-
-      resolve();
-    };
-
-
-    const timer =
-      setTimeout(
-        finalizar,
-        2500
-      );
-
-
-    unsubscribe =
-      auth.onAuthStateChanged(
+      const finish =
         () => {
 
-          finalizar();
+          if (finished) {
 
-        }
-      );
-  }
-);
+            return;
+          }
+
+
+          finished =
+            true;
+
+
+          clearTimeout(
+            timer
+          );
+
+
+          try {
+
+            unsubscribe();
+
+          } catch {}
+
+
+          resolve();
+        };
+
+
+      const timer =
+        setTimeout(
+          finish,
+          3000
+        );
+
+
+      unsubscribe =
+        auth.onAuthStateChanged(
+          () => {
+
+            finish();
+          }
+        );
+    }
+  );
 
 
   // ========================================================
-  // 3. SE FIREBASE AUTH NÃO RESTAUROU,
-  // TENTA AUTENTICAR AUTOMATICAMENTE
+  // 3. TENTA RESTAURAR LOGIN
   // ========================================================
 
   if (!auth.currentUser) {
@@ -7535,24 +7651,39 @@ async function init() {
           : senhaLocal;
 
 
+      setClubLoading(
+        'RENOVANDO LOGIN…'
+      );
+
+
       try {
 
-        await auth
-          .signInWithEmailAndPassword(
-            emailFake,
-            authPass
-          );
+        await withTimeout(
 
+          auth
+            .signInWithEmailAndPassword(
+              emailFake,
+              authPass
+            ),
 
-        console.log(
-          '[DH-CLUB] Firebase Auth restaurado automaticamente.'
+          8000,
+
+          'AUTH_TIMEOUT'
+
         );
 
 
-      } catch (authError) {
+        console.log(
+          '[DH-CLUB] Firebase Auth restaurado.'
+        );
+
+
+      } catch (
+        authError
+      ) {
 
         console.warn(
-          '[DH-CLUB] Não foi possível restaurar Firebase Auth:',
+          '[DH-CLUB] Falha no login Firebase:',
           authError
         );
       }
@@ -7561,8 +7692,7 @@ async function init() {
 
 
   // ========================================================
-  // 4. SE AINDA NÃO ESTÁ AUTENTICADO,
-  // FORÇA NOVO LOGIN NO DH-PE
+  // 4. SE CONTINUA SEM AUTH
   // ========================================================
 
   if (!auth.currentUser) {
@@ -7577,51 +7707,25 @@ async function init() {
     );
 
 
-    document
-      .getElementById(
-        'club-splash'
-      )
-      .classList.add(
-        'hidden'
-      );
+    showClubGate(
+      'Sessão de segurança expirada',
 
+      `
+        Sua sessão precisa ser renovada.
 
-    document
-      .getElementById(
-        'club-gate'
-      )
-      .classList.remove(
-        'hidden'
-      );
+        <br><br>
 
+        Toque em
+        <b>VOLTAR AO DH-PE</b>
+        e faça login novamente
+        com seu CPF e senha.
 
-    document
-      .getElementById(
-        'gate-title'
-      )
-      .textContent =
-        'Sessão de segurança expirada';
+        <br><br>
 
-
-    document
-      .getElementById(
-        'gate-message'
-      )
-      .innerHTML =
-        `
-          Sua sessão do Firebase precisa ser renovada.
-
-          <br><br>
-
-          Toque em
-          <b>VOLTAR AO DH-PE</b>
-          e faça login novamente com seu
-          <b>CPF e senha</b>.
-
-          <br><br>
-
-          Depois entre novamente no DH-Club.
-        `;
+        Depois entre novamente
+        no DH-Club.
+      `
+    );
 
 
     return;
@@ -7634,43 +7738,66 @@ async function init() {
   );
 
 
-  document
-    .getElementById(
+  const avatar =
+    document.getElementById(
       'club-avatar-initials'
-    )
-    .textContent =
+    );
+
+
+  if (avatar) {
+
+    avatar.textContent =
       initials(
         loggedUser.nome
       );
+  }
+
+
+  // ========================================================
+  // 5. CARREGA DADOS
+  // ========================================================
+
+  setClubLoading(
+    'CARREGANDO DADOS…'
+  );
 
 
   const [
     coreSnap,
     clubSnap
   ] =
-    await Promise.all([
+    await withTimeout(
 
-      database
-        .ref(
-          DB_KEY
-        )
-        .once(
-          'value'
-        ),
+      Promise.all([
 
-      database
-        .ref(
-          CLUB_ROOT
-        )
-        .once(
-          'value'
-        )
+        database
+          .ref(
+            DB_KEY
+          )
+          .once(
+            'value'
+          ),
 
-    ]);
+        database
+          .ref(
+            CLUB_ROOT
+          )
+          .once(
+            'value'
+          )
+
+      ]),
+
+      10000,
+
+      'DATABASE_TIMEOUT'
+
+    );
 
 
   const c =
-    coreSnap.val() || {};
+    coreSnap.val() ||
+    {};
 
 
   core = {
@@ -7691,7 +7818,8 @@ async function init() {
       ),
 
     config:
-      c.config || {}
+      c.config ||
+      {}
 
   };
 
@@ -7706,7 +7834,9 @@ async function init() {
   const fresh =
     core.users.find(
       u =>
-        cleanCPF(u.cpf) ===
+        cleanCPF(
+          u.cpf
+        ) ===
         cleanCPF(
           loggedUser.cpf
         )
@@ -7720,62 +7850,60 @@ async function init() {
   }
 
 
-  if (!hasClubAccess()) {
+  // ========================================================
+  // 6. CONFERE ACESSO DH-CLUB
+  // ========================================================
 
-    document
-      .getElementById(
-        'club-splash'
-      )
-      .classList.add(
-        'hidden'
-      );
+  if (
+    !hasClubAccess()
+  ) {
 
+    showClubGate(
+      'DH-Club em Beta',
 
-    document
-      .getElementById(
-        'club-gate'
-      )
-      .classList.remove(
-        'hidden'
-      );
-
-
-    document
-      .getElementById(
-        'gate-title'
-      )
-      .textContent =
-        'DH-Club em Beta';
-
-
-    document
-      .getElementById(
-        'gate-message'
-      )
-      .innerHTML =
-        `O DH-Club está sendo testado antes do lançamento de 2027.<br><br>Seu acesso ainda não foi liberado pela organização.`;
+      'O DH-Club está sendo testado antes do lançamento de 2027.<br><br>Seu acesso ainda não foi liberado pela organização.'
+    );
 
 
     return;
   }
 
 
-  document
-    .getElementById(
+  // ========================================================
+  // 7. ABRE O DH-CLUB
+  // ========================================================
+
+  setClubLoading(
+    'ABRINDO DH-CLUB…'
+  );
+
+
+  const splash =
+    document.getElementById(
       'club-splash'
-    )
-    .classList.add(
-      'hidden'
     );
 
 
-  document
-    .getElementById(
+  const app =
+    document.getElementById(
       'club-app'
-    )
-    .classList.remove(
+    );
+
+
+  if (splash) {
+
+    splash.classList.add(
       'hidden'
     );
+  }
+
+
+  if (app) {
+
+    app.classList.remove(
+      'hidden'
+    );
+  }
 
 
   bind();
@@ -7785,7 +7913,7 @@ async function init() {
 
 
   // ========================================================
-  // ATUALIZAÇÕES DO BANCO PRINCIPAL EM TEMPO REAL
+  // 8. BANCO PRINCIPAL EM TEMPO REAL
   // ========================================================
 
   database
@@ -7794,6 +7922,7 @@ async function init() {
     )
     .on(
       'value',
+
       snap => {
 
         const c =
@@ -7828,7 +7957,9 @@ async function init() {
         const fresh =
           core.users.find(
             u =>
-              cleanCPF(u.cpf) ===
+              cleanCPF(
+                u.cpf
+              ) ===
               cleanCPF(
                 loggedUser.cpf
               )
@@ -7845,12 +7976,20 @@ async function init() {
         render(
           currentView
         );
+      },
+
+      error => {
+
+        console.error(
+          '[DH-CLUB] Erro banco principal:',
+          error
+        );
       }
     );
 
 
   // ========================================================
-  // ATUALIZAÇÕES DO DH-CLUB EM TEMPO REAL
+  // 9. DH-CLUB EM TEMPO REAL
   // ========================================================
 
   database
@@ -7859,6 +7998,7 @@ async function init() {
     )
     .on(
       'value',
+
       snap => {
 
         club =
@@ -7870,6 +8010,14 @@ async function init() {
 
         render(
           currentView
+        );
+      },
+
+      error => {
+
+        console.error(
+          '[DH-CLUB] Erro banco Club:',
+          error
         );
       }
     );
