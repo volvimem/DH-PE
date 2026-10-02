@@ -5507,6 +5507,34 @@ function openContact(
 
 let wrappedIndex = 0;
 let wrappedSlides = [];
+  // ==========================================================
+// ATUALIZAR FOTO DA CARTEIRINHA
+// ==========================================================
+
+function voltarParaAtualizarFoto() {
+
+  const confirmou =
+    confirm(
+      "A retrospectiva usa a mesma foto da sua carteirinha digital.\n\n" +
+      "Você será levado ao DH-PE para atualizar sua foto no PERFIL."
+    );
+
+
+  if (!confirmou) {
+
+    return;
+  }
+
+
+  localStorage.setItem(
+    'dhclub_voltar_para_perfil',
+    '1'
+  );
+
+
+  window.location.href =
+    'index.html';
+}
   
 // ==========================================================
 // ÁUDIO CONTÍNUO DO WRAPPED — SEGURO
