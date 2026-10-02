@@ -1416,6 +1416,832 @@ function achievements() {
 }
 
 // ==========================================================
+// JORNADA ANUAL — DH-CLUB
+// ==========================================================
+
+function annualGoalPercent(
+  current,
+  target
+) {
+
+  if (
+    !target ||
+    target <= 0
+  ) {
+
+    return 0;
+  }
+
+
+  return Math.max(
+    0,
+    Math.min(
+      100,
+      Math.round(
+        (
+          Number(current || 0) /
+          Number(target)
+        ) * 100
+      )
+    )
+  );
+}
+
+
+// ==========================================================
+// PROGRESSO DAS METAS DE TEMPO
+// ==========================================================
+
+function annualTimeProgress(
+  best,
+  target
+) {
+
+  if (
+    !Number.isFinite(
+      best
+    )
+  ) {
+
+    return 0;
+  }
+
+
+  if (
+    best <= target
+  ) {
+
+    return 100;
+  }
+
+
+  // Base de início para cálculo visual:
+  // 4 minutos
+  const start =
+    240000;
+
+
+  if (
+    best >= start
+  ) {
+
+    return 0;
+  }
+
+
+  return Math.max(
+    0,
+    Math.min(
+      100,
+      Math.round(
+        (
+          (
+            start -
+            best
+          ) /
+          (
+            start -
+            target
+          )
+        ) * 100
+      )
+    )
+  );
+}
+
+
+// ==========================================================
+// METAS DA TEMPORADA
+// ==========================================================
+
+function annualGoals() {
+
+  const stats =
+    careerStats();
+
+
+  const comparison =
+    mySeasonComparison();
+
+
+  const positions =
+    stats.results
+      .map(
+        result =>
+          resultPlacement(
+            result
+          )
+      )
+      .filter(
+        position =>
+          Number.isFinite(
+            Number(position)
+          )
+      )
+      .map(Number);
+
+
+  const countTop =
+    limit =>
+      positions.filter(
+        position =>
+          position <= limit
+      ).length;
+
+
+  const victories =
+    positions.filter(
+      position =>
+        position === 1
+    ).length;
+
+
+  const totalEvents =
+    Math.max(
+      1,
+      core.events.length
+    );
+
+
+  const best =
+    stats.best;
+
+
+  const categoryBeat =
+    Math.round(
+      comparison?.categoryBeatPct ||
+      0
+    );
+
+
+  const topHalf =
+    Number(
+      comparison?.topHalfCount ||
+      0
+    );
+
+
+  return [
+
+    // ======================================================
+    // PARTICIPAÇÃO
+    // ======================================================
+
+    {
+      id:
+        'annual-races-3',
+
+      icon:
+        'fa-flag-checkered',
+
+      title:
+        '3 ETAPAS',
+
+      desc:
+        'Complete pelo menos 3 etapas oficiais durante a temporada.',
+
+      current:
+        stats.races,
+
+      target:
+        3,
+
+      currentLabel:
+        `${stats.races}/3 etapas`,
+
+      progress:
+        annualGoalPercent(
+          stats.races,
+          3
+        ),
+
+      done:
+        stats.races >= 3
+    },
+
+
+    {
+      id:
+        'annual-season',
+
+      icon:
+        'fa-calendar-check',
+
+      title:
+        'TEMPORADA PRESENTE',
+
+      desc:
+        'Participe de todas as etapas cadastradas da temporada.',
+
+      current:
+        stats.races,
+
+      target:
+        totalEvents,
+
+      currentLabel:
+        `${stats.races}/${totalEvents} etapas`,
+
+      progress:
+        annualGoalPercent(
+          stats.races,
+          totalEvents
+        ),
+
+      done:
+        totalEvents > 0 &&
+        stats.races >= totalEvents
+    },
+
+
+    // ======================================================
+    // CLASSIFICAÇÃO
+    // ======================================================
+
+    {
+      id:
+        'annual-top20',
+
+      icon:
+        'fa-ranking-star',
+
+      title:
+        'ENTRAR NO TOP 20',
+
+      desc:
+        'Finalize pelo menos uma etapa entre os 20 melhores da sua categoria.',
+
+      current:
+        countTop(20),
+
+      target:
+        1,
+
+      currentLabel:
+        `${countTop(20)}/1`,
+
+      progress:
+        annualGoalPercent(
+          countTop(20),
+          1
+        ),
+
+      done:
+        countTop(20) >= 1
+    },
+
+
+    {
+      id:
+        'annual-top10',
+
+      icon:
+        'fa-ranking-star',
+
+      title:
+        'ENTRAR NO TOP 10',
+
+      desc:
+        'Conquiste pelo menos um resultado oficial dentro do Top 10.',
+
+      current:
+        countTop(10),
+
+      target:
+        1,
+
+      currentLabel:
+        `${countTop(10)}/1`,
+
+      progress:
+        annualGoalPercent(
+          countTop(10),
+          1
+        ),
+
+      done:
+        countTop(10) >= 1
+    },
+
+
+    {
+      id:
+        'annual-top5-3',
+
+      icon:
+        'fa-medal',
+
+      title:
+        '3 RESULTADOS TOP 5',
+
+      desc:
+        'Termine três etapas diferentes entre os cinco melhores.',
+
+      current:
+        countTop(5),
+
+      target:
+        3,
+
+      currentLabel:
+        `${countTop(5)}/3 Top 5`,
+
+      progress:
+        annualGoalPercent(
+          countTop(5),
+          3
+        ),
+
+      done:
+        countTop(5) >= 3
+    },
+
+
+    {
+      id:
+        'annual-podium',
+
+      icon:
+        'fa-medal',
+
+      title:
+        'PÓDIO — TOP 3',
+
+      desc:
+        'Conquiste pelo menos um resultado entre os três primeiros.',
+
+      current:
+        countTop(3),
+
+      target:
+        1,
+
+      currentLabel:
+        `${countTop(3)}/1 pódio`,
+
+      progress:
+        annualGoalPercent(
+          countTop(3),
+          1
+        ),
+
+      done:
+        countTop(3) >= 1
+    },
+
+
+    {
+      id:
+        'annual-win',
+
+      icon:
+        'fa-trophy',
+
+      title:
+        'VENCER UMA ETAPA',
+
+      desc:
+        'Conquiste uma vitória oficial na sua categoria.',
+
+      current:
+        victories,
+
+      target:
+        1,
+
+      currentLabel:
+        `${victories}/1 vitória`,
+
+      progress:
+        annualGoalPercent(
+          victories,
+          1
+        ),
+
+      done:
+        victories >= 1
+    },
+
+
+    // ======================================================
+    // TEMPO
+    // ======================================================
+
+    {
+      id:
+        'annual-sub3',
+
+      icon:
+        'fa-stopwatch',
+
+      title:
+        'QUEBRAR 3:00',
+
+      desc:
+        'Registre uma descida oficial abaixo de 3 minutos.',
+
+      current:
+        best,
+
+      target:
+        180000,
+
+      currentLabel:
+        Number.isFinite(best)
+          ? bestTimeLabel(best)
+          : '--:--.---',
+
+      targetLabel:
+        'META 02:59.999',
+
+      progress:
+        annualTimeProgress(
+          best,
+          180000
+        ),
+
+      done:
+        Number.isFinite(best) &&
+        best < 180000
+    },
+
+
+    {
+      id:
+        'annual-sub230',
+
+      icon:
+        'fa-bolt',
+
+      title:
+        'QUEBRAR 2:30',
+
+      desc:
+        'Registre uma descida oficial abaixo de 2 minutos e 30 segundos.',
+
+      current:
+        best,
+
+      target:
+        150000,
+
+      currentLabel:
+        Number.isFinite(best)
+          ? bestTimeLabel(best)
+          : '--:--.---',
+
+      targetLabel:
+        'META 02:29.999',
+
+      progress:
+        annualTimeProgress(
+          best,
+          150000
+        ),
+
+      done:
+        Number.isFinite(best) &&
+        best < 150000
+    },
+
+
+    // ======================================================
+    // CONSISTÊNCIA
+    // ======================================================
+
+    {
+      id:
+        'annual-top-half',
+
+      icon:
+        'fa-chart-line',
+
+      title:
+        'METADE SUPERIOR 3X',
+
+      desc:
+        'Termine pelo menos três etapas na metade superior da sua categoria.',
+
+      current:
+        topHalf,
+
+      target:
+        3,
+
+      currentLabel:
+        `${topHalf}/3 etapas`,
+
+      progress:
+        annualGoalPercent(
+          topHalf,
+          3
+        ),
+
+      done:
+        topHalf >= 3
+    },
+
+
+    // ======================================================
+    // DESEMPENHO NA CATEGORIA
+    // ======================================================
+
+    {
+      id:
+        'annual-beat50',
+
+      icon:
+        'fa-arrow-trend-up',
+
+      title:
+        'SUPERAR 50% DA CATEGORIA',
+
+      desc:
+        'Fique comparativamente à frente de pelo menos metade dos atletas da categoria.',
+
+      current:
+        categoryBeat,
+
+      target:
+        50,
+
+      currentLabel:
+        `${categoryBeat}%`,
+
+      progress:
+        annualGoalPercent(
+          categoryBeat,
+          50
+        ),
+
+      done:
+        categoryBeat >= 50
+    },
+
+
+    {
+      id:
+        'annual-beat75',
+
+      icon:
+        'fa-fire',
+
+      title:
+        'SUPERAR 75% DA CATEGORIA',
+
+      desc:
+        'Chegue ao grupo superior da sua categoria na classificação comparativa DH-Club.',
+
+      current:
+        categoryBeat,
+
+      target:
+        75,
+
+      currentLabel:
+        `${categoryBeat}%`,
+
+      progress:
+        annualGoalPercent(
+          categoryBeat,
+          75
+        ),
+
+      done:
+        categoryBeat >= 75
+    }
+
+  ];
+}
+
+
+// ==========================================================
+// CARD DA META ANUAL
+// ==========================================================
+
+function annualGoalCard(
+  goal
+) {
+
+  const progress =
+    Math.max(
+      0,
+      Math.min(
+        100,
+        Number(
+          goal.progress ||
+          0
+        )
+      )
+    );
+
+
+  return `
+
+    <div
+      class="premium-card"
+      style="
+        padding:16px;
+        margin-bottom:10px;
+      "
+    >
+
+      <div
+        style="
+          display:flex;
+          align-items:flex-start;
+          gap:12px;
+        "
+      >
+
+        <div
+          style="
+            width:42px;
+            height:42px;
+            flex-shrink:0;
+            border-radius:13px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background:${
+              goal.done
+                ? 'rgba(255,199,44,.13)'
+                : 'rgba(255,255,255,.055)'
+            };
+            color:${
+              goal.done
+                ? 'var(--gold2)'
+                : 'var(--muted)'
+            };
+            border:1px solid ${
+              goal.done
+                ? 'rgba(255,199,44,.28)'
+                : 'rgba(255,255,255,.08)'
+            };
+          "
+        >
+
+          <i
+            class="
+              fa-solid
+              ${goal.icon}
+            "
+          ></i>
+
+        </div>
+
+
+        <div
+          style="
+            flex:1;
+            min-width:0;
+          "
+        >
+
+          <div
+            style="
+              display:flex;
+              align-items:flex-start;
+              justify-content:space-between;
+              gap:8px;
+            "
+          >
+
+            <b
+              style="
+                font-size:11px;
+                color:${
+                  goal.done
+                    ? 'var(--gold2)'
+                    : 'white'
+                };
+              "
+            >
+
+              ${esc(goal.title)}
+
+            </b>
+
+
+            <span
+              class="
+                tag
+                ${goal.done ? 'gold' : ''}
+              "
+            >
+
+              ${
+                goal.done
+                  ? 'CONCLUÍDA'
+                  : `${progress}%`
+              }
+
+            </span>
+
+          </div>
+
+
+          <div
+            style="
+              font-size:9px;
+              color:var(--muted);
+              line-height:1.45;
+              margin-top:6px;
+            "
+          >
+
+            ${esc(goal.desc)}
+
+          </div>
+
+
+          <div
+            style="
+              display:flex;
+              justify-content:space-between;
+              gap:10px;
+              margin-top:12px;
+              font-size:9px;
+              font-weight:900;
+            "
+          >
+
+            <span
+              style="
+                color:white;
+              "
+            >
+
+              ${esc(
+                goal.currentLabel ||
+                goal.current
+              )}
+
+            </span>
+
+
+            ${
+              goal.targetLabel
+
+                ? `
+
+                  <span
+                    style="
+                      color:var(--muted);
+                    "
+                  >
+
+                    ${esc(
+                      goal.targetLabel
+                    )}
+
+                  </span>
+
+                `
+
+                : ''
+            }
+
+          </div>
+
+
+          <div
+            style="
+              width:100%;
+              height:8px;
+              border-radius:20px;
+              overflow:hidden;
+              margin-top:8px;
+              background:rgba(255,255,255,.08);
+            "
+          >
+
+            <div
+              style="
+                width:${progress}%;
+                height:100%;
+                border-radius:20px;
+                background:${
+                  goal.done
+                    ? 'linear-gradient(90deg,#ffc72c,#ffe17b)'
+                    : 'linear-gradient(90deg,#1e6fff,#35d48a)'
+                };
+                transition:width .4s ease;
+              "
+            ></div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  `;
+}
+  
+// ==========================================================
 // HOME
 // ==========================================================
 
@@ -2838,14 +3664,39 @@ function renderCareer() {
 
 function renderAchievements() {
 
-  const a =
+  const achievementsList =
     achievements();
 
+
   const unlocked =
-    a.filter(
-      x =>
-        x.ok
+    achievementsList.filter(
+      item =>
+        item.ok
     ).length;
+
+
+  const goals =
+    annualGoals();
+
+
+  const completedGoals =
+    goals.filter(
+      goal =>
+        goal.done
+    ).length;
+
+
+  const annualPct =
+    goals.length
+
+      ? Math.round(
+          (
+            completedGoals /
+            goals.length
+          ) * 100
+        )
+
+      : 0;
 
 
   document
@@ -2857,30 +3708,202 @@ function renderAchievements() {
     <div class="hero">
 
       <div class="eyebrow">
-        TROFÉUS DIGITAIS
+        EVOLUÇÃO DO ATLETA
       </div>
+
 
       <h2>
         Conquistas
       </h2>
 
+
       <p>
-        ${unlocked}
-        de
-        ${a.length}
-        conquistas desbloqueadas.
+
+        Acompanhe suas metas,
+        evolução e troféus
+        durante a temporada.
+
       </p>
+
 
       <div class="member-chip">
 
-        <i class="fa-solid fa-medal"></i>
+        <i
+          class="
+            fa-solid
+            fa-trophy
+          "
+        ></i>
 
-        ${unlocked}/${a.length}
+        JORNADA ${SYSTEM_YEAR}
 
       </div>
 
     </div>
 
+
+    <!-- ================================================= -->
+    <!-- JORNADA ANUAL -->
+    <!-- ================================================= -->
+
+    <div class="section-title">
+
+      <h3>
+        JORNADA ${SYSTEM_YEAR}
+      </h3>
+
+      <span>
+        METAS ANUAIS
+      </span>
+
+    </div>
+
+
+    <div
+      class="premium-card"
+      style="
+        margin-bottom:14px;
+        overflow:hidden;
+      "
+    >
+
+      <div
+        style="
+          display:flex;
+          justify-content:space-between;
+          align-items:flex-end;
+          gap:15px;
+        "
+      >
+
+        <div>
+
+          <div
+            style="
+              font-size:9px;
+              color:var(--muted);
+              letter-spacing:1px;
+              font-weight:900;
+            "
+          >
+
+            PROGRESSO DA TEMPORADA
+
+          </div>
+
+
+          <div
+            style="
+              font-size:31px;
+              line-height:1;
+              font-weight:1000;
+              color:white;
+              margin-top:7px;
+            "
+          >
+
+            ${completedGoals}
+            /
+            ${goals.length}
+
+          </div>
+
+
+          <div
+            style="
+              font-size:9px;
+              color:var(--muted);
+              margin-top:5px;
+            "
+          >
+
+            metas concluídas
+
+          </div>
+
+        </div>
+
+
+        <div
+          style="
+            font-size:38px;
+            line-height:1;
+            font-weight:1000;
+            color:var(--gold2);
+          "
+        >
+
+          ${annualPct}%
+
+        </div>
+
+      </div>
+
+
+      <div
+        style="
+          height:12px;
+          border-radius:30px;
+          overflow:hidden;
+          margin-top:17px;
+          background:rgba(255,255,255,.08);
+        "
+      >
+
+        <div
+          style="
+            width:${annualPct}%;
+            height:100%;
+            border-radius:30px;
+            background:
+              linear-gradient(
+                90deg,
+                #1e6fff,
+                #35d48a,
+                #ffc72c
+              );
+            transition:width .4s ease;
+          "
+        ></div>
+
+      </div>
+
+
+      <div
+        style="
+          font-size:9px;
+          color:var(--muted);
+          margin-top:11px;
+          line-height:1.45;
+        "
+      >
+
+        As metas são atualizadas
+        automaticamente conforme
+        novos resultados oficiais
+        entram no DH-PE.
+
+      </div>
+
+    </div>
+
+
+    <div>
+
+      ${
+        goals
+          .map(
+            annualGoalCard
+          )
+          .join('')
+      }
+
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- COLEÇÃO DE TROFÉUS -->
+    <!-- ================================================= -->
 
     <div class="section-title">
 
@@ -2889,8 +3912,31 @@ function renderAchievements() {
       </h3>
 
       <span>
-        EVOLUA E DESBLOQUEIE
+
+        ${unlocked}
+        /
+        ${achievementsList.length}
+
       </span>
+
+    </div>
+
+
+    <div
+      style="
+        font-size:10px;
+        color:var(--muted);
+        line-height:1.5;
+        margin:
+          -4px
+          0
+          13px;
+      "
+    >
+
+      Troféus permanentes
+      desbloqueados durante
+      sua carreira no DH-PE.
 
     </div>
 
@@ -2898,74 +3944,75 @@ function renderAchievements() {
     <div class="achievement-grid">
 
       ${
-        a.map(
-          x => `
-
-            <div
-              class="
-                achievement
-                ${
-                  x.ok
-                    ? ''
-                    : 'locked'
-                }
-              "
-            >
-
-              <div class="medal">
-
-                <i
-                  class="
-                    fa-solid
-                    ${x.icon}
-                  "
-                ></i>
-
-              </div>
-
-
-              <b>
-                ${x.title}
-              </b>
-
-
-              <small>
-                ${x.desc}
-              </small>
-
+        achievementsList
+          .map(
+            item => `
 
               <div
-                style="
-                  margin-top:12px
+                class="
+                  achievement
+                  ${
+                    item.ok
+                      ? ''
+                      : 'locked'
+                  }
                 "
               >
 
-                <span
-                  class="
-                    tag
-                    ${
-                      x.ok
-                        ? 'gold'
-                        : ''
-                    }
+                <div class="medal">
+
+                  <i
+                    class="
+                      fa-solid
+                      ${item.icon}
+                    "
+                  ></i>
+
+                </div>
+
+
+                <b>
+                  ${item.title}
+                </b>
+
+
+                <small>
+                  ${item.desc}
+                </small>
+
+
+                <div
+                  style="
+                    margin-top:12px
                   "
                 >
 
-                  ${
-                    x.ok
-                      ? 'DESBLOQUEADA'
-                      : 'BLOQUEADA'
-                  }
+                  <span
+                    class="
+                      tag
+                      ${
+                        item.ok
+                          ? 'gold'
+                          : ''
+                      }
+                    "
+                  >
 
-                </span>
+                    ${
+                      item.ok
+                        ? 'DESBLOQUEADA'
+                        : 'BLOQUEADA'
+                    }
+
+                  </span>
+
+                </div>
 
               </div>
 
-            </div>
-
-          `
-        )
-        .join('')
+            `
+          )
+          .join('')
       }
 
     </div>
