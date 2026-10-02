@@ -2302,244 +2302,1002 @@ function achievements() {
     careerStats();
 
 
-  const races =
-    s.results.length;
+  const official =
+    typeof myOfficialRankingData === 'function'
+      ? myOfficialRankingData()
+      : {};
+
+
+  const comparison =
+    typeof mySeasonComparison === 'function'
+      ? mySeasonComparison()
+      : {};
 
 
   const allClosed =
     core.events.filter(
-      e =>
-        e.status ===
-        'CLOSED'
+      event =>
+        event.status === 'CLOSED'
     ).length;
 
 
-  // Todas as posições oficiais do atleta
+  // ========================================================
+  // UM RESULTADO POR ETAPA
+  // ========================================================
+
+  const byEvent =
+    {};
+
+
+  s.results.forEach(
+    result => {
+
+      const key =
+        String(
+          result.evtId
+        );
+
+
+      if (
+        !byEvent[key] ||
+        timeMs(result.val) <
+        timeMs(
+          byEvent[key].val
+        )
+      ) {
+
+        byEvent[key] =
+          result;
+      }
+    }
+  );
+
+
+  const seasonResults =
+    Object
+      .values(
+        byEvent
+      )
+      .sort(
+        (
+          a,
+          b
+        ) => {
+
+          const indexA =
+            core.events.findIndex(
+              event =>
+                String(event.id) ===
+                String(a.evtId)
+            );
+
+
+          const indexB =
+            core.events.findIndex(
+              event =>
+                String(event.id) ===
+                String(b.evtId)
+            );
+
+
+          if (
+            indexA >= 0 &&
+            indexB >= 0
+          ) {
+
+            return (
+              indexA -
+              indexB
+            );
+          }
+
+
+          return (
+            Number(
+              a.evtId || 0
+            ) -
+            Number(
+              b.evtId || 0
+            )
+          );
+        }
+      );
+
+
   const positions =
-    s.results
+    seasonResults
       .map(
-        t =>
-          resultPlacement(t)
+        result =>
+          resultPlacement(
+            result
+          )
       )
       .filter(
-        p =>
+        position =>
           Number.isFinite(
-            Number(p)
+            Number(position)
           )
       )
       .map(Number);
 
 
+  const countTop =
+    limit =>
+      positions.filter(
+        position =>
+          position <= limit
+      ).length;
+
+
+  const countPosition =
+    position =>
+      positions.filter(
+        resultPosition =>
+          resultPosition ===
+          position
+      ).length;
+
+
   const hasPosition =
-    pos =>
-      positions.includes(
-        pos
-      );
+    position =>
+      countPosition(
+        position
+      ) >= 1;
 
 
   const hasTop =
     limit =>
-      positions.some(
-        pos =>
-          pos <= limit
-      );
+      countTop(
+        limit
+      ) >= 1;
 
 
   const hasTimeBelow =
     milliseconds =>
-      s.results.some(
-        t =>
-          timeMs(t.val) <
+      seasonResults.some(
+        result =>
+          timeMs(
+            result.val
+          ) <
           milliseconds
       );
+
+
+  // ========================================================
+  // SEQUÊNCIA DE RESULTADOS
+  // ========================================================
+
+  const hasStreakTop =
+    (
+      limit,
+      target
+    ) => {
+
+      let streak =
+        0;
+
+
+      for (
+        const position
+        of positions
+      ) {
+
+        if (
+          position <= limit
+        ) {
+
+          streak++;
+
+        } else {
+
+          streak =
+            0;
+        }
+
+
+        if (
+          streak >= target
+        ) {
+
+          return true;
+        }
+      }
+
+
+      return false;
+    };
+
+
+  const races =
+    seasonResults.length;
+
+
+  const podiums =
+    countTop(5);
+
+
+  const wins =
+    countPosition(1);
+
+
+  const totalPts =
+    Number(
+      official.totalPts ||
+      0
+    );
+
+
+  const categoryPosition =
+    Number(
+      official.categoryPosition ||
+      0
+    );
+
+
+  const categoryTotal =
+    Number(
+      official.categoryTotal ||
+      0
+    );
+
+
+  const cityPosition =
+    Number(
+      official.athleteCityPosition ||
+      0
+    );
+
+
+  const cityAthletes =
+    Number(
+      official.athleteCityTotal ||
+      0
+    );
+
+
+  const cityTeamPosition =
+    Number(
+      official.cityPosition ||
+      0
+    );
+
+
+  const cityTotal =
+    Number(
+      official.cityTotal ||
+      0
+    );
+
+
+  const beatPct =
+    Number(
+      comparison.categoryBeatPct ||
+      0
+    );
+
+
+  const improvement =
+    Number(
+      comparison.improvement ||
+      0
+    );
+
+
+  const topHalfCount =
+    Number(
+      comparison.topHalfCount ||
+      0
+    );
+
+
+  // ========================================================
+  // CONSTRUTOR
+  // ========================================================
+
+  const A =
+    (
+      id,
+      group,
+      rarity,
+      icon,
+      title,
+      desc,
+      ok
+    ) => ({
+
+      id,
+
+      group,
+
+      rarity,
+
+      icon,
+
+      title,
+
+      desc,
+
+      ok:
+        !!ok
+
+    });
 
 
   return [
 
     // ======================================================
-    // INÍCIO
+    // 01 — PARTICIPAÇÃO
     // ======================================================
 
-    {
-      id: 'first',
-      icon: 'fa-flag-checkered',
-      title: 'PRIMEIRO RESULTADO',
-      desc: 'Registrou seu primeiro resultado oficial no DH-PE.',
-      ok:
-        races >= 1
-    },
+    A(
+      'first',
+      'PARTICIPAÇÃO',
+      'COMUM',
+      'fa-flag-checkered',
+      'PRIMEIRA LARGADA',
+      'Registrou seu primeiro resultado oficial no DH-PE.',
+      races >= 1
+    ),
 
+    A(
+      'races2',
+      'PARTICIPAÇÃO',
+      'COMUM',
+      'fa-flag',
+      'PEGANDO RITMO',
+      'Participou de pelo menos 2 etapas oficiais.',
+      races >= 2
+    ),
 
-    // ======================================================
-    // FAIXAS DE CLASSIFICAÇÃO
-    // ======================================================
+    A(
+      'races3',
+      'PARTICIPAÇÃO',
+      'COMUM',
+      'fa-road',
+      '3 ETAPAS',
+      'Completou pelo menos 3 etapas da temporada.',
+      races >= 3
+    ),
 
-    {
-      id: 'top20',
-      icon: 'fa-ranking-star',
-      title: 'TOP 20',
-      desc: 'Terminou uma etapa entre os 20 melhores da categoria.',
-      ok:
-        hasTop(20)
-    },
+    A(
+      'races5',
+      'PARTICIPAÇÃO',
+      'RARO',
+      'fa-route',
+      'NA ESTRADA',
+      'Participou de pelo menos 5 etapas oficiais.',
+      races >= 5
+    ),
 
-    {
-      id: 'top15',
-      icon: 'fa-ranking-star',
-      title: 'TOP 15',
-      desc: 'Terminou uma etapa entre os 15 melhores da categoria.',
-      ok:
-        hasTop(15)
-    },
+    A(
+      'races8',
+      'PARTICIPAÇÃO',
+      'ÉPICO',
+      'fa-mountain',
+      'VETERANO DA TEMPORADA',
+      'Registrou resultado em pelo menos 8 etapas.',
+      races >= 8
+    ),
 
-    {
-      id: 'top10',
-      icon: 'fa-ranking-star',
-      title: 'TOP 10',
-      desc: 'Terminou uma etapa entre os 10 melhores da categoria.',
-      ok:
-        hasTop(10)
-    },
+    A(
+      'season',
+      'PARTICIPAÇÃO',
+      'LENDÁRIO',
+      'fa-calendar-check',
+      'TEMPORADA COMPLETA',
+      'Participou de todas as etapas encerradas da temporada.',
+      allClosed > 0 &&
+      races >= allClosed
+    ),
 
-    {
-      id: 'top6',
-      icon: 'fa-ranking-star',
-      title: 'TOP 6',
-      desc: 'Chegou ao grupo dos 6 melhores da categoria.',
-      ok:
-        hasTop(6)
-    },
-
-
-    // ======================================================
-    // COLOCAÇÕES — 5º ATÉ CAMPEÃO
-    // ======================================================
-
-    {
-      id: 'fifth',
-      icon: 'fa-medal',
-      title: '5º LUGAR',
-      desc: 'Conquistou o 5º lugar em uma etapa oficial.',
-      ok:
-        hasPosition(5)
-    },
-
-    {
-      id: 'fourth',
-      icon: 'fa-medal',
-      title: '4º LUGAR',
-      desc: 'Conquistou o 4º lugar em uma etapa oficial.',
-      ok:
-        hasPosition(4)
-    },
-
-    {
-      id: 'third',
-      icon: 'fa-medal',
-      title: '3º LUGAR',
-      desc: 'Subiu ao 3º lugar em uma etapa oficial.',
-      ok:
-        hasPosition(3)
-    },
-
-    {
-      id: 'second',
-      icon: 'fa-medal',
-      title: '2º LUGAR',
-      desc: 'Conquistou o 2º lugar em uma etapa oficial.',
-      ok:
-        hasPosition(2)
-    },
-
-    {
-      id: 'champion',
-      icon: 'fa-trophy',
-      title: 'CAMPEÃO — 1º LUGAR',
-      desc: 'Venceu uma etapa oficial da sua categoria.',
-      ok:
-        hasPosition(1)
-    },
+    A(
+      'club',
+      'PARTICIPAÇÃO',
+      'COMUM',
+      'fa-crown',
+      'MEMBRO DH-CLUB',
+      'Faz parte da comunidade DH-Club.',
+      hasClubAccess()
+    ),
 
 
     // ======================================================
-    // MARCAS DE TEMPO
+    // 02 — CLASSIFICAÇÃO EM ETAPA
     // ======================================================
 
-    {
-      id: 'sub3',
-      icon: 'fa-stopwatch',
-      title: '-3:00 MIN',
-      desc: 'Registrou uma descida oficial abaixo de 3 minutos.',
-      ok:
-        hasTimeBelow(
-          180000
-        )
-    },
+    A(
+      'top20',
+      'CLASSIFICAÇÃO',
+      'COMUM',
+      'fa-ranking-star',
+      'TOP 20',
+      'Terminou uma etapa entre os 20 melhores da categoria.',
+      hasTop(20)
+    ),
 
-    {
-      id: 'sub230',
-      icon: 'fa-bolt',
-      title: '-2:30 MIN',
-      desc: 'Registrou uma descida oficial abaixo de 2 minutos e 30 segundos.',
-      ok:
-        hasTimeBelow(
-          150000
-        )
-    },
+    A(
+      'top15',
+      'CLASSIFICAÇÃO',
+      'COMUM',
+      'fa-ranking-star',
+      'TOP 15',
+      'Terminou uma etapa entre os 15 melhores da categoria.',
+      hasTop(15)
+    ),
 
-    {
-      id: 'sub2',
-      icon: 'fa-gauge-high',
-      title: '-2:00 MIN',
-      desc: 'Registrou uma descida oficial abaixo de 2 minutos.',
-      ok:
-        hasTimeBelow(
-          120000
-        )
-    },
+    A(
+      'top10',
+      'CLASSIFICAÇÃO',
+      'RARO',
+      'fa-ranking-star',
+      'TOP 10',
+      'Entrou no grupo dos 10 melhores da categoria.',
+      hasTop(10)
+    ),
+
+    A(
+      'top6',
+      'CLASSIFICAÇÃO',
+      'RARO',
+      'fa-star',
+      'TOP 6',
+      'Chegou entre os 6 melhores da categoria.',
+      hasTop(6)
+    ),
+
+    A(
+      'fifth',
+      'CLASSIFICAÇÃO',
+      'RARO',
+      'fa-medal',
+      '5º LUGAR',
+      'Conquistou o 5º lugar em uma etapa oficial.',
+      hasPosition(5)
+    ),
+
+    A(
+      'fourth',
+      'CLASSIFICAÇÃO',
+      'RARO',
+      'fa-medal',
+      '4º LUGAR',
+      'Conquistou o 4º lugar em uma etapa oficial.',
+      hasPosition(4)
+    ),
+
+    A(
+      'third',
+      'CLASSIFICAÇÃO',
+      'ÉPICO',
+      'fa-medal',
+      '3º LUGAR',
+      'Subiu ao 3º lugar em uma etapa oficial.',
+      hasPosition(3)
+    ),
+
+    A(
+      'second',
+      'CLASSIFICAÇÃO',
+      'ÉPICO',
+      'fa-medal',
+      '2º LUGAR',
+      'Conquistou o 2º lugar em uma etapa oficial.',
+      hasPosition(2)
+    ),
+
+    A(
+      'champion',
+      'CLASSIFICAÇÃO',
+      'LENDÁRIO',
+      'fa-trophy',
+      'CAMPEÃO DE ETAPA',
+      'Venceu uma etapa oficial da sua categoria.',
+      hasPosition(1)
+    ),
 
 
     // ======================================================
-    // CONSISTÊNCIA
+    // 03 — REPETIÇÃO DE BONS RESULTADOS
     // ======================================================
 
-    {
-      id: 'consistent3',
-      icon: 'fa-chart-line',
-      title: 'CONSISTÊNCIA',
-      desc: 'Registrou resultado oficial em pelo menos 3 etapas.',
-      ok:
-        s.races >= 3
-    },
+    A(
+      'top20x3',
+      'CONSISTÊNCIA',
+      'COMUM',
+      'fa-chart-line',
+      'TOP 20 — 3X',
+      'Terminou pelo menos 3 etapas no Top 20.',
+      countTop(20) >= 3
+    ),
+
+    A(
+      'top15x3',
+      'CONSISTÊNCIA',
+      'RARO',
+      'fa-chart-line',
+      'TOP 15 — 3X',
+      'Terminou pelo menos 3 etapas no Top 15.',
+      countTop(15) >= 3
+    ),
+
+    A(
+      'top10x2',
+      'CONSISTÊNCIA',
+      'RARO',
+      'fa-fire',
+      'TOP 10 — 2X',
+      'Conquistou dois resultados no Top 10.',
+      countTop(10) >= 2
+    ),
+
+    A(
+      'top10x3',
+      'CONSISTÊNCIA',
+      'ÉPICO',
+      'fa-fire',
+      'TOP 10 — 3X',
+      'Conquistou três resultados no Top 10.',
+      countTop(10) >= 3
+    ),
+
+    A(
+      'top10x5',
+      'CONSISTÊNCIA',
+      'LENDÁRIO',
+      'fa-fire-flame-curved',
+      'TOP 10 — 5X',
+      'Terminou pelo menos cinco etapas no Top 10.',
+      countTop(10) >= 5
+    ),
+
+    A(
+      'top5x2',
+      'CONSISTÊNCIA',
+      'RARO',
+      'fa-medal',
+      'TOP 5 — 2X',
+      'Conquistou dois resultados entre os cinco melhores.',
+      countTop(5) >= 2
+    ),
+
+    A(
+      'top5x3',
+      'CONSISTÊNCIA',
+      'ÉPICO',
+      'fa-medal',
+      'TOP 5 — 3X',
+      'Conquistou três resultados entre os cinco melhores.',
+      countTop(5) >= 3
+    ),
+
+    A(
+      'top5x5',
+      'CONSISTÊNCIA',
+      'LENDÁRIO',
+      'fa-gem',
+      'TOP 5 — 5X',
+      'Terminou pelo menos cinco etapas dentro do Top 5.',
+      countTop(5) >= 5
+    ),
 
 
     // ======================================================
-    // TEMPORADA
+    // 04 — PÓDIOS E VITÓRIAS
     // ======================================================
 
-    {
-      id: 'season',
-      icon: 'fa-calendar-check',
-      title: 'TEMPORADA COMPLETA',
-      desc: 'Participou de todas as etapas encerradas da temporada.',
-      ok:
-        allClosed > 0 &&
-        s.races >= allClosed
-    },
+    A(
+      'podium2',
+      'PÓDIOS',
+      'RARO',
+      'fa-award',
+      '2 PÓDIOS',
+      'Conquistou pelo menos dois resultados no Top 5.',
+      podiums >= 2
+    ),
+
+    A(
+      'podium3',
+      'PÓDIOS',
+      'ÉPICO',
+      'fa-award',
+      '3 PÓDIOS',
+      'Conquistou pelo menos três resultados no Top 5.',
+      podiums >= 3
+    ),
+
+    A(
+      'podium5',
+      'PÓDIOS',
+      'LENDÁRIO',
+      'fa-award',
+      '5 PÓDIOS',
+      'Chegou ao Top 5 em pelo menos cinco etapas.',
+      podiums >= 5
+    ),
+
+    A(
+      'win2',
+      'VITÓRIAS',
+      'ÉPICO',
+      'fa-trophy',
+      '2 VITÓRIAS',
+      'Venceu duas etapas oficiais.',
+      wins >= 2
+    ),
+
+    A(
+      'win3',
+      'VITÓRIAS',
+      'ÉPICO',
+      'fa-trophy',
+      '3 VITÓRIAS',
+      'Venceu três etapas oficiais.',
+      wins >= 3
+    ),
+
+    A(
+      'win5',
+      'VITÓRIAS',
+      'LENDÁRIO',
+      'fa-crown',
+      'DOMINANTE',
+      'Conquistou cinco vitórias oficiais.',
+      wins >= 5
+    ),
+
+    A(
+      'streakTop5x2',
+      'CONSISTÊNCIA',
+      'ÉPICO',
+      'fa-bolt',
+      'PÓDIOS SEGUIDOS',
+      'Terminou duas etapas consecutivas no Top 5.',
+      hasStreakTop(
+        5,
+        2
+      )
+    ),
 
 
     // ======================================================
-    // CLUB
+    // 05 — CRONÔMETRO
     // ======================================================
 
-    {
-      id: 'club',
-      icon: 'fa-crown',
-      title: 'MEMBRO DH-CLUB',
-      desc: 'Faz parte da comunidade DH-Club.',
-      ok:
-        hasClubAccess()
-    }
+    A(
+      'sub4',
+      'CRONÔMETRO',
+      'COMUM',
+      'fa-stopwatch',
+      'ABAIXO DE 4:00',
+      'Registrou uma descida oficial abaixo de 4 minutos.',
+      hasTimeBelow(
+        240000
+      )
+    ),
+
+    A(
+      'sub330',
+      'CRONÔMETRO',
+      'COMUM',
+      'fa-stopwatch',
+      'ABAIXO DE 3:30',
+      'Registrou uma descida oficial abaixo de 3 minutos e 30 segundos.',
+      hasTimeBelow(
+        210000
+      )
+    ),
+
+    A(
+      'sub3',
+      'CRONÔMETRO',
+      'RARO',
+      'fa-stopwatch',
+      'ABAIXO DE 3:00',
+      'Registrou uma descida oficial abaixo de 3 minutos.',
+      hasTimeBelow(
+        180000
+      )
+    ),
+
+    A(
+      'sub245',
+      'CRONÔMETRO',
+      'RARO',
+      'fa-gauge-high',
+      'ABAIXO DE 2:45',
+      'Registrou uma descida oficial abaixo de 2 minutos e 45 segundos.',
+      hasTimeBelow(
+        165000
+      )
+    ),
+
+    A(
+      'sub230',
+      'CRONÔMETRO',
+      'ÉPICO',
+      'fa-bolt',
+      'ABAIXO DE 2:30',
+      'Registrou uma descida oficial abaixo de 2 minutos e 30 segundos.',
+      hasTimeBelow(
+        150000
+      )
+    ),
+
+    A(
+      'sub215',
+      'CRONÔMETRO',
+      'ÉPICO',
+      'fa-gauge-high',
+      'ABAIXO DE 2:15',
+      'Registrou uma descida oficial abaixo de 2 minutos e 15 segundos.',
+      hasTimeBelow(
+        135000
+      )
+    ),
+
+    A(
+      'sub2',
+      'CRONÔMETRO',
+      'LENDÁRIO',
+      'fa-gauge-high',
+      'ABAIXO DE 2:00',
+      'Registrou uma descida oficial abaixo de 2 minutos.',
+      hasTimeBelow(
+        120000
+      )
+    ),
+
+
+    // ======================================================
+    // 06 — PONTUAÇÃO OFICIAL
+    // ======================================================
+
+    A(
+      'pts50',
+      'PONTOS',
+      'COMUM',
+      'fa-coins',
+      '50 PONTOS',
+      'Acumulou pelo menos 50 pontos oficiais no DH-PE.',
+      totalPts >= 50
+    ),
+
+    A(
+      'pts100',
+      'PONTOS',
+      'COMUM',
+      'fa-coins',
+      '100 PONTOS',
+      'Acumulou pelo menos 100 pontos oficiais.',
+      totalPts >= 100
+    ),
+
+    A(
+      'pts200',
+      'PONTOS',
+      'RARO',
+      'fa-coins',
+      '200 PONTOS',
+      'Chegou à marca de 200 pontos oficiais.',
+      totalPts >= 200
+    ),
+
+    A(
+      'pts300',
+      'PONTOS',
+      'RARO',
+      'fa-sack-dollar',
+      '300 PONTOS',
+      'Chegou à marca de 300 pontos oficiais.',
+      totalPts >= 300
+    ),
+
+    A(
+      'pts500',
+      'PONTOS',
+      'ÉPICO',
+      'fa-sack-dollar',
+      '500 PONTOS',
+      'Acumulou pelo menos 500 pontos oficiais.',
+      totalPts >= 500
+    ),
+
+    A(
+      'pts750',
+      'PONTOS',
+      'ÉPICO',
+      'fa-gem',
+      '750 PONTOS',
+      'Acumulou pelo menos 750 pontos oficiais.',
+      totalPts >= 750
+    ),
+
+    A(
+      'pts1000',
+      'PONTOS',
+      'LENDÁRIO',
+      'fa-gem',
+      'CLUBE DOS 1.000',
+      'Chegou a 1.000 pontos oficiais acumulados.',
+      totalPts >= 1000
+    ),
+
+
+    // ======================================================
+    // 07 — RANKING OFICIAL DA CATEGORIA
+    // ======================================================
+
+    A(
+      'rankCat20',
+      'RANKING',
+      'COMUM',
+      'fa-list-ol',
+      'TOP 20 DO RANKING',
+      'Chegou ao Top 20 do ranking oficial da categoria.',
+      categoryPosition > 0 &&
+      categoryPosition <= 20
+    ),
+
+    A(
+      'rankCat10',
+      'RANKING',
+      'RARO',
+      'fa-list-ol',
+      'TOP 10 DO RANKING',
+      'Chegou ao Top 10 do ranking oficial da categoria.',
+      categoryPosition > 0 &&
+      categoryPosition <= 10
+    ),
+
+    A(
+      'rankCat5',
+      'RANKING',
+      'ÉPICO',
+      'fa-ranking-star',
+      'TOP 5 DO RANKING',
+      'Chegou ao Top 5 do ranking oficial da categoria.',
+      categoryPosition > 0 &&
+      categoryPosition <= 5
+    ),
+
+    A(
+      'rankCat3',
+      'RANKING',
+      'ÉPICO',
+      'fa-ranking-star',
+      'TOP 3 DO RANKING',
+      'Chegou ao Top 3 do ranking oficial da categoria.',
+      categoryPosition > 0 &&
+      categoryPosition <= 3
+    ),
+
+    A(
+      'rankCat1',
+      'RANKING',
+      'LENDÁRIO',
+      'fa-crown',
+      'LÍDER DA CATEGORIA',
+      'Assumiu a 1ª posição do ranking oficial da categoria.',
+      categoryPosition === 1 &&
+      categoryTotal > 0
+    ),
+
+
+    // ======================================================
+    // 08 — CIDADE
+    // ======================================================
+
+    A(
+      'cityTop5',
+      'CIDADE',
+      'RARO',
+      'fa-location-dot',
+      'TOP 5 DA CIDADE',
+      'Está entre os cinco atletas com mais pontos da sua cidade.',
+      cityPosition > 0 &&
+      cityPosition <= 5 &&
+      cityAthletes >= 2
+    ),
+
+    A(
+      'cityTop3',
+      'CIDADE',
+      'ÉPICO',
+      'fa-city',
+      'TOP 3 DA CIDADE',
+      'Está entre os três atletas com mais pontos da sua cidade.',
+      cityPosition > 0 &&
+      cityPosition <= 3 &&
+      cityAthletes >= 2
+    ),
+
+    A(
+      'city1',
+      'CIDADE',
+      'LENDÁRIO',
+      'fa-location-crosshairs',
+      'Nº 1 DA CIDADE',
+      'É o atleta com maior pontuação oficial da sua cidade.',
+      cityPosition === 1 &&
+      cityAthletes >= 2
+    ),
+
+    A(
+      'cityTeamTop3',
+      'CIDADE',
+      'ÉPICO',
+      'fa-people-group',
+      'CIDADE NO TOP 3',
+      'Sua cidade está entre as três cidades com maior pontuação somada.',
+      cityTeamPosition > 0 &&
+      cityTeamPosition <= 3 &&
+      cityTotal >= 2
+    ),
+
+
+    // ======================================================
+    // 09 — EVOLUÇÃO DH-CLUB
+    // ======================================================
+
+    A(
+      'half3',
+      'EVOLUÇÃO',
+      'RARO',
+      'fa-chart-simple',
+      'METADE SUPERIOR — 3X',
+      'Terminou pelo menos três etapas na metade superior da categoria.',
+      topHalfCount >= 3
+    ),
+
+    A(
+      'beat50',
+      'EVOLUÇÃO',
+      'COMUM',
+      'fa-arrow-trend-up',
+      'À FRENTE DE 50%',
+      'Ficou comparativamente à frente de pelo menos metade da categoria.',
+      beatPct >= 50
+    ),
+
+    A(
+      'beat75',
+      'EVOLUÇÃO',
+      'RARO',
+      'fa-arrow-trend-up',
+      'À FRENTE DE 75%',
+      'Ficou comparativamente à frente de 75% da categoria.',
+      beatPct >= 75
+    ),
+
+    A(
+      'beat90',
+      'EVOLUÇÃO',
+      'LENDÁRIO',
+      'fa-rocket',
+      'TOP 10% DA CATEGORIA',
+      'Ficou comparativamente à frente de 90% dos atletas da categoria.',
+      beatPct >= 90
+    ),
+
+    A(
+      'improve5',
+      'EVOLUÇÃO',
+      'RARO',
+      'fa-arrow-up-right-dots',
+      'EVOLUÇÃO +5',
+      'Melhorou pelo menos 5 pontos no índice relativo durante a temporada.',
+      improvement >= 5
+    ),
+
+    A(
+      'improve10',
+      'EVOLUÇÃO',
+      'ÉPICO',
+      'fa-arrow-up-right-dots',
+      'EVOLUÇÃO +10',
+      'Melhorou pelo menos 10 pontos no índice relativo durante a temporada.',
+      improvement >= 10
+    )
 
   ];
 }
