@@ -6345,14 +6345,52 @@ function buildWrappedSlides() {
     );
 
 
+  const closedEvents =
+    core.events.filter(
+      e =>
+        e.status ===
+        'CLOSED'
+    ).length;
+
+
+  const attendancePct =
+    closedEvents > 0
+
+      ? Math.min(
+          100,
+          Math.round(
+            (
+              s.races /
+              closedEvents
+            ) * 100
+          )
+        )
+
+      : null;
+
+
   const unlockedNames =
     d.unlocked
-      .slice(0, 6)
+      .slice(
+        0,
+        8
+      )
       .map(
         item => `
+
           <span class="wrapped-achievement">
+
+            <i
+              class="
+                fa-solid
+                fa-check
+              "
+            ></i>
+
             ${esc(item.title)}
+
           </span>
+
         `
       )
       .join('');
@@ -6360,16 +6398,18 @@ function buildWrappedSlides() {
 
   return [
 
-    // ------------------------------------------------------
-    // TELA 1
-    // ------------------------------------------------------
+    // ======================================================
+    // STORY 1 — ABERTURA
+    // ======================================================
 
     `
+
       <div class="wrapped-slide">
 
         <div class="wrapped-eyebrow">
           DH-CLUB • TEMPORADA ${SYSTEM_YEAR}
         </div>
+
 
         <img
           class="wrapped-photo"
@@ -6377,13 +6417,23 @@ function buildWrappedSlides() {
           alt="Foto do atleta"
         >
 
+
         <h1 class="wrapped-title">
+
           ESSA FOI<br>
           A SUA TEMPORADA.
+
         </h1>
 
+
         <div class="wrapped-subtitle">
-          <b style="color:white">
+
+          <b
+            style="
+              color:white;
+              font-size:18px;
+            "
+          >
             ${esc(d.name)}
           </b>
 
@@ -6393,267 +6443,148 @@ function buildWrappedSlides() {
 
           <br><br>
 
-          Seus números, evolução
-          e conquistas no DH-PE.
+          Preparado para descobrir
+          os números que marcaram
+          sua temporada no DH-PE?
+
         </div>
 
       </div>
+
     `,
 
 
-    // ------------------------------------------------------
-    // TELA 2
-    // ------------------------------------------------------
+    // ======================================================
+    // STORY 2 — PRESENÇA
+    // ======================================================
 
     `
+
       <div class="wrapped-slide">
 
         <div class="wrapped-eyebrow">
-          SEUS NÚMEROS
+          SUA PRESENÇA
         </div>
 
+
         <h1 class="wrapped-title">
+
           VOCÊ ESTEVE<br>
           NA PISTA.
+
         </h1>
 
-        <div class="wrapped-grid">
-
-          <div class="wrapped-card">
-            <small>ETAPAS</small>
-            <b>${s.races}</b>
-          </div>
-
-          <div class="wrapped-card gold">
-            <small>TOP 5</small>
-            <b>${s.podiums}</b>
-          </div>
-
-          <div class="wrapped-card">
-            <small>VITÓRIAS</small>
-            <b>${s.wins}</b>
-          </div>
-
-          <div class="wrapped-card gold">
-            <small>MELHOR TEMPO</small>
-            <b style="font-size:19px">
-              ${bestTimeLabel(s.best)}
-            </b>
-          </div>
-
-        </div>
-
-        <div class="wrapped-rank-box">
-
-          <div class="wrapped-subtitle">
-            MELHOR POSIÇÃO EM ETAPA
-          </div>
-
-          <div class="wrapped-hero-number">
-            ${c?.bestPosition
-              ? `${c.bestPosition}º`
-              : '—'}
-          </div>
-
-        </div>
-
-      </div>
-    `,
-
-
-    // ------------------------------------------------------
-    // TELA 3
-    // ------------------------------------------------------
-
-    `
-      <div class="wrapped-slide">
-
-        <div class="wrapped-eyebrow">
-          ONDE VOCÊ CHEGOU
-        </div>
-
-        <h1 class="wrapped-title">
-          SUA POSIÇÃO<br>
-          NA TEMPORADA.
-        </h1>
 
         <div class="wrapped-rank-box">
 
           <div class="wrapped-hero-number">
-            ${c?.generalPosition
-              ? `${c.generalPosition}º`
-              : '—'}
+            ${s.races}
           </div>
 
           <div class="wrapped-big-label">
-            DE ${c?.generalTotal || 0}
-            ATLETAS
-          </div>
 
-          <div class="wrapped-subtitle">
-            classificação comparativa
-            do DH-Club
-          </div>
+            ${
+              s.races === 1
+                ? 'ETAPA DISPUTADA'
+                : 'ETAPAS DISPUTADAS'
+            }
 
-        </div>
-
-        <div class="wrapped-grid">
-
-          <div class="wrapped-card gold">
-            <small>
-              ${esc(d.category)}
-            </small>
-
-            <b>
-              ${c?.categoryPosition
-                ? `${c.categoryPosition}º`
-                : '—'}
-            </b>
-
-            <div class="wrapped-subtitle">
-              de ${c?.categoryTotal || 0}
-            </div>
-          </div>
-
-          <div class="wrapped-card green">
-            <small>ATLETAS SUPERADOS</small>
-            <b>${beatPct}%</b>
           </div>
 
         </div>
 
-      </div>
-    `,
+
+        ${
+          attendancePct !== null
+
+            ? `
+
+              <div
+                class="wrapped-meter"
+                style="margin-top:28px"
+              >
+
+                <div class="wrapped-meter-head">
+
+                  <span>
+                    PRESENÇA NA TEMPORADA
+                  </span>
+
+                  <span>
+                    ${attendancePct}%
+                  </span>
+
+                </div>
 
 
-    // ------------------------------------------------------
-    // TELA 4
-    // ------------------------------------------------------
+                <div class="wrapped-meter-track">
 
-    `
-      <div class="wrapped-slide">
+                  <div
+                    class="wrapped-meter-fill"
+                    style="
+                      width:${attendancePct}%;
+                    "
+                  ></div>
 
-        <div class="wrapped-eyebrow">
-          VOCÊ X SUA CATEGORIA
-        </div>
+                </div>
 
-        <h1 class="wrapped-title">
-          COMO FOI<br>
-          SUA EVOLUÇÃO?
-        </h1>
+              </div>
 
-        <div class="wrapped-card green">
-          <small>SEU ÍNDICE</small>
-          <b>${score}%</b>
-        </div>
+            `
 
-        <div class="wrapped-meter">
+            : `
 
-          <div class="wrapped-meter-head">
-            <span>SEU DESEMPENHO</span>
-            <span>${score}%</span>
-          </div>
+              <div
+                class="wrapped-subtitle"
+                style="margin-top:22px"
+              >
 
-          <div class="wrapped-meter-track">
-            <div
-              class="wrapped-meter-fill"
-              style="width:${Math.max(0, Math.min(100, score))}%"
-            ></div>
-          </div>
+                A temporada ainda está
+                em andamento.
 
-        </div>
+              </div>
 
-        <div class="wrapped-meter">
+            `
+        }
 
-          <div class="wrapped-meter-head">
-            <span>MÉDIA DA CATEGORIA</span>
-            <span>${avgScore}%</span>
-          </div>
 
-          <div class="wrapped-meter-track">
-            <div
-              class="wrapped-meter-fill"
-              style="
-                width:${Math.max(0, Math.min(100, avgScore))}%;
-                background:#68788e;
-              "
-            ></div>
-          </div>
+        <div
+          class="wrapped-subtitle"
+          style="
+            margin-top:24px;
+          "
+        >
 
-        </div>
-
-        <div class="wrapped-grid">
-
-          <div class="wrapped-card ${
-            improvement >= 0
-              ? 'green'
-              : 'red'
-          }">
-            <small>EVOLUÇÃO</small>
-            <b>
-              ${improvement > 0 ? '+' : ''}
-              ${improvement} pts
-            </b>
-          </div>
-
-          <div class="wrapped-card ${
-            improvementVsCategory >= 0
-              ? 'green'
-              : 'red'
-          }">
-            <small>VS. CATEGORIA</small>
-            <b>
-              ${improvementVsCategory > 0 ? '+' : ''}
-              ${improvementVsCategory} pts
-            </b>
-          </div>
+          Cada largada fez parte
+          da sua história em ${SYSTEM_YEAR}.
 
         </div>
 
       </div>
+
     `,
 
 
-    // ------------------------------------------------------
-    // TELA 5
-    // ------------------------------------------------------
+    // ======================================================
+    // STORY 3 — VELOCIDADE
+    // ======================================================
 
     `
+
       <div class="wrapped-slide">
 
         <div class="wrapped-eyebrow">
-          MARCAS DE VELOCIDADE
+          VELOCIDADE
         </div>
 
+
         <h1 class="wrapped-title">
+
           CONTRA<br>
           O CRONÔMETRO.
+
         </h1>
 
-        <div class="wrapped-speed">
-
-          <div class="wrapped-speed-item ${d.sub3 ? 'unlocked' : ''}">
-            <strong>-3:00 MIN</strong>
-            <span>
-              ${d.sub3 ? 'DESBLOQUEADA' : 'A CONQUISTAR'}
-            </span>
-          </div>
-
-          <div class="wrapped-speed-item ${d.sub230 ? 'unlocked' : ''}">
-            <strong>-2:30 MIN</strong>
-            <span>
-              ${d.sub230 ? 'DESBLOQUEADA' : 'A CONQUISTAR'}
-            </span>
-          </div>
-
-          <div class="wrapped-speed-item ${d.sub2 ? 'unlocked' : ''}">
-            <strong>-2:00 MIN</strong>
-            <span>
-              ${d.sub2 ? 'DESBLOQUEADA' : 'A CONQUISTAR'}
-            </span>
-          </div>
-
-        </div>
 
         <div class="wrapped-rank-box">
 
@@ -6661,140 +6592,837 @@ function buildWrappedSlides() {
             SEU MELHOR TEMPO OFICIAL
           </div>
 
+
           <div
             class="wrapped-hero-number"
-            style="font-size:47px"
+            style="
+              font-size:48px;
+              margin-top:10px;
+            "
           >
+
             ${bestTimeLabel(s.best)}
+
+          </div>
+
+        </div>
+
+
+        <div class="wrapped-speed">
+
+          <div
+            class="
+              wrapped-speed-item
+              ${d.sub3 ? 'unlocked' : ''}
+            "
+          >
+
+            <strong>
+              -3:00
+            </strong>
+
+            <span>
+
+              ${
+                d.sub3
+                  ? 'DESBLOQUEADA'
+                  : 'A CONQUISTAR'
+              }
+
+            </span>
+
+          </div>
+
+
+          <div
+            class="
+              wrapped-speed-item
+              ${d.sub230 ? 'unlocked' : ''}
+            "
+          >
+
+            <strong>
+              -2:30
+            </strong>
+
+            <span>
+
+              ${
+                d.sub230
+                  ? 'DESBLOQUEADA'
+                  : 'A CONQUISTAR'
+              }
+
+            </span>
+
+          </div>
+
+
+          <div
+            class="
+              wrapped-speed-item
+              ${d.sub2 ? 'unlocked' : ''}
+            "
+          >
+
+            <strong>
+              -2:00
+            </strong>
+
+            <span>
+
+              ${
+                d.sub2
+                  ? 'DESBLOQUEADA'
+                  : 'A CONQUISTAR'
+              }
+
+            </span>
+
           </div>
 
         </div>
 
       </div>
+
     `,
 
 
-    // ------------------------------------------------------
-    // TELA 6
-    // ------------------------------------------------------
+    // ======================================================
+    // STORY 4 — MELHOR POSIÇÃO
+    // ======================================================
 
     `
+
       <div class="wrapped-slide">
 
         <div class="wrapped-eyebrow">
-          PÓDIOS & CONQUISTAS
+          SEU MELHOR RESULTADO
         </div>
+
 
         <h1 class="wrapped-title">
-          CADA POSIÇÃO<br>
-          CONTA UMA HISTÓRIA.
+
+          ATÉ ONDE<br>
+          VOCÊ CHEGOU?
+
         </h1>
 
-        <div class="wrapped-medals">
 
-          <div class="wrapped-medal">
-            <strong>${d.first}</strong>
-            <small>1º</small>
+        <div class="wrapped-rank-box">
+
+          <div class="wrapped-hero-number">
+
+            ${
+              c?.bestPosition
+                ? `${c.bestPosition}º`
+                : '—'
+            }
+
           </div>
 
-          <div class="wrapped-medal">
-            <strong>${d.second}</strong>
-            <small>2º</small>
-          </div>
 
-          <div class="wrapped-medal">
-            <strong>${d.third}</strong>
-            <small>3º</small>
-          </div>
-
-          <div class="wrapped-medal">
-            <strong>${d.fourth}</strong>
-            <small>4º</small>
-          </div>
-
-          <div class="wrapped-medal">
-            <strong>${d.fifth}</strong>
-            <small>5º</small>
+          <div class="wrapped-big-label">
+            MELHOR POSIÇÃO EM ETAPA
           </div>
 
         </div>
+
+
+        <div class="wrapped-grid">
+
+          <div class="wrapped-card gold">
+
+            <small>
+              TOP 5
+            </small>
+
+            <b>
+              ${s.podiums}
+            </b>
+
+          </div>
+
+
+          <div class="wrapped-card">
+
+            <small>
+              VITÓRIAS
+            </small>
+
+            <b>
+              ${s.wins}
+            </b>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    `,
+
+
+    // ======================================================
+    // STORY 5 — TEMPORADA GERAL
+    // ======================================================
+
+    `
+
+      <div class="wrapped-slide">
+
+        <div class="wrapped-eyebrow">
+          TEMPORADA ${SYSTEM_YEAR}
+        </div>
+
+
+        <h1 class="wrapped-title">
+
+          ENTRE TODOS<br>
+          OS ATLETAS.
+
+        </h1>
+
+
+        <div class="wrapped-rank-box">
+
+          <div class="wrapped-hero-number">
+
+            ${
+              c?.generalPosition
+                ? `${c.generalPosition}º`
+                : '—'
+            }
+
+          </div>
+
+
+          <div class="wrapped-big-label">
+
+            DE
+            ${c?.generalTotal || 0}
+            ATLETAS
+
+          </div>
+
+
+          <div
+            class="wrapped-subtitle"
+            style="margin-top:8px"
+          >
+
+            classificação comparativa
+            DH-Club
+
+          </div>
+
+        </div>
+
+
+        <div
+          class="wrapped-subtitle"
+          style="margin-top:24px"
+        >
+
+          Um retrato comparativo dos
+          resultados oficiais registrados
+          durante a temporada.
+
+        </div>
+
+      </div>
+
+    `,
+
+
+    // ======================================================
+    // STORY 6 — CATEGORIA
+    // ======================================================
+
+    `
+
+      <div class="wrapped-slide">
+
+        <div class="wrapped-eyebrow">
+          SUA CATEGORIA
+        </div>
+
+
+        <h1 class="wrapped-title">
+
+          AGORA ENTRE<br>
+          OS SEUS RIVAIS.
+
+        </h1>
+
 
         <div class="wrapped-rank-box">
 
           <div class="wrapped-subtitle">
-            CONQUISTAS DESBLOQUEADAS
+
+            ${esc(d.category)}
+
           </div>
 
+
           <div class="wrapped-hero-number">
-            ${d.unlocked.length}
+
+            ${
+              c?.categoryPosition
+                ? `${c.categoryPosition}º`
+                : '—'
+            }
+
+          </div>
+
+
+          <div class="wrapped-big-label">
+
+            DE
+            ${c?.categoryTotal || 0}
+            ATLETAS
+
           </div>
 
         </div>
 
-        <div class="wrapped-achievements">
-          ${
-            unlockedNames ||
-            '<span class="wrapped-subtitle">Continue competindo para desbloquear conquistas.</span>'
-          }
+
+        <div
+          class="wrapped-card green"
+          style="margin-top:16px"
+        >
+
+          <small>
+            ATLETAS SUPERADOS
+          </small>
+
+          <b>
+            ${beatPct}%
+          </b>
+
+        </div>
+
+
+        <div
+          class="wrapped-subtitle"
+          style="margin-top:18px"
+        >
+
+          Você terminou comparativamente
+          à frente de ${beatPct}%
+          dos atletas da sua categoria.
+
         </div>
 
       </div>
+
     `,
 
 
-    // ------------------------------------------------------
-    // TELA 7
-    // ------------------------------------------------------
+    // ======================================================
+    // STORY 7 — EVOLUÇÃO
+    // ======================================================
 
     `
+
+      <div class="wrapped-slide">
+
+        <div class="wrapped-eyebrow">
+          SUA EVOLUÇÃO
+        </div>
+
+
+        <h1 class="wrapped-title">
+
+          NÃO É SÓ<br>
+          SOBRE GANHAR.
+
+        </h1>
+
+
+        <div class="wrapped-grid">
+
+          <div
+            class="
+              wrapped-card
+              ${
+                improvement >= 0
+                  ? 'green'
+                  : 'red'
+              }
+            "
+          >
+
+            <small>
+              SUA EVOLUÇÃO
+            </small>
+
+            <b>
+
+              ${
+                improvement > 0
+                  ? '+'
+                  : ''
+              }
+
+              ${improvement}
+              pts
+
+            </b>
+
+          </div>
+
+
+          <div
+            class="
+              wrapped-card
+              ${
+                improvementVsCategory >= 0
+                  ? 'green'
+                  : 'red'
+              }
+            "
+          >
+
+            <small>
+              VS. CATEGORIA
+            </small>
+
+            <b>
+
+              ${
+                improvementVsCategory > 0
+                  ? '+'
+                  : ''
+              }
+
+              ${improvementVsCategory}
+              pts
+
+            </b>
+
+          </div>
+
+        </div>
+
+
+        <div
+          class="wrapped-meter"
+          style="margin-top:28px"
+        >
+
+          <div class="wrapped-meter-head">
+
+            <span>
+              SEU ÍNDICE
+            </span>
+
+            <span>
+              ${score}%
+            </span>
+
+          </div>
+
+
+          <div class="wrapped-meter-track">
+
+            <div
+              class="wrapped-meter-fill"
+              style="
+                width:${
+                  Math.max(
+                    0,
+                    Math.min(
+                      100,
+                      score
+                    )
+                  )
+                }%;
+              "
+            ></div>
+
+          </div>
+
+        </div>
+
+
+        <div class="wrapped-meter">
+
+          <div class="wrapped-meter-head">
+
+            <span>
+              MÉDIA DA CATEGORIA
+            </span>
+
+            <span>
+              ${avgScore}%
+            </span>
+
+          </div>
+
+
+          <div class="wrapped-meter-track">
+
+            <div
+              class="wrapped-meter-fill"
+              style="
+                width:${
+                  Math.max(
+                    0,
+                    Math.min(
+                      100,
+                      avgScore
+                    )
+                  )
+                }%;
+                background:#68788e;
+              "
+            ></div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    `,
+
+
+    // ======================================================
+    // STORY 8 — PÓDIOS
+    // ======================================================
+
+    `
+
+      <div class="wrapped-slide">
+
+        <div class="wrapped-eyebrow">
+          PÓDIOS
+        </div>
+
+
+        <h1 class="wrapped-title">
+
+          CADA POSIÇÃO<br>
+          CONTA.
+
+        </h1>
+
+
+        <div class="wrapped-medals">
+
+          <div class="wrapped-medal">
+
+            <strong>
+              ${d.first}
+            </strong>
+
+            <small>
+              1º
+            </small>
+
+          </div>
+
+
+          <div class="wrapped-medal">
+
+            <strong>
+              ${d.second}
+            </strong>
+
+            <small>
+              2º
+            </small>
+
+          </div>
+
+
+          <div class="wrapped-medal">
+
+            <strong>
+              ${d.third}
+            </strong>
+
+            <small>
+              3º
+            </small>
+
+          </div>
+
+
+          <div class="wrapped-medal">
+
+            <strong>
+              ${d.fourth}
+            </strong>
+
+            <small>
+              4º
+            </small>
+
+          </div>
+
+
+          <div class="wrapped-medal">
+
+            <strong>
+              ${d.fifth}
+            </strong>
+
+            <small>
+              5º
+            </small>
+
+          </div>
+
+        </div>
+
+
+        <div class="wrapped-rank-box">
+
+          <div class="wrapped-subtitle">
+            RESULTADOS NO TOP 5
+          </div>
+
+
+          <div class="wrapped-hero-number">
+
+            ${s.podiums}
+
+          </div>
+
+        </div>
+
+      </div>
+
+    `,
+
+
+    // ======================================================
+    // STORY 9 — CONQUISTAS
+    // ======================================================
+
+    `
+
+      <div class="wrapped-slide">
+
+        <div class="wrapped-eyebrow">
+          CONQUISTAS
+        </div>
+
+
+        <h1 class="wrapped-title">
+
+          O QUE VOCÊ<br>
+          DESBLOQUEOU.
+
+        </h1>
+
+
+        <div class="wrapped-rank-box">
+
+          <div class="wrapped-hero-number">
+
+            ${d.unlocked.length}
+
+          </div>
+
+
+          <div class="wrapped-big-label">
+
+            ${
+              d.unlocked.length === 1
+                ? 'CONQUISTA'
+                : 'CONQUISTAS'
+            }
+
+          </div>
+
+        </div>
+
+
+        <div class="wrapped-achievements">
+
+          ${
+            unlockedNames ||
+
+            `
+
+              <span class="wrapped-subtitle">
+
+                Sua jornada está apenas
+                começando.
+
+              </span>
+
+            `
+          }
+
+        </div>
+
+
+        <div
+          class="wrapped-subtitle"
+          style="margin-top:24px"
+        >
+
+          Continue competindo para
+          desbloquear novas marcas
+          durante o ano.
+
+        </div>
+
+      </div>
+
+    `,
+
+
+    // ======================================================
+    // STORY 10 — FINAL
+    // ======================================================
+
+    `
+
       <div class="wrapped-slide">
 
         <div class="wrapped-eyebrow">
           DH-PE • ${SYSTEM_YEAR}
         </div>
 
+
+        <img
+          class="wrapped-photo"
+          src="${esc(d.photo)}"
+          alt="Foto do atleta"
+        >
+
+
         <h1 class="wrapped-title">
+
           ESSA TEMPORADA<br>
           É SUA.
+
         </h1>
+
 
         <div class="wrapped-rank-box">
 
-          <div class="wrapped-subtitle">
-            ${esc(d.name)}
-          </div>
-
           <div
             style="
-              font-size:21px;
+              font-size:18px;
               font-weight:1000;
-              margin-top:7px;
+              color:white;
             "
           >
-            ${s.races} etapas •
-            ${s.podiums} Top 5 •
-            ${bestTimeLabel(s.best)}
+
+            ${esc(d.name)}
+
           </div>
+
 
           <div
             class="wrapped-subtitle"
-            style="margin-top:12px"
+            style="margin-top:5px"
           >
-            Mais que uma pista,
-            uma comunidade.
+
+            ${esc(d.category)}
+
           </div>
+
+
+          <div
+            style="
+              margin-top:18px;
+              font-size:18px;
+              font-weight:900;
+              line-height:1.7;
+            "
+          >
+
+            ${s.races}
+            ${
+              s.races === 1
+                ? 'ETAPA'
+                : 'ETAPAS'
+            }
+
+            •
+
+            ${s.podiums}
+            TOP 5
+
+            <br>
+
+            ${bestTimeLabel(s.best)}
+            MELHOR TEMPO
+
+          </div>
+
+
+          ${
+            c?.categoryPosition
+
+              ? `
+
+                <div
+                  style="
+                    margin-top:12px;
+                    color:#ffc72c;
+                    font-size:13px;
+                    font-weight:900;
+                  "
+                >
+
+                  ${c.categoryPosition}º
+                  DE
+                  ${c.categoryTotal}
+                  NA
+                  ${esc(d.category)}
+
+                </div>
+
+              `
+
+              : ''
+          }
 
         </div>
 
+
+        <div
+          class="wrapped-subtitle"
+          style="
+            margin-top:18px;
+            text-align:center;
+          "
+        >
+
+          Mais que uma pista,
+          uma comunidade.
+
+        </div>
+
+
         <button
           class="wrapped-share"
-          onclick="Club.shareWrapped()"
+          onclick="
+            Club.shareWrapped()
+          "
         >
-          <i class="fa-solid fa-share-nodes"></i>
+
+          <i
+            class="
+              fa-solid
+              fa-share-nodes
+            "
+          ></i>
+
           COMPARTILHAR MINHA TEMPORADA
+
         </button>
 
       </div>
+
     `
 
   ];
