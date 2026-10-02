@@ -7884,6 +7884,1497 @@ DH-PE • Downhill Pernambuco`;
 }
 
 // ==========================================================
+// IMAGEM COMPARTILHÁVEL DA TEMPORADA
+// ==========================================================
+
+function shareRoundRect(
+  ctx,
+  x,
+  y,
+  width,
+  height,
+  radius
+) {
+
+  const r =
+    Math.min(
+      radius,
+      width / 2,
+      height / 2
+    );
+
+
+  ctx.beginPath();
+
+  ctx.moveTo(
+    x + r,
+    y
+  );
+
+  ctx.lineTo(
+    x + width - r,
+    y
+  );
+
+  ctx.quadraticCurveTo(
+    x + width,
+    y,
+    x + width,
+    y + r
+  );
+
+  ctx.lineTo(
+    x + width,
+    y + height - r
+  );
+
+  ctx.quadraticCurveTo(
+    x + width,
+    y + height,
+    x + width - r,
+    y + height
+  );
+
+  ctx.lineTo(
+    x + r,
+    y + height
+  );
+
+  ctx.quadraticCurveTo(
+    x,
+    y + height,
+    x,
+    y + height - r
+  );
+
+  ctx.lineTo(
+    x,
+    y + r
+  );
+
+  ctx.quadraticCurveTo(
+    x,
+    y,
+    x + r,
+    y
+  );
+
+  ctx.closePath();
+}
+
+
+// ==========================================================
+// AJUSTA TEXTO PARA NÃO ESTOURAR O CARD
+// ==========================================================
+
+function shareFitText(
+  ctx,
+  text,
+  maxWidth,
+  startSize,
+  minSize = 28
+) {
+
+  let size =
+    startSize;
+
+
+  while (
+    size > minSize
+  ) {
+
+    ctx.font =
+      `900 ${size}px Arial`;
+
+
+    if (
+      ctx.measureText(
+        text
+      ).width <= maxWidth
+    ) {
+
+      break;
+    }
+
+
+    size -=
+      2;
+  }
+
+
+  ctx.font =
+    `900 ${size}px Arial`;
+
+
+  return size;
+}
+
+
+// ==========================================================
+// CARREGA FOTO DO ATLETA
+// ==========================================================
+
+function loadWrappedSharePhoto(
+  src
+) {
+
+  return new Promise(
+    resolve => {
+
+      if (!src) {
+
+        resolve(
+          null
+        );
+
+        return;
+      }
+
+
+      const img =
+        new Image();
+
+
+      let finished =
+        false;
+
+
+      const finish =
+        result => {
+
+          if (finished) {
+
+            return;
+          }
+
+
+          finished =
+            true;
+
+
+          clearTimeout(
+            timer
+          );
+
+
+          resolve(
+            result
+          );
+        };
+
+
+      try {
+
+        if (
+          /^https?:/i.test(
+            src
+          )
+        ) {
+
+          img.crossOrigin =
+            'anonymous';
+        }
+
+      } catch {}
+
+
+      img.onload =
+        () =>
+          finish(
+            img
+          );
+
+
+      img.onerror =
+        () =>
+          finish(
+            null
+          );
+
+
+      const timer =
+        setTimeout(
+          () =>
+            finish(
+              null
+            ),
+          5000
+        );
+
+
+      img.src =
+        src;
+    }
+  );
+}
+
+
+// ==========================================================
+// DESENHA FOTO CIRCULAR
+// ==========================================================
+
+function drawWrappedSharePhoto(
+  ctx,
+  img,
+  x,
+  y,
+  size,
+  name
+) {
+
+  ctx.save();
+
+
+  ctx.beginPath();
+
+  ctx.arc(
+    x + size / 2,
+    y + size / 2,
+    size / 2,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.closePath();
+
+  ctx.clip();
+
+
+  if (img) {
+
+    const scale =
+      Math.max(
+        size / img.width,
+        size / img.height
+      );
+
+
+    const width =
+      img.width *
+      scale;
+
+
+    const height =
+      img.height *
+      scale;
+
+
+    ctx.drawImage(
+      img,
+
+      x +
+      (
+        size -
+        width
+      ) / 2,
+
+      y +
+      (
+        size -
+        height
+      ) / 2,
+
+      width,
+
+      height
+    );
+
+  } else {
+
+    const gradient =
+      ctx.createLinearGradient(
+        x,
+        y,
+        x + size,
+        y + size
+      );
+
+
+    gradient.addColorStop(
+      0,
+      '#16385d'
+    );
+
+
+    gradient.addColorStop(
+      1,
+      '#06111f'
+    );
+
+
+    ctx.fillStyle =
+      gradient;
+
+
+    ctx.fillRect(
+      x,
+      y,
+      size,
+      size
+    );
+
+
+    ctx.fillStyle =
+      '#ffc72c';
+
+
+    ctx.textAlign =
+      'center';
+
+
+    ctx.textBaseline =
+      'middle';
+
+
+    ctx.font =
+      '900 72px Arial';
+
+
+    ctx.fillText(
+      initials(
+        name
+      ),
+      x + size / 2,
+      y + size / 2
+    );
+  }
+
+
+  ctx.restore();
+
+
+  ctx.beginPath();
+
+  ctx.arc(
+    x + size / 2,
+    y + size / 2,
+    size / 2 + 5,
+    0,
+    Math.PI * 2
+  );
+
+
+  ctx.strokeStyle =
+    '#ffc72c';
+
+
+  ctx.lineWidth =
+    10;
+
+
+  ctx.stroke();
+}
+
+
+// ==========================================================
+// CARD DE NÚMERO
+// ==========================================================
+
+function drawWrappedShareStat(
+  ctx,
+  x,
+  y,
+  width,
+  label,
+  value,
+  gold = false
+) {
+
+  shareRoundRect(
+    ctx,
+    x,
+    y,
+    width,
+    150,
+    28
+  );
+
+
+  ctx.fillStyle =
+    gold
+      ? 'rgba(255,199,44,.11)'
+      : 'rgba(255,255,255,.055)';
+
+
+  ctx.fill();
+
+
+  ctx.strokeStyle =
+    gold
+      ? 'rgba(255,199,44,.28)'
+      : 'rgba(255,255,255,.10)';
+
+
+  ctx.lineWidth =
+    2;
+
+
+  ctx.stroke();
+
+
+  ctx.textAlign =
+    'left';
+
+
+  ctx.textBaseline =
+    'alphabetic';
+
+
+  ctx.fillStyle =
+    '#8d9caf';
+
+
+  ctx.font =
+    '900 22px Arial';
+
+
+  ctx.fillText(
+    label,
+    x + 30,
+    y + 45
+  );
+
+
+  ctx.fillStyle =
+    gold
+      ? '#ffc72c'
+      : '#ffffff';
+
+
+  shareFitText(
+    ctx,
+    String(value),
+    width - 60,
+    48,
+    27
+  );
+
+
+  ctx.fillText(
+    String(value),
+    x + 30,
+    y + 112
+  );
+}
+
+
+// ==========================================================
+// GERA O CARD 1080 x 1920
+// ==========================================================
+
+async function generateWrappedShareImage() {
+
+  const d =
+    wrappedData();
+
+
+  const s =
+    d.stats;
+
+
+  const c =
+    d.comparison;
+
+
+  const canvas =
+    document.createElement(
+      'canvas'
+    );
+
+
+  canvas.width =
+    1080;
+
+
+  canvas.height =
+    1920;
+
+
+  const ctx =
+    canvas.getContext(
+      '2d'
+    );
+
+
+  // ========================================================
+  // FUNDO
+  // ========================================================
+
+  const bg =
+    ctx.createLinearGradient(
+      0,
+      0,
+      1080,
+      1920
+    );
+
+
+  bg.addColorStop(
+    0,
+    '#091c33'
+  );
+
+
+  bg.addColorStop(
+    .48,
+    '#04111f'
+  );
+
+
+  bg.addColorStop(
+    1,
+    '#010711'
+  );
+
+
+  ctx.fillStyle =
+    bg;
+
+
+  ctx.fillRect(
+    0,
+    0,
+    1080,
+    1920
+  );
+
+
+  // ========================================================
+  // LUZ AZUL
+  // ========================================================
+
+  const blue =
+    ctx.createRadialGradient(
+      120,
+      320,
+      0,
+      120,
+      320,
+      700
+    );
+
+
+  blue.addColorStop(
+    0,
+    'rgba(27,105,255,.32)'
+  );
+
+
+  blue.addColorStop(
+    1,
+    'rgba(27,105,255,0)'
+  );
+
+
+  ctx.fillStyle =
+    blue;
+
+
+  ctx.fillRect(
+    0,
+    0,
+    1080,
+    1050
+  );
+
+
+  // ========================================================
+  // LUZ DOURADA
+  // ========================================================
+
+  const goldGlow =
+    ctx.createRadialGradient(
+      980,
+      500,
+      0,
+      980,
+      500,
+      520
+    );
+
+
+  goldGlow.addColorStop(
+    0,
+    'rgba(255,199,44,.22)'
+  );
+
+
+  goldGlow.addColorStop(
+    1,
+    'rgba(255,199,44,0)'
+  );
+
+
+  ctx.fillStyle =
+    goldGlow;
+
+
+  ctx.fillRect(
+    400,
+    0,
+    680,
+    1050
+  );
+
+
+  // ========================================================
+  // GRID DISCRETO
+  // ========================================================
+
+  ctx.strokeStyle =
+    'rgba(255,255,255,.025)';
+
+
+  ctx.lineWidth =
+    1;
+
+
+  for (
+    let x = 0;
+    x <= 1080;
+    x += 72
+  ) {
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      x,
+      0
+    );
+
+    ctx.lineTo(
+      x,
+      1920
+    );
+
+    ctx.stroke();
+  }
+
+
+  for (
+    let y = 0;
+    y <= 1920;
+    y += 72
+  ) {
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      0,
+      y
+    );
+
+    ctx.lineTo(
+      1080,
+      y
+    );
+
+    ctx.stroke();
+  }
+
+
+  // ========================================================
+  // SILHUETA DE MONTANHAS
+  // ========================================================
+
+  ctx.beginPath();
+
+  ctx.moveTo(
+    0,
+    1540
+  );
+
+  ctx.lineTo(
+    150,
+    1360
+  );
+
+  ctx.lineTo(
+    300,
+    1460
+  );
+
+  ctx.lineTo(
+    505,
+    1190
+  );
+
+  ctx.lineTo(
+    690,
+    1415
+  );
+
+  ctx.lineTo(
+    855,
+    1250
+  );
+
+  ctx.lineTo(
+    1080,
+    1480
+  );
+
+  ctx.lineTo(
+    1080,
+    1920
+  );
+
+  ctx.lineTo(
+    0,
+    1920
+  );
+
+  ctx.closePath();
+
+
+  const mountains =
+    ctx.createLinearGradient(
+      0,
+      1180,
+      0,
+      1920
+    );
+
+
+  mountains.addColorStop(
+    0,
+    'rgba(14,48,76,.55)'
+  );
+
+
+  mountains.addColorStop(
+    1,
+    'rgba(1,7,17,.98)'
+  );
+
+
+  ctx.fillStyle =
+    mountains;
+
+
+  ctx.fill();
+
+
+  // ========================================================
+  // FAIXA DE CORES
+  // ========================================================
+
+  ctx.fillStyle =
+    '#176cff';
+
+
+  ctx.fillRect(
+    70,
+    74,
+    130,
+    9
+  );
+
+
+  ctx.fillStyle =
+    '#ffc72c';
+
+
+  ctx.fillRect(
+    200,
+    74,
+    130,
+    9
+  );
+
+
+  ctx.fillStyle =
+    '#35d48a';
+
+
+  ctx.fillRect(
+    330,
+    74,
+    130,
+    9
+  );
+
+
+  // ========================================================
+  // CABEÇALHO
+  // ========================================================
+
+  ctx.textAlign =
+    'left';
+
+
+  ctx.fillStyle =
+    '#ffffff';
+
+
+  ctx.font =
+    '900 44px Arial';
+
+
+  ctx.fillText(
+    'DH★PE',
+    70,
+    150
+  );
+
+
+  ctx.textAlign =
+    'right';
+
+
+  ctx.fillStyle =
+    '#ffc72c';
+
+
+  ctx.font =
+    '900 25px Arial';
+
+
+  ctx.fillText(
+    `TEMPORADA ${SYSTEM_YEAR}`,
+    1010,
+    148
+  );
+
+
+  // ========================================================
+  // TÍTULO
+  // ========================================================
+
+  ctx.textAlign =
+    'left';
+
+
+  ctx.fillStyle =
+    '#ffc72c';
+
+
+  ctx.font =
+    '900 23px Arial';
+
+
+  ctx.fillText(
+    'MINHA RETROSPECTIVA',
+    70,
+    245
+  );
+
+
+  ctx.fillStyle =
+    '#ffffff';
+
+
+  ctx.font =
+    '900 77px Arial';
+
+
+  ctx.fillText(
+    'ESSA TEMPORADA',
+    70,
+    335
+  );
+
+
+  ctx.fillText(
+    'É MINHA.',
+    70,
+    415
+  );
+
+
+  // ========================================================
+  // FOTO + ATLETA
+  // ========================================================
+
+  const photo =
+    await loadWrappedSharePhoto(
+      d.photo
+    );
+
+
+  drawWrappedSharePhoto(
+    ctx,
+    photo,
+    70,
+    500,
+    230,
+    d.name
+  );
+
+
+  ctx.textAlign =
+    'left';
+
+
+  ctx.fillStyle =
+    '#ffffff';
+
+
+  shareFitText(
+    ctx,
+    String(
+      d.name
+    ).toUpperCase(),
+    665,
+    55,
+    31
+  );
+
+
+  ctx.fillText(
+    String(
+      d.name
+    ).toUpperCase(),
+    345,
+    585
+  );
+
+
+  ctx.fillStyle =
+    '#ffc72c';
+
+
+  shareFitText(
+    ctx,
+    d.category,
+    660,
+    30,
+    22
+  );
+
+
+  ctx.fillText(
+    d.category,
+    345,
+    635
+  );
+
+
+  ctx.fillStyle =
+    '#8d9caf';
+
+
+  ctx.font =
+    '700 22px Arial';
+
+
+  ctx.fillText(
+    'ATLETA DH-PE',
+    345,
+    680
+  );
+
+
+  // ========================================================
+  // ESTATÍSTICAS
+  // ========================================================
+
+  drawWrappedShareStat(
+    ctx,
+    70,
+    800,
+    450,
+    'ETAPAS',
+    s.races
+  );
+
+
+  drawWrappedShareStat(
+    ctx,
+    560,
+    800,
+    450,
+    'TOP 5',
+    s.podiums,
+    true
+  );
+
+
+  drawWrappedShareStat(
+    ctx,
+    70,
+    975,
+    450,
+    'MELHOR TEMPO',
+    bestTimeLabel(
+      s.best
+    ),
+    true
+  );
+
+
+  drawWrappedShareStat(
+    ctx,
+    560,
+    975,
+    450,
+    'MELHOR POSIÇÃO',
+    c?.bestPosition
+      ? `${c.bestPosition}º`
+      : '—'
+  );
+
+
+  // ========================================================
+  // CLASSIFICAÇÃO
+  // ========================================================
+
+  shareRoundRect(
+    ctx,
+    70,
+    1170,
+    940,
+    270,
+    34
+  );
+
+
+  ctx.fillStyle =
+    'rgba(255,199,44,.075)';
+
+
+  ctx.fill();
+
+
+  ctx.strokeStyle =
+    'rgba(255,199,44,.25)';
+
+
+  ctx.lineWidth =
+    2;
+
+
+  ctx.stroke();
+
+
+  ctx.textAlign =
+    'left';
+
+
+  ctx.fillStyle =
+    '#ffc72c';
+
+
+  ctx.font =
+    '900 22px Arial';
+
+
+  ctx.fillText(
+    'CLASSIFICAÇÃO COMPARATIVA',
+    110,
+    1228
+  );
+
+
+  ctx.fillStyle =
+    '#ffffff';
+
+
+  ctx.font =
+    '900 64px Arial';
+
+
+  ctx.fillText(
+    c?.categoryPosition
+      ? `${c.categoryPosition}º`
+      : '—',
+    110,
+    1320
+  );
+
+
+  ctx.font =
+    '900 29px Arial';
+
+
+  ctx.fillText(
+    `DE ${c?.categoryTotal || 0} NA ${d.category}`,
+    280,
+    1315
+  );
+
+
+  ctx.fillStyle =
+    '#8d9caf';
+
+
+  ctx.font =
+    '700 22px Arial';
+
+
+  ctx.fillText(
+    `À frente de ${
+      Math.round(
+        c?.categoryBeatPct ||
+        0
+      )
+    }% dos atletas da categoria`,
+    110,
+    1370
+  );
+
+
+  if (
+    c?.generalPosition
+  ) {
+
+    ctx.fillText(
+      `Geral: ${c.generalPosition}º de ${c.generalTotal || 0} atletas`,
+      110,
+      1410
+    );
+  }
+
+
+  // ========================================================
+  // CONQUISTAS
+  // ========================================================
+
+  ctx.fillStyle =
+    '#ffffff';
+
+
+  ctx.font =
+    '900 30px Arial';
+
+
+  ctx.fillText(
+    `${d.unlocked.length} CONQUISTAS DESBLOQUEADAS`,
+    70,
+    1535
+  );
+
+
+  ctx.fillStyle =
+    '#ffc72c';
+
+
+  ctx.fillRect(
+    70,
+    1570,
+    Math.min(
+      940,
+      100 +
+      d.unlocked.length *
+      70
+    ),
+    9
+  );
+
+
+  // ========================================================
+  // FRASE FINAL
+  // ========================================================
+
+  ctx.fillStyle =
+    '#ffffff';
+
+
+  ctx.font =
+    '900 40px Arial';
+
+
+  ctx.fillText(
+    'MAIS QUE UMA PISTA,',
+    70,
+    1690
+  );
+
+
+  ctx.fillStyle =
+    '#ffc72c';
+
+
+  ctx.fillText(
+    'UMA COMUNIDADE.',
+    70,
+    1740
+  );
+
+
+  ctx.fillStyle =
+    '#7f90a6';
+
+
+  ctx.font =
+    '700 18px Arial';
+
+
+  ctx.fillText(
+    'Comparativo DH-Club baseado nos resultados oficiais registrados.',
+    70,
+    1810
+  );
+
+
+  ctx.fillStyle =
+    '#ffffff';
+
+
+  ctx.font =
+    '900 24px Arial';
+
+
+  ctx.fillText(
+    'DH-PE • DOWNHILL PERNAMBUCO',
+    70,
+    1870
+  );
+
+
+  return canvas;
+}
+
+
+// ==========================================================
+// NOME DO ARQUIVO
+// ==========================================================
+
+function wrappedShareFileName() {
+
+  const name =
+    String(
+      loggedUser?.nome ||
+      'atleta'
+    )
+      .normalize(
+        'NFD'
+      )
+      .replace(
+        /[\u0300-\u036f]/g,
+        ''
+      )
+      .toLowerCase()
+      .replace(
+        /[^a-z0-9]+/g,
+        '-'
+      )
+      .replace(
+        /^-|-$/g,
+        ''
+      );
+
+
+  return (
+    `temporada-dhpe-${SYSTEM_YEAR}-${name || 'atleta'}.png`
+  );
+}
+
+
+// ==========================================================
+// COMPARTILHAR IMAGEM
+// ==========================================================
+
+async function shareWrapped() {
+
+  const d =
+    wrappedData();
+
+
+  const s =
+    d.stats;
+
+
+  const c =
+    d.comparison;
+
+
+  const texto =
+`🏁 MINHA TEMPORADA DH-PE ${SYSTEM_YEAR}
+
+🚵 ${s.races} etapas
+⭐ ${s.podiums} resultados no Top 5
+⏱️ Melhor tempo: ${bestTimeLabel(s.best)}
+📊 Melhor posição: ${
+  c?.bestPosition
+    ? `${c.bestPosition}º`
+    : '—'
+}
+
+${
+  c?.categoryPosition
+
+    ? `🔥 ${c.categoryPosition}º de ${c.categoryTotal} na ${d.category}`
+
+    : ''
+}
+
+Mais que uma pista, uma comunidade.
+DH-PE • Downhill Pernambuco`;
+
+
+  try {
+
+    toast(
+      'CRIANDO SUA ARTE…'
+    );
+
+
+    const canvas =
+      await generateWrappedShareImage();
+
+
+    const blob =
+      await new Promise(
+        (
+          resolve,
+          reject
+        ) => {
+
+          canvas.toBlob(
+            result => {
+
+              if (result) {
+
+                resolve(
+                  result
+                );
+
+              } else {
+
+                reject(
+                  new Error(
+                    'Falha ao criar PNG.'
+                  )
+                );
+              }
+
+            },
+
+            'image/png'
+          );
+        }
+      );
+
+
+    const fileName =
+      wrappedShareFileName();
+
+
+    const file =
+      new File(
+        [
+          blob
+        ],
+
+        fileName,
+
+        {
+          type:
+            'image/png'
+        }
+      );
+
+
+    // ======================================================
+    // CELULAR
+    // ======================================================
+
+    if (
+      navigator.share &&
+      navigator.canShare &&
+      navigator.canShare({
+        files: [
+          file
+        ]
+      })
+    ) {
+
+      await navigator.share({
+
+        title:
+          `Minha temporada DH-PE ${SYSTEM_YEAR}`,
+
+        text:
+          texto,
+
+        files: [
+          file
+        ]
+
+      });
+
+
+      return;
+    }
+
+
+    // ======================================================
+    // PC / FALLBACK
+    // ======================================================
+
+    const url =
+      URL.createObjectURL(
+        blob
+      );
+
+
+    const link =
+      document.createElement(
+        'a'
+      );
+
+
+    link.href =
+      url;
+
+
+    link.download =
+      fileName;
+
+
+    document.body.appendChild(
+      link
+    );
+
+
+    link.click();
+
+
+    link.remove();
+
+
+    setTimeout(
+      () => {
+
+        URL.revokeObjectURL(
+          url
+        );
+
+      },
+      3000
+    );
+
+
+    toast(
+      'ARTE DA TEMPORADA CRIADA!'
+    );
+
+
+  } catch (err) {
+
+    if (
+      err?.name ===
+      'AbortError'
+    ) {
+
+      return;
+    }
+
+
+    console.error(
+      '[DH-CLUB] Erro ao gerar arte:',
+      err
+    );
+
+
+    toast(
+      'ERRO AO CRIAR A ARTE'
+    );
+  }
+}
+  
+// ==========================================================
 // NORMALIZAR BANCO DO CLUB
 // ==========================================================
 
