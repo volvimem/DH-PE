@@ -8865,7 +8865,42 @@ function wrappedData() {
       : null;
 
 
+  // ========================================================
+  // RANKING OFICIAL DH-PE
+  // ========================================================
+
+  const officialRanking =
+    typeof myOfficialRankingData ===
+      'function'
+
+      ? myOfficialRankingData()
+
+      : null;
+
+
+  // ========================================================
+  // JORNADA ANUAL
+  // ========================================================
+
+  const goals =
+    typeof annualGoals ===
+      'function'
+
+      ? annualGoals()
+
+      : [];
+
+
+  const completedGoals =
+    goals.filter(
+      goal =>
+        goal.done
+    ).length;
+
+
   const positions =
+
+
     stats.results
       .map(
         result =>
@@ -8902,11 +8937,17 @@ function wrappedData() {
     stats.best;
 
 
-  return {
+    return {
 
     stats,
 
     comparison,
+
+    officialRanking,
+
+    goals,
+
+    completedGoals,
 
     name:
       String(
