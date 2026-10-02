@@ -64,6 +64,9 @@ let club = {
 
 let currentView = 'home';
 
+  let achievementFilter =
+  'TODAS';
+
 
 const cleanCPF = v =>
   String(v || '').replace(/\D/g, '');
@@ -6152,6 +6155,251 @@ function renderCareer() {
 // CONQUISTAS
 // ==========================================================
 
+// ==========================================================
+// FILTROS E RARIDADE DAS CONQUISTAS
+// ==========================================================
+
+function achievementRarityInfo(
+  rarity
+) {
+
+  const value =
+    String(
+      rarity ||
+      'COMUM'
+    )
+      .toUpperCase();
+
+
+  const map = {
+
+    COMUM: {
+      label: 'COMUM',
+      color: '#aeb8c6',
+      bg: 'rgba(174,184,198,.09)',
+      border: 'rgba(174,184,198,.20)'
+    },
+
+    RARO: {
+      label: 'RARO',
+      color: '#55a7ff',
+      bg: 'rgba(37,132,255,.10)',
+      border: 'rgba(37,132,255,.28)'
+    },
+
+    'ÉPICO': {
+      label: 'ÉPICO',
+      color: '#bf78ff',
+      bg: 'rgba(174,79,255,.11)',
+      border: 'rgba(174,79,255,.30)'
+    },
+
+    LENDÁRIO: {
+      label: 'LENDÁRIO',
+      color: '#ffc72c',
+      bg: 'rgba(255,199,44,.11)',
+      border: 'rgba(255,199,44,.30)'
+    }
+
+  };
+
+
+  return (
+    map[value] ||
+    map.COMUM
+  );
+}
+
+
+// ==========================================================
+// TROCA O FILTRO
+// ==========================================================
+
+function setAchievementFilter(
+  group
+) {
+
+  achievementFilter =
+    group ||
+    'TODAS';
+
+
+  renderAchievements();
+}
+
+
+// ==========================================================
+// CARD DE CONQUISTA
+// ==========================================================
+
+function achievementCollectionCard(
+  item
+) {
+
+  const rarity =
+    achievementRarityInfo(
+      item.rarity
+    );
+
+
+  return `
+
+    <div
+      class="
+        achievement
+        ${
+          item.ok
+            ? ''
+            : 'locked'
+        }
+      "
+      style="
+        position:relative;
+        overflow:hidden;
+        border-color:${
+          item.ok
+            ? rarity.border
+            : 'rgba(255,255,255,.07)'
+        };
+      "
+    >
+
+      <!-- RARIDADE -->
+
+      <div
+        style="
+          position:absolute;
+          top:9px;
+          right:9px;
+          padding:4px 7px;
+          border-radius:20px;
+          font-size:6px;
+          font-weight:1000;
+          letter-spacing:.8px;
+          color:${
+            item.ok
+              ? rarity.color
+              : '#687587'
+          };
+          background:${
+            item.ok
+              ? rarity.bg
+              : 'rgba(255,255,255,.04)'
+          };
+          border:1px solid ${
+            item.ok
+              ? rarity.border
+              : 'rgba(255,255,255,.06)'
+          };
+        "
+      >
+
+        ${rarity.label}
+
+      </div>
+
+
+      <!-- MEDALHA -->
+
+      <div
+        class="medal"
+        style="
+          color:${
+            item.ok
+              ? rarity.color
+              : ''
+          };
+        "
+      >
+
+        <i
+          class="
+            fa-solid
+            ${item.icon}
+          "
+        ></i>
+
+      </div>
+
+
+      <!-- GRUPO -->
+
+      <div
+        style="
+          margin-top:10px;
+          margin-bottom:5px;
+          font-size:6px;
+          letter-spacing:1px;
+          font-weight:900;
+          color:var(--muted);
+        "
+      >
+
+        ${esc(
+          item.group ||
+          'GERAL'
+        )}
+
+      </div>
+
+
+      <!-- TÍTULO -->
+
+      <b>
+        ${esc(item.title)}
+      </b>
+
+
+      <!-- DESCRIÇÃO -->
+
+      <small>
+        ${esc(item.desc)}
+      </small>
+
+
+      <div
+        style="
+          margin-top:12px;
+        "
+      >
+
+        <span
+          class="
+            tag
+            ${
+              item.ok
+                ? 'gold'
+                : ''
+            }
+          "
+          style="
+            ${
+              item.ok
+                ? `
+                  color:${rarity.color};
+                  background:${rarity.bg};
+                  border-color:${rarity.border};
+                `
+                : ''
+            }
+          "
+        >
+
+          ${
+            item.ok
+              ? 'DESBLOQUEADA'
+              : 'BLOQUEADA'
+          }
+
+        </span>
+
+      </div>
+
+    </div>
+
+  `;
+}
+  
 function renderAchievements() {
 
   const achievementsList =
@@ -6188,7 +6436,118 @@ function renderAchievements() {
 
       : 0;
 
+  // ========================================================
+  // GRUPOS DE CONQUISTAS
+  // ========================================================
 
+  const groupOrder = [
+
+    'PARTICIPAÇÃO',
+
+    'CLASSIFICAÇÃO',
+
+    'CONSISTÊNCIA',
+
+    'PÓDIOS',
+
+    'VITÓRIAS',
+
+    'CRONÔMETRO',
+
+    'PONTOS',
+
+    'RANKING',
+
+    'CIDADE',
+
+    'EVOLUÇÃO'
+
+  ];
+
+
+  const availableGroups =
+    groupOrder.filter(
+      group =>
+        achievementsList.some(
+          item =>
+            item.group === group
+        )
+    );
+
+
+  const filteredAchievements =
+    achievementFilter ===
+      'TODAS'
+
+      ? achievementsList
+
+      : achievementsList.filter(
+          item =>
+            item.group ===
+            achievementFilter
+        );
+
+
+  const filteredUnlocked =
+    filteredAchievements.filter(
+      item =>
+        item.ok
+    ).length;
+
+
+  const filtersHtml =
+    [
+      'TODAS',
+      ...availableGroups
+    ]
+      .map(
+        group => `
+
+          <button
+
+            onclick="
+              Club.setAchievementFilter(
+                '${group}'
+              )
+            "
+
+            style="
+              border:1px solid ${
+                achievementFilter === group
+                  ? 'rgba(255,199,44,.50)'
+                  : 'rgba(255,255,255,.08)'
+              };
+
+              background:${
+                achievementFilter === group
+                  ? 'rgba(255,199,44,.13)'
+                  : 'rgba(255,255,255,.04)'
+              };
+
+              color:${
+                achievementFilter === group
+                  ? '#ffc72c'
+                  : '#9ba8bb'
+              };
+
+              padding:9px 12px;
+              border-radius:30px;
+              font-size:8px;
+              font-weight:1000;
+              letter-spacing:.7px;
+              white-space:nowrap;
+              cursor:pointer;
+            "
+          >
+
+            ${group}
+
+          </button>
+
+        `
+      )
+      .join('');
+  
   document
     .getElementById(
       'view-achievements'
@@ -6403,11 +6762,13 @@ function renderAchievements() {
 
       <span>
 
-        ${unlocked}
-        /
-        ${achievementsList.length}
+  ${unlocked}
+  /
+  ${achievementsList.length}
 
-      </span>
+  TOTAL
+
+</span>
 
     </div>
 
@@ -6430,80 +6791,79 @@ function renderAchievements() {
 
     </div>
 
+    <div
+      style="
+        display:flex;
+        gap:7px;
+        overflow-x:auto;
+        padding:
+          2px
+          1px
+          12px;
+        scrollbar-width:none;
+      "
+    >
 
-    <div class="achievement-grid">
+      ${filtersHtml}
 
-      ${
-        achievementsList
-          .map(
-            item => `
-
-              <div
-                class="
-                  achievement
-                  ${
-                    item.ok
-                      ? ''
-                      : 'locked'
-                  }
-                "
-              >
-
-                <div class="medal">
-
-                  <i
-                    class="
-                      fa-solid
-                      ${item.icon}
-                    "
-                  ></i>
-
-                </div>
+    </div>
 
 
-                <b>
-                  ${item.title}
-                </b>
+    <div
+      style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin:
+          2px
+          0
+          12px;
+      "
+    >
+
+      <div
+        style="
+          font-size:9px;
+          color:var(--muted);
+          font-weight:900;
+        "
+      >
+
+        ${
+          achievementFilter ===
+            'TODAS'
+
+            ? 'TODAS AS CONQUISTAS'
+
+            : achievementFilter
+        }
+
+      </div>
 
 
-                <small>
-                  ${item.desc}
-                </small>
+      <div
+        style="
+          font-size:9px;
+          font-weight:1000;
+          color:var(--gold2);
+        "
+      >
 
+        ${filteredUnlocked}
+        /
+        ${filteredAchievements.length}
 
-                <div
-                  style="
-                    margin-top:12px
-                  "
-                >
+      </div>
 
-                  <span
-                    class="
-                      tag
-                      ${
-                        item.ok
-                          ? 'gold'
-                          : ''
-                      }
-                    "
-                  >
+    </div>
 
-                    ${
-                      item.ok
-                        ? 'DESBLOQUEADA'
-                        : 'BLOQUEADA'
-                    }
-
-                  </span>
-
-                </div>
-
-              </div>
-
-            `
-          )
-          .join('')
-      }
+    ${
+  filteredAchievements
+    .map(
+      achievementCollectionCard
+    )
+    .join('')
+}
 
     </div>
 
@@ -14734,6 +15094,8 @@ window.Club = {
   render,
 
   closeModal,
+
+  setAchievementFilter,
 
   toggleChallenge,
 
