@@ -3824,8 +3824,20 @@ function renderCareer() {
   const s =
     careerStats();
 
-    const comparison =
+
+  const comparison =
     mySeasonComparison();
+
+
+  const officialRanking =
+    typeof myOfficialRankingData === 'function'
+
+      ? myOfficialRankingData()
+
+      : null;
+
+
+  const rows =
 
   const rows =
     s.results
@@ -4323,6 +4335,599 @@ function renderCareer() {
         * Comparativo DH-Club calculado a partir
         dos resultados oficiais da temporada.
         Não substitui o ranking oficial do campeonato.
+      </div>
+
+    </div>
+
+    <div class="section-title">
+
+      <h3>
+        RANKING OFICIAL
+      </h3>
+
+      <span>
+        PONTUAÇÃO DH-PE
+      </span>
+
+    </div>
+
+
+    <div
+      class="premium-card"
+      style="
+        position:relative;
+        overflow:hidden;
+      "
+    >
+
+      <div
+        style="
+          position:absolute;
+          width:150px;
+          height:150px;
+          border-radius:50%;
+          background:rgba(255,199,44,.08);
+          right:-60px;
+          top:-70px;
+          pointer-events:none;
+        "
+      ></div>
+
+
+      <div
+        style="
+          font-size:9px;
+          letter-spacing:1.6px;
+          color:var(--gold2);
+          font-weight:900;
+          margin-bottom:7px;
+        "
+      >
+        PONTUAÇÃO OFICIAL ${SYSTEM_YEAR}
+      </div>
+
+
+      <div
+        style="
+          display:flex;
+          align-items:flex-end;
+          gap:7px;
+          margin-bottom:5px;
+        "
+      >
+
+        <div
+          style="
+            font-size:46px;
+            line-height:1;
+            font-weight:1000;
+            color:white;
+          "
+        >
+          ${
+            officialRanking
+              ?.totalPts ||
+            0
+          }
+        </div>
+
+
+        <div
+          style="
+            font-size:12px;
+            font-weight:900;
+            color:var(--gold2);
+            padding-bottom:5px;
+          "
+        >
+          PTS
+        </div>
+
+      </div>
+
+
+      <div
+        style="
+          font-size:10px;
+          color:var(--muted);
+          margin-bottom:17px;
+        "
+      >
+        Pontuação acumulada no
+        ranking oficial do campeonato.
+      </div>
+
+
+      <div
+        style="
+          display:grid;
+          grid-template-columns:1fr 1fr;
+          gap:9px;
+        "
+      >
+
+
+        <!-- CATEGORIA -->
+
+        <div
+          style="
+            background:rgba(255,199,44,.07);
+            border:1px solid rgba(255,199,44,.18);
+            border-radius:15px;
+            padding:13px;
+          "
+        >
+
+          <div
+            style="
+              font-size:8px;
+              color:var(--muted);
+              font-weight:900;
+              letter-spacing:.8px;
+            "
+          >
+            NA CATEGORIA
+          </div>
+
+
+          <div
+            style="
+              margin-top:5px;
+              font-size:23px;
+              font-weight:1000;
+              color:var(--gold2);
+            "
+          >
+            ${
+              officialRanking
+                ?.categoryPosition
+                ? `${officialRanking.categoryPosition}º`
+                : '—'
+            }
+          </div>
+
+
+          <div
+            style="
+              margin-top:3px;
+              font-size:9px;
+              color:var(--muted);
+            "
+          >
+            de
+            ${
+              officialRanking
+                ?.categoryTotal ||
+              0
+            }
+            atletas
+          </div>
+
+        </div>
+
+
+        <!-- GERAL -->
+
+        <div
+          style="
+            background:rgba(255,255,255,.04);
+            border:1px solid rgba(255,255,255,.08);
+            border-radius:15px;
+            padding:13px;
+          "
+        >
+
+          <div
+            style="
+              font-size:8px;
+              color:var(--muted);
+              font-weight:900;
+              letter-spacing:.8px;
+            "
+          >
+            RANKING GERAL
+          </div>
+
+
+          <div
+            style="
+              margin-top:5px;
+              font-size:23px;
+              font-weight:1000;
+              color:white;
+            "
+          >
+            ${
+              officialRanking
+                ?.generalPosition
+                ? `${officialRanking.generalPosition}º`
+                : '—'
+            }
+          </div>
+
+
+          <div
+            style="
+              margin-top:3px;
+              font-size:9px;
+              color:var(--muted);
+            "
+          >
+            de
+            ${
+              officialRanking
+                ?.generalTotal ||
+              0
+            }
+            registros
+          </div>
+
+        </div>
+
+
+        <!-- PONTOS OFICIAL -->
+
+        <div
+          style="
+            background:rgba(49,208,124,.06);
+            border:1px solid rgba(49,208,124,.15);
+            border-radius:15px;
+            padding:13px;
+          "
+        >
+
+          <div
+            style="
+              font-size:8px;
+              color:var(--muted);
+              font-weight:900;
+              letter-spacing:.8px;
+            "
+          >
+            DESCIDA OFICIAL
+          </div>
+
+
+          <div
+            style="
+              margin-top:5px;
+              font-size:20px;
+              font-weight:1000;
+              color:var(--green);
+            "
+          >
+            ${
+              officialRanking
+                ?.officialPts ||
+              0
+            }
+            pts
+          </div>
+
+        </div>
+
+
+        <!-- PONTOS QUALIFY -->
+
+        <div
+          style="
+            background:rgba(100,120,255,.06);
+            border:1px solid rgba(100,120,255,.15);
+            border-radius:15px;
+            padding:13px;
+          "
+        >
+
+          <div
+            style="
+              font-size:8px;
+              color:var(--muted);
+              font-weight:900;
+              letter-spacing:.8px;
+            "
+          >
+            CLASSIFICATÓRIA
+          </div>
+
+
+          <div
+            style="
+              margin-top:5px;
+              font-size:20px;
+              font-weight:1000;
+              color:#8fa5ff;
+            "
+          >
+            ${
+              officialRanking
+                ?.qualifyPts ||
+              0
+            }
+            pts
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- ================================================= -->
+      <!-- CIDADE -->
+      <!-- ================================================= -->
+
+      <div
+        style="
+          height:1px;
+          background:rgba(255,255,255,.08);
+          margin:18px 0;
+        "
+      ></div>
+
+
+      <div
+        style="
+          display:flex;
+          align-items:center;
+          gap:10px;
+          margin-bottom:13px;
+        "
+      >
+
+        <div
+          style="
+            width:39px;
+            height:39px;
+            border-radius:12px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background:rgba(255,199,44,.10);
+            color:var(--gold2);
+            flex-shrink:0;
+          "
+        >
+          <i class="fa-solid fa-location-dot"></i>
+        </div>
+
+
+        <div>
+
+          <div
+            style="
+              font-size:8px;
+              color:var(--muted);
+              font-weight:900;
+              letter-spacing:1px;
+            "
+          >
+            REPRESENTANDO
+          </div>
+
+
+          <div
+            style="
+              font-size:15px;
+              color:white;
+              font-weight:1000;
+              margin-top:3px;
+            "
+          >
+            ${esc(
+              officialRanking?.city ||
+              loggedUser.city ||
+              'CIDADE NÃO INFORMADA'
+            )}
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        style="
+          display:grid;
+          grid-template-columns:1fr 1fr;
+          gap:9px;
+        "
+      >
+
+
+        <!-- ATLETA NA CIDADE -->
+
+        <div
+          style="
+            background:rgba(255,255,255,.04);
+            border-radius:15px;
+            padding:13px;
+          "
+        >
+
+          <div
+            style="
+              font-size:8px;
+              color:var(--muted);
+              font-weight:900;
+            "
+          >
+            ENTRE ATLETAS DA CIDADE
+          </div>
+
+
+          <div
+            style="
+              font-size:21px;
+              font-weight:1000;
+              color:var(--gold2);
+              margin-top:5px;
+            "
+          >
+            ${
+              officialRanking
+                ?.athleteCityPosition
+                ? `${officialRanking.athleteCityPosition}º`
+                : '—'
+            }
+          </div>
+
+
+          <div
+            style="
+              font-size:9px;
+              color:var(--muted);
+              margin-top:3px;
+            "
+          >
+            de
+            ${
+              officialRanking
+                ?.athleteCityTotal ||
+              0
+            }
+            atletas
+          </div>
+
+        </div>
+
+
+        <!-- CIDADE NO CAMPEONATO -->
+
+        <div
+          style="
+            background:rgba(255,255,255,.04);
+            border-radius:15px;
+            padding:13px;
+          "
+        >
+
+          <div
+            style="
+              font-size:8px;
+              color:var(--muted);
+              font-weight:900;
+            "
+          >
+            POSIÇÃO DA CIDADE
+          </div>
+
+
+          <div
+            style="
+              font-size:21px;
+              font-weight:1000;
+              color:white;
+              margin-top:5px;
+            "
+          >
+            ${
+              officialRanking
+                ?.cityPosition
+                ? `${officialRanking.cityPosition}º`
+                : '—'
+            }
+          </div>
+
+
+          <div
+            style="
+              font-size:9px;
+              color:var(--muted);
+              margin-top:3px;
+            "
+          >
+            de
+            ${
+              officialRanking
+                ?.cityTotal ||
+              0
+            }
+            cidades
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        style="
+          margin-top:10px;
+          padding:13px;
+          border-radius:15px;
+          background:linear-gradient(
+            135deg,
+            rgba(255,199,44,.12),
+            rgba(255,199,44,.03)
+          );
+          border:1px solid rgba(255,199,44,.18);
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          gap:10px;
+        "
+      >
+
+        <div>
+
+          <div
+            style="
+              font-size:8px;
+              font-weight:900;
+              color:var(--muted);
+            "
+          >
+            PONTOS SOMADOS PELA CIDADE
+          </div>
+
+
+          <div
+            style="
+              font-size:9px;
+              color:var(--muted);
+              margin-top:3px;
+            "
+          >
+            ${
+              officialRanking
+                ?.cityAthleteCount ||
+              0
+            }
+            atleta(s) pontuador(es)
+          </div>
+
+        </div>
+
+
+        <div
+          style="
+            font-size:22px;
+            font-weight:1000;
+            color:var(--gold2);
+            white-space:nowrap;
+          "
+        >
+          ${
+            officialRanking
+              ?.cityPoints ||
+            0
+          }
+          pts
+        </div>
+
+      </div>
+
+
+      <div
+        style="
+          margin-top:12px;
+          font-size:8px;
+          line-height:1.5;
+          color:var(--muted);
+        "
+      >
+        * Estes dados utilizam a pontuação
+        configurada oficialmente em cada etapa
+        do DH-PE.
       </div>
 
     </div>
