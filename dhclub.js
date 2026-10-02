@@ -1262,47 +1262,6 @@ function officialPointsRanking() {
   };
 }
 
-        pointsMap[key] = {
-
-          cpf,
-
-          name:
-            result.name ||
-            '',
-
-          pointsMap[key] = {
-
-  cpf,
-
-  name:
-    result.name ||
-    '',
-
-  city:
-    result.city ||
-    '',
-
-  cat:
-    category,
-
-  totalPts:
-    0,
-
-  qPts:
-    0,
-
-  oPts:
-    0,
-
-  evts:
-    [],
-
-  pointsByEvent:
-    {}
-
-};
-      }
-
 
       pointsMap[key]
         .totalPts +=
