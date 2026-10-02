@@ -7771,7 +7771,117 @@ function closeWrapped() {
     '';
 }
 
+// ==========================================================
+// COMPARTILHAR TEMPORADA
+// ==========================================================
 
+async function shareWrapped() {
+
+  const d =
+    wrappedData();
+
+
+  const s =
+    d.stats;
+
+
+  const c =
+    d.comparison;
+
+
+  const texto =
+`🏁 MINHA TEMPORADA DH-PE ${SYSTEM_YEAR}
+
+🚵 ${s.races} etapas disputadas
+⭐ ${s.podiums} resultados em TOP 5
+🏆 ${s.wins} vitória(s)
+⏱️ Melhor tempo: ${bestTimeLabel(s.best)}
+📊 Melhor posição: ${
+  c?.bestPosition
+    ? `${c.bestPosition}º`
+    : '—'
+}
+
+${
+  c?.categoryPosition
+
+    ? `🔥 ${c.categoryPosition}º de ${c.categoryTotal} na ${d.category}`
+
+    : ''
+}
+
+Mais que uma pista, uma comunidade.
+DH-PE • Downhill Pernambuco`;
+
+
+  try {
+
+    if (
+      navigator.share
+    ) {
+
+      await navigator.share({
+
+        title:
+          `Minha temporada DH-PE ${SYSTEM_YEAR}`,
+
+        text:
+          texto
+
+      });
+
+
+      return;
+    }
+
+
+    if (
+      navigator.clipboard
+    ) {
+
+      await navigator.clipboard
+        .writeText(
+          texto
+        );
+
+
+      toast(
+        'RETROSPECTIVA COPIADA!'
+      );
+
+
+      return;
+    }
+
+
+    alert(
+      texto
+    );
+
+
+  } catch (err) {
+
+    if (
+      err &&
+      err.name ===
+        'AbortError'
+    ) {
+
+      return;
+    }
+
+
+    console.error(
+      '[DH-CLUB] Erro ao compartilhar:',
+      err
+    );
+
+
+    alert(
+      texto
+    );
+  }
+}
 
 // ==========================================================
 // NORMALIZAR BANCO DO CLUB
