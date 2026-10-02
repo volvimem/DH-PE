@@ -1186,12 +1186,13 @@ function officialPointsRanking() {
   // ========================================================
 
   const addPoints =
-    (
-      result,
-      points,
-      isQualify,
-      eventName
-    ) => {
+  (
+    result,
+    points,
+    isQualify,
+    eventName,
+    eventId
+  ) => {
 
       const pts =
         Number(
@@ -1236,26 +1237,37 @@ function officialPointsRanking() {
             result.name ||
             '',
 
-          city:
-            result.city ||
-            '',
+          pointsMap[key] = {
 
-          cat:
-            category,
+  cpf,
 
-          totalPts:
-            0,
+  name:
+    result.name ||
+    '',
 
-          qPts:
-            0,
+  city:
+    result.city ||
+    '',
 
-          oPts:
-            0,
+  cat:
+    category,
 
-          evts:
-            []
+  totalPts:
+    0,
 
-        };
+  qPts:
+    0,
+
+  oPts:
+    0,
+
+  evts:
+    [],
+
+  pointsByEvent:
+    {}
+
+};
       }
 
 
@@ -1295,6 +1307,75 @@ function officialPointsRanking() {
             eventName
           );
       }
+// ========================================================
+// DETALHAMENTO DOS PONTOS POR ETAPA
+// ========================================================
+
+const eventKey =
+  String(
+    eventId ||
+    eventName ||
+    'evento'
+  );
+
+
+if (
+  !pointsMap[key]
+    .pointsByEvent[
+      eventKey
+    ]
+) {
+
+  pointsMap[key]
+    .pointsByEvent[
+      eventKey
+    ] = {
+
+      eventId:
+        eventId ||
+        '',
+
+      eventName:
+        eventName ||
+        'ETAPA',
+
+      officialPts:
+        0,
+
+      qualifyPts:
+        0,
+
+      totalPts:
+        0
+
+    };
+}
+
+
+const eventEntry =
+  pointsMap[key]
+    .pointsByEvent[
+      eventKey
+    ];
+
+
+eventEntry.totalPts +=
+  pts;
+
+
+if (
+  isQualify
+) {
+
+  eventEntry.qualifyPts +=
+    pts;
+
+} else {
+
+  eventEntry.officialPts +=
+    pts;
+}
+    
     };
 
 
@@ -1576,11 +1657,12 @@ function officialPointsRanking() {
 
 
                 addPoints(
-                  result,
-                  points,
-                  false,
-                  event.t
-                );
+  result,
+  points,
+  false,
+  event.t,
+  event.id
+);
               }
             );
           }
@@ -1640,11 +1722,12 @@ function officialPointsRanking() {
 
 
                 addPoints(
-                  result,
-                  points,
-                  true,
-                  event.t
-                );
+  result,
+  points,
+  true,
+  event.t,
+  event.id
+);
               }
             );
           }
@@ -2091,7 +2174,46 @@ function myOfficialRankingData() {
         ?.qPts ||
       0,
 
+// ------------------------------------------------------
+// PONTOS DETALHADOS POR ETAPA
+// ------------------------------------------------------
 
+pointsByEvent:
+  Object
+    .values(
+      categoryEntry
+        ?.pointsByEvent ||
+      {}
+    )
+    .sort(
+      (
+        a,
+        b
+      ) => {
+
+        const indexA =
+          core.events.findIndex(
+            event =>
+              String(event.id) ===
+              String(a.eventId)
+          );
+
+
+        const indexB =
+          core.events.findIndex(
+            event =>
+              String(event.id) ===
+              String(b.eventId)
+          );
+
+
+        return (
+          indexA -
+          indexB
+        );
+      }
+    ),
+    
     // ------------------------------------------------------
     // RANKING DA CATEGORIA
     // ------------------------------------------------------
