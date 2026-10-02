@@ -9015,6 +9015,156 @@ function buildWrappedSlides() {
   const c =
     d.comparison;
 
+    // ========================================================
+  // DADOS OFICIAIS PARA OS NOVOS STORIES
+  // ========================================================
+
+  const o =
+    d.officialRanking ||
+    {};
+
+
+  const goals =
+    Array.isArray(
+      d.goals
+    )
+
+      ? d.goals
+
+      : [];
+
+
+  const completedGoals =
+    Number(
+      d.completedGoals ||
+      0
+    );
+
+
+  const annualProgress =
+    goals.length
+
+      ? Math.round(
+          (
+            completedGoals /
+            goals.length
+          ) * 100
+        )
+
+      : 0;
+
+
+  const cityAthletesHtml =
+    Array.isArray(
+      o.cityAthletes
+    )
+
+      ? o.cityAthletes
+          .slice(
+            0,
+            5
+          )
+          .map(
+            (
+              athlete,
+              index
+            ) => `
+
+              <div
+                style="
+                  display:flex;
+                  align-items:center;
+                  justify-content:space-between;
+                  gap:10px;
+                  padding:10px 0;
+                  border-bottom:
+                    1px solid
+                    rgba(255,255,255,.07);
+                "
+              >
+
+                <div
+                  style="
+                    display:flex;
+                    align-items:center;
+                    gap:10px;
+                    min-width:0;
+                  "
+                >
+
+                  <div
+                    style="
+                      width:30px;
+                      height:30px;
+                      border-radius:10px;
+                      display:flex;
+                      align-items:center;
+                      justify-content:center;
+                      background:rgba(255,199,44,.10);
+                      color:#ffc72c;
+                      font-size:11px;
+                      font-weight:1000;
+                      flex-shrink:0;
+                    "
+                  >
+                    ${index + 1}º
+                  </div>
+
+
+                  <div
+                    style="
+                      font-size:11px;
+                      font-weight:900;
+                      color:white;
+                      white-space:nowrap;
+                      overflow:hidden;
+                      text-overflow:ellipsis;
+                    "
+                  >
+                    ${
+                      cleanCPF(
+                        athlete.cpf
+                      ) ===
+                      cleanCPF(
+                        loggedUser.cpf
+                      )
+
+                        ? 'VOCÊ'
+
+                        : esc(
+                            athlete.name ||
+                            'ATLETA'
+                          )
+                    }
+                  </div>
+
+                </div>
+
+
+                <div
+                  style="
+                    color:#ffc72c;
+                    font-size:11px;
+                    font-weight:1000;
+                    white-space:nowrap;
+                  "
+                >
+                  ${
+                    Number(
+                      athlete.totalPts ||
+                      0
+                    )
+                  }
+                  pts
+                </div>
+
+              </div>
+
+            `
+          )
+          .join('')
+
+      : '';
 
   const beatPct =
     Math.round(
@@ -9624,7 +9774,515 @@ function buildWrappedSlides() {
 
     `,
 
+    // ======================================================
+    // NOVO STORY — PONTOS OFICIAIS
+    // ======================================================
 
+    `
+
+      <div class="wrapped-slide">
+
+        <div class="wrapped-eyebrow">
+          PONTUAÇÃO OFICIAL
+        </div>
+
+
+        <h1 class="wrapped-title">
+
+          SEUS PONTOS<br>
+          NA TEMPORADA.
+
+        </h1>
+
+
+        <div class="wrapped-rank-box">
+
+          <div class="wrapped-hero-number">
+
+            ${
+              Number(
+                o.totalPts ||
+                0
+              )
+            }
+
+          </div>
+
+
+          <div class="wrapped-big-label">
+            PONTOS DH-PE
+          </div>
+
+        </div>
+
+
+        <div class="wrapped-grid">
+
+          <div class="wrapped-card green">
+
+            <small>
+              DESCIDA OFICIAL
+            </small>
+
+            <b>
+              ${
+                Number(
+                  o.officialPts ||
+                  0
+                )
+              }
+            </b>
+
+          </div>
+
+
+          <div class="wrapped-card gold">
+
+            <small>
+              CLASSIFICATÓRIA
+            </small>
+
+            <b>
+              ${
+                Number(
+                  o.qualifyPts ||
+                  0
+                )
+              }
+            </b>
+
+          </div>
+
+        </div>
+
+
+        <div
+          class="wrapped-subtitle"
+          style="margin-top:22px"
+        >
+
+          Pontuação calculada com
+          os valores oficiais configurados
+          em cada etapa do campeonato.
+
+        </div>
+
+      </div>
+
+    `,
+
+
+    // ======================================================
+    // NOVO STORY — RANKING OFICIAL
+    // ======================================================
+
+    `
+
+      <div class="wrapped-slide">
+
+        <div class="wrapped-eyebrow">
+          RANKING OFICIAL
+        </div>
+
+
+        <h1 class="wrapped-title">
+
+          ONDE SEUS PONTOS<br>
+          TE COLOCARAM.
+
+        </h1>
+
+
+        <div class="wrapped-grid">
+
+          <div class="wrapped-card gold">
+
+            <small>
+              ${esc(d.category)}
+            </small>
+
+            <b>
+              ${
+                o.categoryPosition
+                  ? `${o.categoryPosition}º`
+                  : '—'
+              }
+            </b>
+
+            <div class="wrapped-subtitle">
+
+              de
+              ${
+                o.categoryTotal ||
+                0
+              }
+              atletas
+
+            </div>
+
+          </div>
+
+
+          <div class="wrapped-card">
+
+            <small>
+              GERAL
+            </small>
+
+            <b>
+              ${
+                o.generalPosition
+                  ? `${o.generalPosition}º`
+                  : '—'
+              }
+            </b>
+
+            <div class="wrapped-subtitle">
+
+              de
+              ${
+                o.generalTotal ||
+                0
+              }
+              registros
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <div class="wrapped-rank-box">
+
+          <div class="wrapped-subtitle">
+            PONTUAÇÃO ACUMULADA
+          </div>
+
+
+          <div
+            class="wrapped-hero-number"
+            style="font-size:60px"
+          >
+            ${
+              Number(
+                o.totalPts ||
+                0
+              )
+            }
+          </div>
+
+
+          <div class="wrapped-big-label">
+            PTS
+          </div>
+
+        </div>
+
+      </div>
+
+    `,
+
+
+    // ======================================================
+    // NOVO STORY — MINHA CIDADE
+    // ======================================================
+
+    `
+
+      <div class="wrapped-slide">
+
+        <div class="wrapped-eyebrow">
+          SUA CIDADE
+        </div>
+
+
+        <h1 class="wrapped-title">
+
+          VOCÊ TAMBÉM<br>
+          REPRESENTOU.
+
+        </h1>
+
+
+        <div class="wrapped-rank-box">
+
+          <div
+            style="
+              color:#ffc72c;
+              font-size:13px;
+              font-weight:900;
+              letter-spacing:1px;
+            "
+          >
+
+            <i class="fa-solid fa-location-dot"></i>
+
+            ${esc(
+              o.city ||
+              loggedUser.city ||
+              'CIDADE NÃO INFORMADA'
+            )}
+
+          </div>
+
+
+          <div
+            class="wrapped-hero-number"
+            style="
+              margin-top:18px;
+            "
+          >
+
+            ${
+              o.athleteCityPosition
+                ? `${o.athleteCityPosition}º`
+                : '—'
+            }
+
+          </div>
+
+
+          <div class="wrapped-big-label">
+
+            DE
+            ${
+              o.athleteCityTotal ||
+              0
+            }
+            ATLETAS DA CIDADE
+
+          </div>
+
+        </div>
+
+
+        <div
+          class="wrapped-card gold"
+          style="margin-top:16px"
+        >
+
+          <small>
+            SEUS PONTOS
+          </small>
+
+          <b>
+            ${
+              Number(
+                o.athleteCityPoints ||
+                o.totalPts ||
+                0
+              )
+            }
+            pts
+          </b>
+
+        </div>
+
+      </div>
+
+    `,
+
+
+    // ======================================================
+    // NOVO STORY — FORÇA DA CIDADE
+    // ======================================================
+
+    `
+
+      <div class="wrapped-slide">
+
+        <div class="wrapped-eyebrow">
+          FORÇA DA CIDADE
+        </div>
+
+
+        <h1 class="wrapped-title">
+
+          SOMANDO FORÇAS<br>
+          NA TEMPORADA.
+
+        </h1>
+
+
+        <div class="wrapped-rank-box">
+
+          <div class="wrapped-subtitle">
+
+            ${esc(
+              o.city ||
+              loggedUser.city ||
+              'SUA CIDADE'
+            )}
+
+          </div>
+
+
+          <div
+            class="wrapped-hero-number"
+            style="
+              font-size:58px;
+              margin-top:12px;
+            "
+          >
+
+            ${
+              Number(
+                o.cityPoints ||
+                0
+              )
+            }
+
+          </div>
+
+
+          <div class="wrapped-big-label">
+            PONTOS SOMADOS
+          </div>
+
+        </div>
+
+
+        <div class="wrapped-grid">
+
+          <div class="wrapped-card gold">
+
+            <small>
+              RANKING DAS CIDADES
+            </small>
+
+            <b>
+              ${
+                o.cityPosition
+                  ? `${o.cityPosition}º`
+                  : '—'
+              }
+            </b>
+
+            <div class="wrapped-subtitle">
+
+              de
+              ${
+                o.cityTotal ||
+                0
+              }
+
+            </div>
+
+          </div>
+
+
+          <div class="wrapped-card green">
+
+            <small>
+              ATLETAS PONTUADORES
+            </small>
+
+            <b>
+              ${
+                o.cityAthleteCount ||
+                0
+              }
+            </b>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    `,
+
+
+    // ======================================================
+    // NOVO STORY — ATLETAS DA CIDADE
+    // ======================================================
+
+    `
+
+      <div class="wrapped-slide">
+
+        <div class="wrapped-eyebrow">
+          SUA EQUIPE DE CIDADE
+        </div>
+
+
+        <h1 class="wrapped-title">
+
+          QUEM SOMOU<br>
+          JUNTO COM VOCÊ.
+
+        </h1>
+
+
+        <div
+          class="wrapped-card"
+          style="
+            margin-top:20px;
+            padding:16px;
+          "
+        >
+
+          <div
+            style="
+              color:#ffc72c;
+              font-size:10px;
+              font-weight:1000;
+              letter-spacing:1px;
+              margin-bottom:5px;
+            "
+          >
+
+            ${esc(
+              o.city ||
+              loggedUser.city ||
+              'CIDADE'
+            )}
+
+          </div>
+
+
+          ${
+            cityAthletesHtml ||
+
+            `
+
+              <div
+                class="wrapped-subtitle"
+                style="
+                  padding:18px 0;
+                "
+              >
+
+                Ainda não há atletas
+                pontuadores suficientes
+                para montar esta lista.
+
+              </div>
+
+            `
+          }
+
+        </div>
+
+
+        <div
+          class="wrapped-subtitle"
+          style="
+            margin-top:18px;
+          "
+        >
+
+          Os pontos individuais também
+          ajudam a construir a força
+          esportiva da sua cidade.
+
+        </div>
+
+      </div>
+
+    `,
+    
     // ======================================================
     // STORY 7 — EVOLUÇÃO
     // ======================================================
