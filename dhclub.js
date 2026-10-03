@@ -216,6 +216,8 @@ let memoryStartedAt = 0;
 
 let memoryFinishedAt = 0;
 
+let memoryTimerId = null;
+
   // Guarda a ordem da partida anterior
 // para evitar repetir exatamente o mesmo tabuleiro.
 
@@ -282,9 +284,19 @@ function buildMemoryDeck() {
   // 16 bikes x 2 = 32 cartas
   // --------------------------------------------------------
 
-  const cards =
+  const selectedBikes =
+  shuffleMemoryArray(
     MEMORY_BIKES
-      .flatMap(
+  )
+    .slice(
+      0,
+      10
+    );
+
+
+const cards =
+  selectedBikes
+    .flatMap(
         bike => [
 
           {
@@ -433,13 +445,8 @@ function buildMemoryDeck() {
 
 function startMemoryGame() {
 
-  // --------------------------------------------------------
-  // CRIA UM NOVO BARALHO
-  //
-  // 16 pares = 32 cartas
-  // com nova ordem aleatória
-  // --------------------------------------------------------
-
+  stopMemoryTimer();
+  
   memoryDeck =
     buildMemoryDeck();
 
@@ -476,8 +483,8 @@ function startMemoryGame() {
   // INICIA O CRONÔMETRO DA NOVA PARTIDA
   // --------------------------------------------------------
 
-  memoryStartedAt =
-    Date.now();
+ memoryStartedAt =
+  0;
 
 
   // --------------------------------------------------------
@@ -553,6 +560,22 @@ function flipMemoryCard(
   // VIRA A CARTA
   // --------------------------------------------------------
 
+// --------------------------------------------------------
+// INICIA O CRONÔMETRO SOMENTE
+// NO PRIMEIRO CLIQUE VÁLIDO
+// --------------------------------------------------------
+
+if (
+  memoryStartedAt === 0
+) {
+
+  memoryStartedAt =
+    Date.now();
+
+
+  startMemoryTimer();
+}
+  
   memoryFlipped.push(
     index
   );
@@ -645,12 +668,18 @@ function flipMemoryCard(
     ) {
 
       memoryFinishedAt =
-        Date.now();
+  Date.now();
+
+
+stopMemoryTimer();
+
+
+toast(
 
 
       toast(
-        'PARABÉNS! VOCÊ ENCONTROU OS 16 PARES!'
-      );
+  'PARABÉNS! VOCÊ ENCONTROU TODOS OS PARES!'
+);
     }
 
 
@@ -753,7 +782,71 @@ function formatMemoryDuration(
 // JOGO DA MEMÓRIA — GARANTE PARTIDA ATIVA
 // ==========================================================
 
-function ensureMemoryGameReady() {
+
+// ==========================================================
+// JOGO DA MEMÓRIA — CRONÔMETRO VISUAL
+// ==========================================================
+
+function stopMemoryTimer() {
+
+  if (
+    memoryTimerId
+  ) {
+
+    clearInterval(
+      memoryTimerId
+    );
+
+    memoryTimerId =
+      null;
+  }
+}
+
+
+function startMemoryTimer() {
+
+  stopMemoryTimer();
+
+
+  memoryTimerId =
+    setInterval(
+      () => {
+
+        if (
+          !memoryStartedAt ||
+          memoryFinishedAt
+        ) {
+
+          return;
+        }
+
+
+        const el =
+          document.getElementById(
+            'memory-time'
+          );
+
+
+        if (!el) {
+
+          return;
+        }
+
+
+        el.textContent =
+          formatMemoryDuration(
+            Date.now() -
+            memoryStartedAt
+          );
+
+      },
+
+      250
+    );
+}
+  
+  
+  function ensureMemoryGameReady() {
 
   if (
     memoryDeck.length > 0
@@ -783,7 +876,7 @@ function ensureMemoryGameReady() {
 
 
   memoryStartedAt =
-    Date.now();
+  0;
 
 
   memoryFinishedAt =
@@ -1036,7 +1129,13 @@ function renderGames() {
 
 
   const totalPairs =
-    MEMORY_BIKES.length;
+  Math.floor(
+    memoryDeck.length / 2
+  );
+
+
+const totalCards =
+  memoryDeck.length;
 
 
   const foundPairs =
@@ -1095,8 +1194,8 @@ function renderGames() {
 
         <br>
 
-        São 16 pares
-        e 32 cartas.
+       São ${totalPairs} pares
+     e ${totalCards} cartas.
 
       </p>
 
@@ -1110,10 +1209,10 @@ function renderGames() {
           "
         ></i>
 
-        16 PARES
-        •
+        ${totalPairs} PARES
+         •
 
-        32 CARTAS
+        ${totalCards} CARTAS
 
       </div>
 
@@ -1138,13 +1237,28 @@ function renderGames() {
       )}
 
 
-      ${stat(
-        'TEMPO',
-        formatMemoryDuration(
-          elapsed
-        ),
-        'partida atual'
-      )}
+      <div class="stat-card">
+
+  <div class="stat-label">
+    TEMPO
+  </div>
+
+  <div
+    class="stat-value"
+    id="memory-time"
+  >
+    ${
+      formatMemoryDuration(
+        elapsed
+      )
+    }
+  </div>
+
+  <div class="stat-sub">
+    partida atual
+  </div>
+
+</div>
 
 
       ${stat(
@@ -1253,7 +1367,7 @@ function renderGames() {
 
             <h3>
               Você encontrou
-              os 16 pares!
+             os ${totalPairs} pares!
             </h3>
 
 
