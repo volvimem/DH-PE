@@ -216,6 +216,207 @@ let memoryStartedAt = 0;
 
 let memoryFinishedAt = 0;
 
+  // Guarda a ordem da partida anterior
+// para evitar repetir exatamente o mesmo tabuleiro.
+
+let lastMemoryOrderSignature = '';
+
+  // ==========================================================
+// JOGO DA MEMÓRIA — EMBARALHAR CARTAS
+// ==========================================================
+
+function shuffleMemoryArray(
+  array
+) {
+
+  const shuffled =
+    array.slice();
+
+
+  // Fisher-Yates Shuffle
+  // embaralhamento aleatório das cartas
+
+  for (
+    let i =
+      shuffled.length - 1;
+
+    i > 0;
+
+    i--
+  ) {
+
+    const j =
+      Math.floor(
+        Math.random() *
+        (i + 1)
+      );
+
+
+    const temp =
+      shuffled[i];
+
+    shuffled[i] =
+      shuffled[j];
+
+    shuffled[j] =
+      temp;
+  }
+
+
+  return shuffled;
+}
+
+
+// ==========================================================
+// JOGO DA MEMÓRIA — CRIAR AS 32 CARTAS
+// ==========================================================
+
+function buildMemoryDeck() {
+
+  // --------------------------------------------------------
+  // CRIA DUAS CARTAS PARA CADA BIKE
+  //
+  // 16 bikes x 2 = 32 cartas
+  // --------------------------------------------------------
+
+  const cards =
+    MEMORY_BIKES
+      .flatMap(
+        bike => [
+
+          {
+            uid:
+              `${bike.key}-A`,
+
+            pairId:
+              bike.key,
+
+            brand:
+              bike.brand,
+
+            model:
+              bike.model,
+
+            accent:
+              bike.accent,
+
+            matched:
+              false
+          },
+
+
+          {
+            uid:
+              `${bike.key}-B`,
+
+            pairId:
+              bike.key,
+
+            brand:
+              bike.brand,
+
+            model:
+              bike.model,
+
+            accent:
+              bike.accent,
+
+            matched:
+              false
+          }
+
+        ]
+      );
+
+
+  // --------------------------------------------------------
+  // PRIMEIRO EMBARALHAMENTO
+  // --------------------------------------------------------
+
+  let shuffled =
+    shuffleMemoryArray(
+      cards
+    );
+
+
+  let signature =
+    shuffled
+      .map(
+        card =>
+          card.uid
+      )
+      .join('|');
+
+
+  // --------------------------------------------------------
+  // EVITA REPETIR EXATAMENTE
+  // O TABULEIRO DA PARTIDA ANTERIOR
+  // --------------------------------------------------------
+
+  if (
+    signature ===
+    lastMemoryOrderSignature
+  ) {
+
+    shuffled =
+      shuffleMemoryArray(
+        cards
+      );
+
+
+    signature =
+      shuffled
+        .map(
+          card =>
+            card.uid
+        )
+        .join('|');
+  }
+
+
+  // --------------------------------------------------------
+  // PROTEÇÃO EXTRA
+  //
+  // Se mesmo assim a ordem fosse igual,
+  // move a primeira carta para o final.
+  // --------------------------------------------------------
+
+  if (
+    signature ===
+      lastMemoryOrderSignature &&
+    shuffled.length > 1
+  ) {
+
+    const firstCard =
+      shuffled.shift();
+
+
+    shuffled.push(
+      firstCard
+    );
+
+
+    signature =
+      shuffled
+        .map(
+          card =>
+            card.uid
+        )
+        .join('|');
+  }
+
+
+  // --------------------------------------------------------
+  // GUARDA A ORDEM DA PARTIDA ATUAL
+  // --------------------------------------------------------
+
+  lastMemoryOrderSignature =
+    signature;
+
+
+  return shuffled;
+}
+
 const cleanCPF = v =>
   String(v || '').replace(/\D/g, '');
 
