@@ -219,7 +219,10 @@ let memoryFinishedAt = 0;
   // Guarda a ordem da partida anterior
 // para evitar repetir exatamente o mesmo tabuleiro.
 
-let lastMemoryOrderSignature = '';
+let lastMemoryOrderSignature =
+  sessionStorage.getItem(
+    'dhclub_memory_last_order'
+  ) || '';
 
   // ==========================================================
 // JOGO DA MEMÓRIA — EMBARALHAR CARTAS
@@ -410,8 +413,14 @@ function buildMemoryDeck() {
   // GUARDA A ORDEM DA PARTIDA ATUAL
   // --------------------------------------------------------
 
-  lastMemoryOrderSignature =
+    lastMemoryOrderSignature =
     signature;
+
+
+  sessionStorage.setItem(
+    'dhclub_memory_last_order',
+    signature
+  );
 
 
   return shuffled;
