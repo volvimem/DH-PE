@@ -511,6 +511,666 @@ function flipMemoryCard(
   index
 ) {
 
+
+// ==========================================================
+// JOGO DA MEMÓRIA — FORMATAR TEMPO
+// ==========================================================
+
+function formatMemoryDuration(
+  milliseconds
+) {
+
+  const totalSeconds =
+    Math.max(
+      0,
+      Math.floor(
+        Number(
+          milliseconds || 0
+        ) / 1000
+      )
+    );
+
+
+  const minutes =
+    String(
+      Math.floor(
+        totalSeconds / 60
+      )
+    )
+      .padStart(
+        2,
+        '0'
+      );
+
+
+  const seconds =
+    String(
+      totalSeconds % 60
+    )
+      .padStart(
+        2,
+        '0'
+      );
+
+
+  return (
+    `${minutes}:${seconds}`
+  );
+}
+
+
+// ==========================================================
+// JOGO DA MEMÓRIA — GARANTE PARTIDA ATIVA
+// ==========================================================
+
+function ensureMemoryGameReady() {
+
+  if (
+    memoryDeck.length > 0
+  ) {
+
+    return;
+  }
+
+
+  memoryDeck =
+    buildMemoryDeck();
+
+
+  memoryFlipped =
+    [];
+
+
+  memoryMatched =
+    0;
+
+
+  memoryMoves =
+    0;
+
+
+  memoryBusy =
+    false;
+
+
+  memoryStartedAt =
+    Date.now();
+
+
+  memoryFinishedAt =
+    0;
+}
+
+
+// ==========================================================
+// JOGO DA MEMÓRIA — DESENHO SIMPLES DA BIKE
+// ==========================================================
+
+function memoryBikeArt(
+  color
+) {
+
+  return `
+
+    <svg
+      viewBox="0 0 120 70"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      aria-hidden="true"
+    >
+
+      <circle
+        cx="25"
+        cy="50"
+        r="15"
+        stroke="${color}"
+        stroke-width="5"
+      ></circle>
+
+
+      <circle
+        cx="94"
+        cy="50"
+        r="15"
+        stroke="${color}"
+        stroke-width="5"
+      ></circle>
+
+
+      <path
+        d="
+          M25 50
+          L43 28
+          L64 28
+          L52 50
+          Z
+        "
+        stroke="${color}"
+        stroke-width="5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      ></path>
+
+
+      <path
+        d="
+          M64 28
+          L78 20
+          L94 50
+        "
+        stroke="${color}"
+        stroke-width="5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      ></path>
+
+
+      <path
+        d="
+          M43 28
+          L34 18
+        "
+        stroke="${color}"
+        stroke-width="5"
+        stroke-linecap="round"
+      ></path>
+
+
+      <path
+        d="
+          M30 18
+          H40
+        "
+        stroke="${color}"
+        stroke-width="5"
+        stroke-linecap="round"
+      ></path>
+
+
+      <path
+        d="
+          M52 50
+          L60 15
+        "
+        stroke="${color}"
+        stroke-width="5"
+        stroke-linecap="round"
+      ></path>
+
+
+      <path
+        d="
+          M54 16
+          H68
+        "
+        stroke="${color}"
+        stroke-width="5"
+        stroke-linecap="round"
+      ></path>
+
+    </svg>
+
+  `;
+}
+
+
+// ==========================================================
+// JOGO DA MEMÓRIA — HTML DE CADA CARTA
+// ==========================================================
+
+function memoryCardMarkup(
+  card,
+  index
+) {
+
+  const isFlipped =
+    memoryFlipped.includes(
+      index
+    ) ||
+    card.matched;
+
+
+  return `
+
+    <button
+      class="
+        memory-card
+        ${
+          isFlipped
+            ? 'flipped'
+            : ''
+        }
+        ${
+          card.matched
+            ? 'matched'
+            : ''
+        }
+      "
+      type="button"
+      onclick="
+        Club.flipMemoryCard(
+          ${index}
+        )
+      "
+    >
+
+      <div class="memory-card-inner">
+
+
+        <!-- FRENTE FECHADA -->
+
+        <div
+          class="
+            memory-face
+            memory-front
+          "
+        >
+
+          <i
+            class="
+              fa-solid
+              fa-mountain
+            "
+          ></i>
+
+          <span>
+            DH
+          </span>
+
+        </div>
+
+
+        <!-- VERSO ABERTO -->
+
+        <div
+          class="
+            memory-face
+            memory-back
+          "
+        >
+
+          <div
+            class="
+              memory-bike-art
+            "
+          >
+
+            ${
+              memoryBikeArt(
+                card.accent
+              )
+            }
+
+          </div>
+
+
+          <div
+            class="
+              memory-bike-brand
+            "
+          >
+
+            ${esc(
+              card.brand
+            )}
+
+          </div>
+
+
+          <div
+            class="
+              memory-bike-model
+            "
+          >
+
+            ${esc(
+              card.model
+            )}
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </button>
+
+  `;
+}
+
+
+// ==========================================================
+// JOGOS — TELA PRINCIPAL
+// ==========================================================
+
+function renderGames() {
+
+  ensureMemoryGameReady();
+
+
+  const totalPairs =
+    MEMORY_BIKES.length;
+
+
+  const foundPairs =
+    Math.floor(
+      memoryMatched / 2
+    );
+
+
+  const elapsed =
+    memoryStartedAt
+
+      ? (
+          memoryFinishedAt ||
+          Date.now()
+        ) -
+        memoryStartedAt
+
+      : 0;
+
+
+  const finished =
+    memoryDeck.length > 0 &&
+    memoryMatched ===
+      memoryDeck.length;
+
+
+  const view =
+    document.getElementById(
+      'view-games'
+    );
+
+
+  if (!view) {
+
+    return;
+  }
+
+
+  view.innerHTML = `
+
+    <div class="hero">
+
+      <div class="eyebrow">
+
+        DH-CLUB GAMES
+
+      </div>
+
+
+      <h2>
+
+        Jogo da Memória
+
+      </h2>
+
+
+      <p>
+
+        Encontre os pares
+        das bikes de downhill.
+
+        <br>
+
+        São 16 pares
+        e 32 cartas.
+
+      </p>
+
+
+      <div class="member-chip">
+
+        <i
+          class="
+            fa-solid
+            fa-gamepad
+          "
+        ></i>
+
+        16 PARES
+        •
+
+        32 CARTAS
+
+      </div>
+
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- ESTATÍSTICAS -->
+    <!-- ================================================= -->
+
+    <div class="grid-stats">
+
+
+      ${stat(
+        'PARES',
+        `${foundPairs}/${totalPairs}`,
+        'encontrados'
+      )}
+
+
+      ${stat(
+        'JOGADAS',
+        memoryMoves,
+        'tentativas'
+      )}
+
+
+      ${stat(
+        'TEMPO',
+        formatMemoryDuration(
+          elapsed
+        ),
+        'partida atual'
+      )}
+
+
+      ${stat(
+        'CARTAS',
+        memoryMatched,
+        `de ${memoryDeck.length}`
+      )}
+
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- NOVA PARTIDA -->
+    <!-- ================================================= -->
+
+    <div
+      class="btn-row"
+      style="
+        margin-top:12px;
+      "
+    >
+
+      <button
+        class="primary-btn"
+        onclick="
+          Club.startMemoryGame()
+        "
+      >
+
+        <i
+          class="
+            fa-solid
+            fa-rotate
+          "
+        ></i>
+
+        NOVO JOGO
+
+      </button>
+
+    </div>
+
+
+    <div class="section-title">
+
+      <h3>
+
+        TABULEIRO
+
+      </h3>
+
+
+      <span>
+
+        ${foundPairs}
+        /
+        ${totalPairs}
+        PARES
+
+      </span>
+
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- 32 CARTAS -->
+    <!-- ================================================= -->
+
+    <div class="memory-board">
+
+      ${
+        memoryDeck
+          .map(
+            (
+              card,
+              index
+            ) =>
+              memoryCardMarkup(
+                card,
+                index
+              )
+          )
+          .join('')
+      }
+
+    </div>
+
+
+    ${
+      finished
+
+        ? `
+
+          <div
+            class="premium-card"
+            style="
+              margin-top:16px;
+              text-align:center;
+            "
+          >
+
+            <div
+              style="
+                font-size:35px;
+                margin-bottom:8px;
+              "
+            >
+
+              🏆
+
+            </div>
+
+
+            <div
+              class="eyebrow"
+            >
+
+              PARTIDA CONCLUÍDA
+
+            </div>
+
+
+            <h3>
+
+              Você encontrou
+              os 16 pares!
+
+            </h3>
+
+
+            <p
+              style="
+                color:var(--muted);
+                font-size:11px;
+                line-height:1.6;
+              "
+            >
+
+              Tempo:
+
+              <b
+                style="
+                  color:white;
+                "
+              >
+
+                ${
+                  formatMemoryDuration(
+                    elapsed
+                  )
+                }
+
+              </b>
+
+
+              <br>
+
+
+              Jogadas:
+
+              <b
+                style="
+                  color:white;
+                "
+              >
+
+                ${memoryMoves}
+
+              </b>
+
+            </p>
+
+
+            <button
+              class="primary-btn"
+              style="
+                width:100%;
+                margin-top:8px;
+              "
+              onclick="
+                Club.startMemoryGame()
+              "
+            >
+
+              <i
+                class="
+                  fa-solid
+                  fa-rotate
+                "
+              ></i>
+
+              JOGAR NOVAMENTE
+
+            </button>
+
+          </div>
+
+        `
+
+        : ''
+    }
+
+  `;
+}
+  
   // --------------------------------------------------------
   // BLOQUEIA CLIQUES DURANTE A COMPARAÇÃO
   // --------------------------------------------------------
@@ -9425,15 +10085,24 @@ function render(
   }
 
   if (
-    view ===
-    'benefits'
-  ) {
-    renderBenefits();
-  }
+  view ===
+  'benefits'
+) {
+  renderBenefits();
+}
 
-  if (view === 'admin') {
-    renderAdmin();
-  }
+
+if (
+  view ===
+  'games'
+) {
+  renderGames();
+}
+
+
+if (view === 'admin') {
+  renderAdmin();
+}
 }
 
 
@@ -16676,6 +17345,10 @@ window.Club = {
   go,
 
   render,
+
+  startMemoryGame,
+
+  flipMemoryCard,
 
   closeModal,
 
