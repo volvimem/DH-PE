@@ -6531,6 +6531,212 @@ function achievementRarityInfo(
 }
 
 
+  // ==========================================================
+// XP DAS CONQUISTAS — DH-CLUB
+// ==========================================================
+
+function achievementXpValue(
+  rarity
+) {
+
+  const value =
+    String(
+      rarity ||
+      'COMUM'
+    )
+      .toUpperCase();
+
+
+  const xpMap = {
+
+    COMUM:
+      20,
+
+    RARO:
+      50,
+
+    'ÉPICO':
+      100,
+
+    LENDÁRIO:
+      200
+
+  };
+
+
+  return (
+    xpMap[value] ||
+    20
+  );
+}
+
+
+// ==========================================================
+// PERFIL DE XP / NÍVEL DO ATLETA
+// ==========================================================
+
+function athleteXpProfile(
+  list
+) {
+
+  const achievementsList =
+    Array.isArray(list)
+      ? list
+      : [];
+
+
+  const xp =
+    achievementsList
+      .filter(
+        item =>
+          item.ok
+      )
+      .reduce(
+        (
+          total,
+          item
+        ) =>
+          total +
+          achievementXpValue(
+            item.rarity
+          ),
+        0
+      );
+
+
+  const maxXp =
+    achievementsList
+      .reduce(
+        (
+          total,
+          item
+        ) =>
+          total +
+          achievementXpValue(
+            item.rarity
+          ),
+        0
+      );
+
+
+  // Cada nível exige 250 XP.
+  const XP_PER_LEVEL =
+    250;
+
+
+  const level =
+    Math.floor(
+      xp /
+      XP_PER_LEVEL
+    ) + 1;
+
+
+  const currentLevelXp =
+    xp %
+    XP_PER_LEVEL;
+
+
+  const levelProgress =
+    Math.round(
+      (
+        currentLevelXp /
+        XP_PER_LEVEL
+      ) * 100
+    );
+
+
+  const xpToNext =
+    XP_PER_LEVEL -
+    currentLevelXp;
+
+
+  const maxLevel =
+    Math.floor(
+      maxXp /
+      XP_PER_LEVEL
+    ) + 1;
+
+
+  let rank =
+    'BRONZE';
+
+
+  let color =
+    '#b8865b';
+
+
+  let icon =
+    'fa-shield';
+
+
+  if (
+    level >= 4
+  ) {
+
+    rank =
+      'PRATA';
+
+    color =
+      '#c4ceda';
+  }
+
+
+  if (
+    level >= 7
+  ) {
+
+    rank =
+      'OURO';
+
+    color =
+      '#ffc72c';
+
+    icon =
+      'fa-medal';
+  }
+
+
+  if (
+    level >= 11
+  ) {
+
+    rank =
+      'ELITE';
+
+    color =
+      '#bf78ff';
+
+    icon =
+      'fa-crown';
+  }
+
+
+  return {
+
+    xp,
+
+    maxXp,
+
+    level,
+
+    maxLevel,
+
+    currentLevelXp,
+
+    levelProgress,
+
+    xpToNext,
+
+    rank,
+
+    color,
+
+    icon
+
+  };
+}
+  
+
 // ==========================================================
 // TROCA O FILTRO
 // ==========================================================
@@ -6561,6 +6767,10 @@ function achievementCollectionCard(
       item.rarity
     );
 
+  const xpValue =
+  achievementXpValue(
+    item.rarity
+  );
 
   return `
 
@@ -6678,42 +6888,74 @@ function achievementCollectionCard(
 
 
       <div
-        style="
-          margin-top:12px;
-        "
-      >
+  style="
+    margin-top:12px;
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+    align-items:center;
+  "
+>
 
-        <span
-          class="
-            tag
-            ${
-              item.ok
-                ? 'gold'
-                : ''
-            }
-          "
-          style="
-            ${
-              item.ok
-                ? `
-                  color:${rarity.color};
-                  background:${rarity.bg};
-                  border-color:${rarity.border};
-                `
-                : ''
-            }
-          "
-        >
+  <span
+    class="
+      tag
+      ${
+        item.ok
+          ? 'gold'
+          : ''
+      }
+    "
+    style="
+      ${
+        item.ok
+          ? `
+            color:${rarity.color};
+            background:${rarity.bg};
+            border-color:${rarity.border};
+          `
+          : ''
+      }
+    "
+  >
 
-          ${
-            item.ok
-              ? 'DESBLOQUEADA'
-              : 'BLOQUEADA'
-          }
+    ${
+      item.ok
+        ? 'DESBLOQUEADA'
+        : 'BLOQUEADA'
+    }
 
-        </span>
+  </span>
 
-      </div>
+
+  <span
+    class="tag"
+    style="
+      color:${
+        item.ok
+          ? rarity.color
+          : '#718096'
+      };
+      background:rgba(
+        255,
+        255,
+        255,
+        .04
+      );
+      border-color:rgba(
+        255,
+        255,
+        255,
+        .08
+      );
+    "
+  >
+
+    +${xpValue} XP
+
+  </span>
+
+</div>
 
     </div>
 
@@ -6733,6 +6975,12 @@ function renderAchievements() {
     ).length;
 
 
+  const xpProfile =
+  athleteXpProfile(
+    achievementsList
+  );
+  
+  
   const goals =
     annualGoals();
 
@@ -6905,6 +7153,271 @@ function renderAchievements() {
         ></i>
 
         JORNADA ${SYSTEM_YEAR}
+
+      </div>
+
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- NÍVEL DO ATLETA -->
+    <!-- ================================================= -->
+
+    <div class="section-title">
+
+      <h3>
+        NÍVEL DO ATLETA
+      </h3>
+
+      <span>
+        XP DH-CLUB
+      </span>
+
+    </div>
+
+
+    <div
+      class="premium-card"
+      style="
+        margin-bottom:16px;
+        position:relative;
+        overflow:hidden;
+      "
+    >
+
+      <div
+        style="
+          position:absolute;
+          width:170px;
+          height:170px;
+          border-radius:50%;
+          right:-75px;
+          top:-85px;
+          background:${
+            xpProfile.color
+          }18;
+          pointer-events:none;
+        "
+      ></div>
+
+
+      <div
+        style="
+          display:flex;
+          align-items:center;
+          gap:14px;
+        "
+      >
+
+        <div
+          style="
+            width:65px;
+            height:65px;
+            border-radius:19px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background:${
+              xpProfile.color
+            }14;
+            border:1px solid ${
+              xpProfile.color
+            }44;
+            color:${
+              xpProfile.color
+            };
+            font-size:25px;
+            flex-shrink:0;
+          "
+        >
+
+          <i
+            class="
+              fa-solid
+              ${xpProfile.icon}
+            "
+          ></i>
+
+        </div>
+
+
+        <div
+          style="
+            flex:1;
+            min-width:0;
+          "
+        >
+
+          <div
+            style="
+              font-size:8px;
+              letter-spacing:1.5px;
+              color:var(--muted);
+              font-weight:900;
+            "
+          >
+            CLASSIFICAÇÃO DH-CLUB
+          </div>
+
+
+          <div
+            style="
+              font-size:24px;
+              font-weight:1000;
+              color:${
+                xpProfile.color
+              };
+              margin-top:3px;
+            "
+          >
+
+            ${xpProfile.rank}
+
+          </div>
+
+
+          <div
+            style="
+              font-size:10px;
+              color:white;
+              font-weight:900;
+              margin-top:2px;
+            "
+          >
+
+            NÍVEL
+            ${xpProfile.level}
+
+          </div>
+
+        </div>
+
+
+        <div
+          style="
+            text-align:right;
+          "
+        >
+
+          <div
+            style="
+              font-size:22px;
+              font-weight:1000;
+              color:white;
+            "
+          >
+
+            ${xpProfile.xp}
+
+          </div>
+
+
+          <div
+            style="
+              font-size:8px;
+              color:var(--muted);
+              font-weight:900;
+            "
+          >
+            XP TOTAL
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        style="
+          margin-top:18px;
+          display:flex;
+          justify-content:space-between;
+          gap:10px;
+          font-size:9px;
+          font-weight:900;
+        "
+      >
+
+        <span
+          style="
+            color:var(--muted);
+          "
+        >
+
+          NÍVEL
+          ${xpProfile.level}
+
+        </span>
+
+
+        <span
+          style="
+            color:${
+              xpProfile.color
+            };
+          "
+        >
+
+          ${
+            xpProfile.xpToNext
+          }
+          XP PARA O PRÓXIMO
+
+        </span>
+
+      </div>
+
+
+      <div
+        style="
+          height:11px;
+          border-radius:30px;
+          overflow:hidden;
+          margin-top:8px;
+          background:rgba(
+            255,
+            255,
+            255,
+            .08
+          );
+        "
+      >
+
+        <div
+          style="
+            width:${
+              xpProfile.levelProgress
+            }%;
+            height:100%;
+            border-radius:30px;
+            background:linear-gradient(
+              90deg,
+              ${xpProfile.color},
+              #ffc72c
+            );
+            transition:width .4s ease;
+          "
+        ></div>
+
+      </div>
+
+
+      <div
+        style="
+          margin-top:11px;
+          font-size:9px;
+          line-height:1.5;
+          color:var(--muted);
+        "
+      >
+
+        O XP é exclusivo do DH-Club e
+        vem das conquistas desbloqueadas.
+
+        <br>
+
+        Ele não altera sua pontuação
+        oficial no campeonato.
 
       </div>
 
