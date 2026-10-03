@@ -3827,6 +3827,11 @@ const officialRaces =
       season.halfTarget
 },
 
+
+{
+  id:
+    'annual-season',
+
   icon:
     'fa-calendar-check',
 
