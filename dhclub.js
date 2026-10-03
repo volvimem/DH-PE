@@ -2299,7 +2299,292 @@ pointsByEvent:
 // CONQUISTAS
 // ==========================================================
 
-function achievements() {
+// ==========================================================
+// TEMPORADA OFICIAL DINÂMICA — DH-CLUB
+// ==========================================================
+
+function hasOfficialPointsTable(
+  table
+) {
+
+  return (
+    Array.isArray(table) &&
+    table.some(
+      value => {
+
+        const points =
+          Number(value);
+
+        return (
+          Number.isFinite(points) &&
+          points > 0
+        );
+      }
+    )
+  );
+}
+
+
+// ==========================================================
+// IDENTIFICA ETAPA VÁLIDA DO CAMPEONATO
+// ==========================================================
+
+function isOfficialScoringEvent(
+  event
+) {
+
+  if (!event) {
+
+    return false;
+  }
+
+
+  // Etapa cancelada não entra
+  if (
+    String(
+      event.status ||
+      ''
+    ).toUpperCase() ===
+      'CANCELLED'
+  ) {
+
+    return false;
+  }
+
+
+  const hasOfficial =
+    hasOfficialPointsTable(
+      event.points
+    );
+
+
+  const hasQualify =
+    hasOfficialPointsTable(
+      event.qPoints
+    );
+
+
+  // A etapa precisa possuir
+  // alguma pontuação configurada.
+  return (
+    hasOfficial ||
+    hasQualify
+  );
+}
+
+
+// ==========================================================
+// MAIOR PONTUAÇÃO POSSÍVEL EM UMA TABELA
+// ==========================================================
+
+function maxPointsFromTable(
+  table
+) {
+
+  if (
+    !Array.isArray(table)
+  ) {
+
+    return 0;
+  }
+
+
+  const valid =
+    table
+      .map(Number)
+      .filter(
+        value =>
+          Number.isFinite(value) &&
+          value > 0
+      );
+
+
+  if (!valid.length) {
+
+    return 0;
+  }
+
+
+  return Math.max(
+    ...valid
+  );
+}
+
+
+// ==========================================================
+// SITUAÇÃO REAL DA TEMPORADA
+// ==========================================================
+
+function officialSeasonProgress() {
+
+  const events =
+    core.events.filter(
+      isOfficialScoringEvent
+    );
+
+
+  const eventIds =
+    new Set(
+      events.map(
+        event =>
+          String(event.id)
+      )
+    );
+
+
+  // --------------------------------------------------------
+  // ETAPAS EM QUE O ATLETA REALMENTE PARTICIPOU
+  // DNS não conta como participação.
+  // DNF continua contando como participação.
+  // --------------------------------------------------------
+
+  const participatedIds =
+    new Set(
+      myOfficialResults()
+        .filter(
+          result => {
+
+            if (
+              !eventIds.has(
+                String(
+                  result.evtId
+                )
+              )
+            ) {
+
+              return false;
+            }
+
+
+            return (
+              String(
+                result.val ||
+                ''
+              ).toUpperCase() !==
+                'DNS'
+            );
+          }
+        )
+        .map(
+          result =>
+            String(
+              result.evtId
+            )
+        )
+    );
+
+
+  const total =
+    events.length;
+
+
+  const completed =
+    participatedIds.size;
+
+
+  // --------------------------------------------------------
+  // TODAS AS ETAPAS OFICIAIS JÁ ENCERRARAM?
+  // --------------------------------------------------------
+
+  const allClosed =
+    total > 0 &&
+    events.every(
+      event =>
+        String(
+          event.status ||
+          ''
+        ).toUpperCase() ===
+          'CLOSED'
+    );
+
+
+  // --------------------------------------------------------
+  // METADE DA TEMPORADA
+  // --------------------------------------------------------
+
+  const halfTarget =
+    total > 0
+
+      ? Math.max(
+          1,
+          Math.ceil(
+            total * 0.50
+          )
+        )
+
+      : 0;
+
+
+  // --------------------------------------------------------
+  // VETERANO = 80% DA TEMPORADA
+  // --------------------------------------------------------
+
+  const veteranTarget =
+    total > 0
+
+      ? Math.max(
+          1,
+          Math.ceil(
+            total * 0.80
+          )
+        )
+
+      : 0;
+
+
+  // --------------------------------------------------------
+  // MÁXIMO DE PONTOS POSSÍVEIS DA TEMPORADA
+  // --------------------------------------------------------
+
+  const maxSeasonPoints =
+    events.reduce(
+      (
+        totalPoints,
+        event
+      ) => {
+
+        const officialMax =
+          maxPointsFromTable(
+            event.points
+          );
+
+
+        const qualifyMax =
+          maxPointsFromTable(
+            event.qPoints
+          );
+
+
+        return (
+          totalPoints +
+          officialMax +
+          qualifyMax
+        );
+      },
+      0
+    );
+
+
+  return {
+
+    events,
+
+    total,
+
+    completed,
+
+    allClosed,
+
+    halfTarget,
+
+    veteranTarget,
+
+    maxSeasonPoints
+
+  };
+}
+  
+  function achievements() {
 
   const s =
     careerStats();
@@ -2316,13 +2601,29 @@ function achievements() {
       ? mySeasonComparison()
       : {};
 
+const season =
+  officialSeasonProgress();
 
-  const allClosed =
-    core.events.filter(
-      event =>
-        event.status === 'CLOSED'
-    ).length;
 
+const officialRaces =
+  season.completed;
+
+
+const officialSeasonTotal =
+  season.total;
+
+
+const veteranTarget =
+  season.veteranTarget;
+
+
+const halfSeasonTarget =
+  season.halfTarget;
+
+
+const maxSeasonPoints =
+  season.maxSeasonPoints;
+    
 
   // ========================================================
   // UM RESULTADO POR ETAPA
@@ -2639,59 +2940,48 @@ function achievements() {
       'fa-flag-checkered',
       'PRIMEIRA LARGADA',
       'Registrou seu primeiro resultado oficial no DH-PE.',
-      races >= 1
+      officialRaces >= 1
     ),
 
     A(
-      'races2',
-      'PARTICIPAÇÃO',
-      'COMUM',
-      'fa-flag',
-      'PEGANDO RITMO',
-      'Participou de pelo menos 2 etapas oficiais.',
-      races >= 2
-    ),
+  'halfSeason',
+  'PARTICIPAÇÃO',
+  'RARO',
+  'fa-road',
+  'METADE DA TEMPORADA',
+  `Participou de pelo menos ${halfSeasonTarget} das ${officialSeasonTotal} etapas oficiais previstas.`,
+  officialSeasonTotal > 0 &&
+  officialRaces >=
+    halfSeasonTarget
+),
+
 
     A(
-      'races3',
-      'PARTICIPAÇÃO',
-      'COMUM',
-      'fa-road',
-      '3 ETAPAS',
-      'Completou pelo menos 3 etapas da temporada.',
-      races >= 3
-    ),
+  'seasonVeteran',
+  'PARTICIPAÇÃO',
+  'ÉPICO',
+  'fa-mountain',
+  'VETERANO DA TEMPORADA',
+  `Participou de pelo menos ${veteranTarget} das ${officialSeasonTotal} etapas oficiais da temporada.`,
+  officialSeasonTotal >= 2 &&
+  officialRaces >=
+    veteranTarget
+),
 
     A(
-      'races5',
-      'PARTICIPAÇÃO',
-      'RARO',
-      'fa-route',
-      'NA ESTRADA',
-      'Participou de pelo menos 5 etapas oficiais.',
-      races >= 5
-    ),
+  'season',
+  'PARTICIPAÇÃO',
+  'LENDÁRIO',
+  'fa-calendar-check',
+  'TEMPORADA COMPLETA',
+  `Participou das ${officialSeasonTotal} etapas oficiais e concluiu a temporada.`,
+  officialSeasonTotal > 0 &&
 
-    A(
-      'races8',
-      'PARTICIPAÇÃO',
-      'ÉPICO',
-      'fa-mountain',
-      'VETERANO DA TEMPORADA',
-      'Registrou resultado em pelo menos 8 etapas.',
-      races >= 8
-    ),
+  season.allClosed &&
 
-    A(
-      'season',
-      'PARTICIPAÇÃO',
-      'LENDÁRIO',
-      'fa-calendar-check',
-      'TEMPORADA COMPLETA',
-      'Participou de todas as etapas encerradas da temporada.',
-      allClosed > 0 &&
-      races >= allClosed
-    ),
+  officialRaces ===
+    officialSeasonTotal
+),
 
     A(
       'club',
@@ -3056,74 +3346,92 @@ function achievements() {
     // ======================================================
 
     A(
-      'pts50',
-      'PONTOS',
-      'COMUM',
-      'fa-coins',
-      '50 PONTOS',
-      'Acumulou pelo menos 50 pontos oficiais no DH-PE.',
-      totalPts >= 50
-    ),
+  'pointsFirst',
+  'PONTOS',
+  'COMUM',
+  'fa-coins',
+  'PRIMEIROS PONTOS',
+  'Conquistou seus primeiros pontos oficiais no DH-PE.',
+  totalPts > 0
+),
 
-    A(
-      'pts100',
-      'PONTOS',
-      'COMUM',
-      'fa-coins',
-      '100 PONTOS',
-      'Acumulou pelo menos 100 pontos oficiais.',
-      totalPts >= 100
-    ),
 
-    A(
-      'pts200',
-      'PONTOS',
-      'RARO',
-      'fa-coins',
-      '200 PONTOS',
-      'Chegou à marca de 200 pontos oficiais.',
-      totalPts >= 200
-    ),
+A(
+  'points25',
+  'PONTOS',
+  'COMUM',
+  'fa-coins',
+  '25% DA PONTUAÇÃO MÁXIMA',
+  `Alcançou pelo menos 25% dos ${maxSeasonPoints} pontos máximos possíveis da temporada.`,
+  maxSeasonPoints > 0 &&
+  totalPts >=
+    Math.ceil(
+      maxSeasonPoints *
+      0.25
+    )
+),
 
-    A(
-      'pts300',
-      'PONTOS',
-      'RARO',
-      'fa-sack-dollar',
-      '300 PONTOS',
-      'Chegou à marca de 300 pontos oficiais.',
-      totalPts >= 300
-    ),
 
-    A(
-      'pts500',
-      'PONTOS',
-      'ÉPICO',
-      'fa-sack-dollar',
-      '500 PONTOS',
-      'Acumulou pelo menos 500 pontos oficiais.',
-      totalPts >= 500
-    ),
+A(
+  'points50',
+  'PONTOS',
+  'RARO',
+  'fa-coins',
+  'METADE DOS PONTOS',
+  `Alcançou pelo menos 50% dos ${maxSeasonPoints} pontos máximos possíveis da temporada.`,
+  maxSeasonPoints > 0 &&
+  totalPts >=
+    Math.ceil(
+      maxSeasonPoints *
+      0.50
+    )
+),
 
-    A(
-      'pts750',
-      'PONTOS',
-      'ÉPICO',
-      'fa-gem',
-      '750 PONTOS',
-      'Acumulou pelo menos 750 pontos oficiais.',
-      totalPts >= 750
-    ),
 
-    A(
-      'pts1000',
-      'PONTOS',
-      'LENDÁRIO',
-      'fa-gem',
-      'CLUBE DOS 1.000',
-      'Chegou a 1.000 pontos oficiais acumulados.',
-      totalPts >= 1000
-    ),
+A(
+  'points75',
+  'PONTOS',
+  'ÉPICO',
+  'fa-sack-dollar',
+  '75% DA PONTUAÇÃO MÁXIMA',
+  `Alcançou pelo menos 75% dos ${maxSeasonPoints} pontos máximos possíveis da temporada.`,
+  maxSeasonPoints > 0 &&
+  totalPts >=
+    Math.ceil(
+      maxSeasonPoints *
+      0.75
+    )
+),
+
+
+A(
+  'points90',
+  'PONTOS',
+  'ÉPICO',
+  'fa-gem',
+  'CAMPANHA DE ELITE',
+  `Alcançou pelo menos 90% dos ${maxSeasonPoints} pontos máximos possíveis da temporada.`,
+  maxSeasonPoints > 0 &&
+  totalPts >=
+    Math.ceil(
+      maxSeasonPoints *
+      0.90
+    )
+),
+
+
+A(
+  'pointsPerfect',
+  'PONTOS',
+  'LENDÁRIO',
+  'fa-crown',
+  'PONTUAÇÃO PERFEITA',
+  `Alcançou a pontuação máxima possível da temporada: ${maxSeasonPoints} pontos.`,
+  maxSeasonPoints > 0 &&
+  season.allClosed &&
+  totalPts >=
+    maxSeasonPoints
+),
 
 
     // ======================================================
@@ -3446,11 +3754,19 @@ function annualGoals() {
     ).length;
 
 
-  const totalEvents =
-    Math.max(
-      1,
-      core.events.length
-    );
+  const season =
+  officialSeasonProgress();
+
+
+const totalEvents =
+  Math.max(
+    1,
+    season.total
+  );
+
+
+const officialRaces =
+  season.completed;
 
 
   const best =
@@ -3478,70 +3794,69 @@ function annualGoals() {
     // ======================================================
 
     {
-      id:
-        'annual-races-3',
+  id:
+    'annual-half-season',
 
-      icon:
-        'fa-flag-checkered',
+  icon:
+    'fa-flag-checkered',
 
-      title:
-        '3 ETAPAS',
+  title:
+    'METADE DA TEMPORADA',
 
-      desc:
-        'Complete pelo menos 3 etapas oficiais durante a temporada.',
+  desc:
+    `Participe de pelo menos ${season.halfTarget} das ${season.total} etapas oficiais.`,
 
-      current:
-        stats.races,
+  current:
+    officialRaces,
 
-      target:
-        3,
+  target:
+    season.halfTarget,
 
-      currentLabel:
-        `${stats.races}/3 etapas`,
+  currentLabel:
+    `${officialRaces}/${season.halfTarget} etapas`,
 
-      progress:
-        annualGoalPercent(
-          stats.races,
-          3
-        ),
+  progress:
+    annualGoalPercent(
+      officialRaces,
+      season.halfTarget
+    ),
 
-      done:
-        stats.races >= 3
-    },
+  done:
+    season.total > 0 &&
+    officialRaces >=
+      season.halfTarget
+},
 
+  icon:
+    'fa-calendar-check',
 
-    {
-      id:
-        'annual-season',
+  title:
+    'TEMPORADA PRESENTE',
 
-      icon:
-        'fa-calendar-check',
+  desc:
+    `Participe das ${totalEvents} etapas oficiais pontuáveis da temporada.`,
 
-      title:
-        'TEMPORADA PRESENTE',
+  current:
+    officialRaces,
 
-      desc:
-        'Participe de todas as etapas cadastradas da temporada.',
+  target:
+    totalEvents,
 
-      current:
-        stats.races,
+  currentLabel:
+    `${officialRaces}/${totalEvents} etapas`,
 
-      target:
-        totalEvents,
+  progress:
+    annualGoalPercent(
+      officialRaces,
+      totalEvents
+    ),
 
-      currentLabel:
-        `${stats.races}/${totalEvents} etapas`,
-
-      progress:
-        annualGoalPercent(
-          stats.races,
-          totalEvents
-        ),
-
-      done:
-        totalEvents > 0 &&
-        stats.races >= totalEvents
-    },
+  done:
+    season.allClosed &&
+    season.total > 0 &&
+    officialRaces >=
+      season.total
+},
 
 
     // ======================================================
@@ -10588,13 +10903,6 @@ function buildWrappedSlides() {
       0
     );
 
-
-  const closedEvents =
-    core.events.filter(
-      e =>
-        e.status ===
-        'CLOSED'
-    ).length;
 
 
   const attendancePct =
