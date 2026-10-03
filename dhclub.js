@@ -11466,20 +11466,47 @@ function buildWrappedSlides() {
 
 
 
-  const attendancePct =
-    closedEvents > 0
+  // ========================================================
+// ETAPAS OFICIAIS JÁ ENCERRADAS
+// ========================================================
 
-      ? Math.min(
-          100,
-          Math.round(
-            (
-              s.races /
-              closedEvents
-            ) * 100
-          )
+const closedEvents =
+  core.events
+    .filter(
+      event =>
+
+        isOfficialScoringEvent(
+          event
+        ) &&
+
+        String(
+          event.status || ''
         )
+          .toUpperCase() ===
+          'CLOSED'
+    )
+    .length;
 
-      : null;
+
+// ========================================================
+// PERCENTUAL DE PRESENÇA NA TEMPORADA
+// ========================================================
+
+const attendancePct =
+  closedEvents > 0
+
+    ? Math.min(
+        100,
+
+        Math.round(
+          (
+            s.races /
+            closedEvents
+          ) * 100
+        )
+      )
+
+    : null;
 
 
   const unlockedNames =
