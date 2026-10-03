@@ -8751,6 +8751,10 @@ function render(
 
 function go(view) {
 
+  // ========================================================
+  // FECHA TODAS AS TELAS
+  // ========================================================
+
   document
     .querySelectorAll(
       '.club-view'
@@ -8763,6 +8767,10 @@ function go(view) {
     );
 
 
+  // ========================================================
+  // ABRE A TELA SOLICITADA
+  // ========================================================
+
   const el =
     document.getElementById(
       'view-' + view
@@ -8770,11 +8778,40 @@ function go(view) {
 
 
   if (el) {
+
     el.classList.add(
       'active'
     );
   }
 
+
+  // ========================================================
+  // DEFINE QUAL BOTÃO INFERIOR FICA ATIVO
+  //
+  // Carreira, Conquistas, X1 e Admin
+  // pertencem ao menu INÍCIO.
+  // ========================================================
+
+  const viewsDoInicio = [
+    'home',
+    'career',
+    'achievements',
+    'x1',
+    'admin'
+  ];
+
+
+  const navView =
+    viewsDoInicio.includes(view)
+
+      ? 'home'
+
+      : view;
+
+
+  // ========================================================
+  // ATUALIZA MENU INFERIOR
+  // ========================================================
 
   document
     .querySelectorAll(
@@ -8784,17 +8821,24 @@ function go(view) {
       x =>
         x.classList.toggle(
           'active',
-          x.dataset.view === view
+          x.dataset.view === navView
         )
     );
 
+
+  // ========================================================
+  // RENDERIZA A TELA
+  // ========================================================
 
   render(view);
 
 
   window.scrollTo({
+
     top: 0,
+
     behavior: 'smooth'
+
   });
 }
 
