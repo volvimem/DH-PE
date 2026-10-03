@@ -10811,8 +10811,7 @@ function ensureWrappedStyles() {
     }
 
     .wrapped-medals {
-      display:grid;
-      grid-template-columns:repeat(5,1fr);
+      display:flex;
       gap:7px;
       margin-top:20px;
     }
