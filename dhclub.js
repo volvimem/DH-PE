@@ -68,6 +68,154 @@ let currentView = 'home';
   'TODAS';
 
 
+  // ==========================================================
+// JOGOS — JOGO DA MEMÓRIA
+// 16 PARES / 32 CARTAS
+// ==========================================================
+
+const MEMORY_BEST_KEY =
+  'dhclub_memory_best_v1';
+
+
+// ==========================================================
+// BICICLETAS DO JOGO
+// ==========================================================
+
+const MEMORY_BIKES = [
+
+  {
+    key: 'trek-session',
+    brand: 'TREK',
+    model: 'SESSION',
+    accent: '#76e9aa'
+  },
+
+  {
+    key: 'santa-v10',
+    brand: 'SANTA CRUZ',
+    model: 'V10',
+    accent: '#ffc72c'
+  },
+
+  {
+    key: 'commencal-supreme',
+    brand: 'COMMENCAL',
+    model: 'SUPREME DH V5',
+    accent: '#8fa5ff'
+  },
+
+  {
+    key: 'specialized-demo',
+    brand: 'SPECIALIZED',
+    model: 'DEMO RACE',
+    accent: '#ff7f7f'
+  },
+
+  {
+    key: 'canyon-sender',
+    brand: 'CANYON',
+    model: 'SENDER CFR',
+    accent: '#70d6ff'
+  },
+
+  {
+    key: 'yt-tues',
+    brand: 'YT',
+    model: 'TUES',
+    accent: '#ffd166'
+  },
+
+  {
+    key: 'pivot-phoenix',
+    brand: 'PIVOT',
+    model: 'PHOENIX',
+    accent: '#c77dff'
+  },
+
+  {
+    key: 'norco-aurum',
+    brand: 'NORCO',
+    model: 'AURUM HSP',
+    accent: '#7ae582'
+  },
+
+  {
+    key: 'giant-glory',
+    brand: 'GIANT',
+    model: 'GLORY ADVANCED',
+    accent: '#ffb703'
+  },
+
+  {
+    key: 'scott-gambler',
+    brand: 'SCOTT',
+    model: 'GAMBLER',
+    accent: '#9bf6ff'
+  },
+
+  {
+    key: 'atherton-a200',
+    brand: 'ATHERTON',
+    model: 'A.200.G',
+    accent: '#bdb2ff'
+  },
+
+  {
+    key: 'gt-fury',
+    brand: 'GT',
+    model: 'FURY',
+    accent: '#ffd6a5'
+  },
+
+  {
+    key: 'mondraker-summum',
+    brand: 'MONDRAKER',
+    model: 'SUMMUM',
+    accent: '#ffadad'
+  },
+
+  {
+    key: 'transition-tr11',
+    brand: 'TRANSITION',
+    model: 'TR11',
+    accent: '#caffbf'
+  },
+
+  {
+    key: 'nukeproof-dissent',
+    brand: 'NUKEPROOF',
+    model: 'DISSENT',
+    accent: '#a0c4ff'
+  },
+
+  {
+    key: 'intense-m29',
+    brand: 'INTENSE',
+    model: 'M29',
+    accent: '#f1c0e8'
+  }
+
+];
+
+
+// ==========================================================
+// ESTADO DO JOGO DA MEMÓRIA
+// ==========================================================
+
+let memoryDeck = [];
+
+let memoryFlipped = [];
+
+let memoryMatched = 0;
+
+let memoryMoves = 0;
+
+let memoryBusy = false;
+
+let memoryStartedAt = 0;
+
+let memoryFinishedAt = 0;
+
 const cleanCPF = v =>
   String(v || '').replace(/\D/g, '');
 
