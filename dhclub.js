@@ -501,6 +501,259 @@ function startMemoryGame() {
     renderGames();
   }
 }
+
+
+  // ==========================================================
+// JOGO DA MEMÓRIA — VIRAR CARTA
+// ==========================================================
+
+function flipMemoryCard(
+  index
+) {
+
+  // --------------------------------------------------------
+  // BLOQUEIA CLIQUES DURANTE A COMPARAÇÃO
+  // --------------------------------------------------------
+
+  if (
+    memoryBusy
+  ) {
+
+    return;
+  }
+
+
+  // --------------------------------------------------------
+  // CONFERE SE A CARTA EXISTE
+  // --------------------------------------------------------
+
+  const card =
+    memoryDeck[index];
+
+
+  if (!card) {
+
+    return;
+  }
+
+
+  // --------------------------------------------------------
+  // NÃO PERMITE CLICAR EM PAR JÁ ENCONTRADO
+  // --------------------------------------------------------
+
+  if (
+    card.matched
+  ) {
+
+    return;
+  }
+
+
+  // --------------------------------------------------------
+  // NÃO PERMITE CLICAR DUAS VEZES
+  // NA MESMA CARTA
+  // --------------------------------------------------------
+
+  if (
+    memoryFlipped.includes(
+      index
+    )
+  ) {
+
+    return;
+  }
+
+
+  // --------------------------------------------------------
+  // VIRA A CARTA
+  // --------------------------------------------------------
+
+  memoryFlipped.push(
+    index
+  );
+
+
+  // --------------------------------------------------------
+  // ATUALIZA A TELA PARA MOSTRAR
+  // A CARTA VIRADA
+  // --------------------------------------------------------
+
+  if (
+    currentView === 'games' &&
+    typeof renderGames ===
+      'function'
+  ) {
+
+    renderGames();
+  }
+
+
+  // --------------------------------------------------------
+  // SE SÓ EXISTE UMA CARTA VIRADA,
+  // AGUARDA A SEGUNDA
+  // --------------------------------------------------------
+
+  if (
+    memoryFlipped.length < 2
+  ) {
+
+    return;
+  }
+
+
+  // --------------------------------------------------------
+  // SEGUNDA CARTA VIRADA =
+  // UMA JOGADA COMPLETA
+  // --------------------------------------------------------
+
+  memoryMoves++;
+
+
+  // --------------------------------------------------------
+  // BLOQUEIA NOVOS CLIQUES
+  // ENQUANTO CONFERE AS DUAS CARTAS
+  // --------------------------------------------------------
+
+  memoryBusy =
+    true;
+
+
+  const firstIndex =
+    memoryFlipped[0];
+
+
+  const secondIndex =
+    memoryFlipped[1];
+
+
+  const firstCard =
+    memoryDeck[
+      firstIndex
+    ];
+
+
+  const secondCard =
+    memoryDeck[
+      secondIndex
+    ];
+
+
+  // ========================================================
+  // ACERTOU O PAR
+  // ========================================================
+
+  if (
+    firstCard.pairId ===
+    secondCard.pairId
+  ) {
+
+    // ------------------------------------------------------
+    // MARCA AS DUAS CARTAS COMO ENCONTRADAS
+    // ------------------------------------------------------
+
+    firstCard.matched =
+      true;
+
+
+    secondCard.matched =
+      true;
+
+
+    // ------------------------------------------------------
+    // SOMA DUAS CARTAS ENCONTRADAS
+    // ------------------------------------------------------
+
+    memoryMatched +=
+      2;
+
+
+    // ------------------------------------------------------
+    // LIMPA AS CARTAS TEMPORARIAMENTE VIRADAS
+    // ------------------------------------------------------
+
+    memoryFlipped = [];
+
+
+    // ------------------------------------------------------
+    // LIBERA O TABULEIRO
+    // ------------------------------------------------------
+
+    memoryBusy =
+      false;
+
+
+    // ======================================================
+    // CONFERE SE O JOGO TERMINOU
+    //
+    // 32 cartas encontradas = 16 pares
+    // ======================================================
+
+    if (
+      memoryMatched ===
+      memoryDeck.length
+    ) {
+
+      memoryFinishedAt =
+        Date.now();
+
+
+      toast(
+        'PARABÉNS! VOCÊ ENCONTROU OS 16 PARES!'
+      );
+    }
+
+
+    // ------------------------------------------------------
+    // ATUALIZA A TELA
+    // ------------------------------------------------------
+
+    if (
+      currentView === 'games' &&
+      typeof renderGames ===
+        'function'
+    ) {
+
+      renderGames();
+    }
+
+
+    return;
+  }
+
+
+  // ========================================================
+  // ERROU O PAR
+  // ========================================================
+
+  // As duas cartas permanecem abertas
+  // por 850 milissegundos.
+  // Depois viram novamente.
+
+  setTimeout(
+    () => {
+
+      memoryFlipped =
+        [];
+
+
+      memoryBusy =
+        false;
+
+
+      if (
+        currentView === 'games' &&
+        typeof renderGames ===
+          'function'
+      ) {
+
+        renderGames();
+      }
+
+    },
+
+    850
+  );
+}
   
 
 const cleanCPF = v =>
