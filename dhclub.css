@@ -40,3 +40,527 @@ body:before{content:"";position:fixed;inset:0;background-image:linear-gradient(r
   cursor:pointer;
 }.club-nav-item i{font-size:17px}.club-nav-item.active{color:var(--gold2)}.club-nav-item.x1-nav{position:relative}.club-nav-item.x1-nav i{color:#ffca28}.career-row{display:grid;grid-template-columns:54px 1fr auto;gap:10px;align-items:center}.place-badge{width:54px;height:54px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:#0b1728;border:1px solid var(--line);font-size:18px;font-weight:1000}.achievement-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.achievement{padding:16px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(145deg,#101d30,#08131f);min-height:148px}.achievement.locked{filter:grayscale(1);opacity:.45}.achievement .medal{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:rgba(247,201,72,.12);color:var(--gold);font-size:21px;margin-bottom:16px}.achievement b{display:block;font-size:12px}.achievement small{color:var(--muted);font-size:9px;line-height:1.4;display:block;margin-top:5px}.x1-hero{background:linear-gradient(135deg,#25110d,#17101f 55%,#08111d);border-color:rgba(255,174,55,.22)}.x1-duel{padding:15px;border-radius:20px;background:linear-gradient(145deg,#121d2d,#0a121e);border:1px solid var(--line)}.x1-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:13px}.x1-versus{display:grid;grid-template-columns:1fr 48px 1fr;align-items:center;gap:8px;text-align:center}.fighter{padding:12px 6px;border-radius:15px;background:rgba(255,255,255,.03)}.fighter b{font-size:11px;display:block}.fighter small{font-size:9px;color:var(--muted);display:block;margin-top:4px}.vs{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#ffb21a,#f45d1c);color:#140a05;font-size:11px;font-weight:1000}.fee-zero{color:var(--green);font-size:9px;font-weight:900}.benefit-card{padding:17px;border-radius:20px;background:linear-gradient(145deg,#102238,#09131f);border:1px solid rgba(78,161,255,.18)}.benefit-card h4{margin:5px 0;font-size:15px}.benefit-card p{color:var(--muted);font-size:10px;line-height:1.5}.sponsor-logo{height:44px;min-width:90px;padding:10px;border-radius:12px;background:white;color:#0b1422;display:flex;align-items:center;justify-content:center;font-weight:1000;font-size:10px}.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:30;display:flex;align-items:flex-end;justify-content:center;padding:12px}.modal-card{width:min(100%,520px);max-height:88vh;overflow:auto;border-radius:26px 26px 18px 18px;padding:22px;position:relative}.modal-close{position:absolute;right:12px;top:12px;width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:white}.field{margin:11px 0}.field label{display:block;font-size:9px;color:var(--muted);font-weight:900;margin-bottom:6px}.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:13px;padding:12px;background:#07111d;color:white;outline:none}.toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:60;background:#13243a;border:1px solid var(--line);padding:11px 14px;border-radius:14px;font-size:10px;font-weight:900;box-shadow:var(--shadow);max-width:90vw}.admin-box{padding:16px;border-radius:20px;background:#0c1726;border:1px solid var(--line);margin-bottom:10px}.empty{padding:28px;text-align:center;color:var(--muted);font-size:11px;border:1px dashed var(--line);border-radius:18px}
 @media(min-width:720px){.grid-stats{grid-template-columns:repeat(4,1fr)}.quick-grid{grid-template-columns:repeat(4,1fr)}.achievement-grid{grid-template-columns:repeat(4,1fr)}.club-nav{left:50%;right:auto;transform:translateX(-50%);width:640px;border-radius:22px 22px 0 0}.content{padding-bottom:20px}}
+
+
+/* =========================================================
+   DH-CLUB GAMES — JOGO DA MEMÓRIA
+   ========================================================= */
+
+
+/* =========================================================
+   TABULEIRO
+   ========================================================= */
+
+.memory-board {
+  width: 100%;
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(0, 1fr)
+    );
+
+  gap: 9px;
+
+  margin-top: 12px;
+
+  padding-bottom: 18px;
+}
+
+
+/* =========================================================
+   CARTA
+   ========================================================= */
+
+.memory-card {
+  appearance: none;
+
+  -webkit-appearance: none;
+
+  border: 0;
+
+  outline: 0;
+
+  background: transparent;
+
+  padding: 0;
+
+  margin: 0;
+
+  width: 100%;
+
+  aspect-ratio: 3 / 4;
+
+  cursor: pointer;
+
+  perspective: 1000px;
+
+  touch-action: manipulation;
+
+  -webkit-tap-highlight-color:
+    transparent;
+}
+
+
+/* =========================================================
+   CONTEÚDO INTERNO DA CARTA
+   ========================================================= */
+
+.memory-card-inner {
+  position: relative;
+
+  width: 100%;
+
+  height: 100%;
+
+  transform-style:
+    preserve-3d;
+
+  -webkit-transform-style:
+    preserve-3d;
+
+  transition:
+    transform
+    .36s
+    cubic-bezier(
+      .2,
+      .7,
+      .2,
+      1
+    );
+}
+
+
+/* =========================================================
+   CARTA VIRADA
+   ========================================================= */
+
+.memory-card.flipped
+.memory-card-inner,
+
+.memory-card.matched
+.memory-card-inner {
+  transform:
+    rotateY(180deg);
+}
+
+
+/* =========================================================
+   FACES DA CARTA
+   ========================================================= */
+
+.memory-face {
+  position: absolute;
+
+  inset: 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  text-align: center;
+
+  border-radius: 15px;
+
+  overflow: hidden;
+
+  padding: 7px;
+
+  backface-visibility:
+    hidden;
+
+  -webkit-backface-visibility:
+    hidden;
+
+  border:
+    1px solid
+    rgba(
+      255,
+      255,
+      255,
+      .10
+    );
+
+  box-shadow:
+    0
+    8px
+    20px
+    rgba(
+      0,
+      0,
+      0,
+      .25
+    );
+}
+
+
+/* =========================================================
+   FRENTE — CARTA FECHADA
+   ========================================================= */
+
+.memory-front {
+  background:
+    radial-gradient(
+      circle
+      at
+      50%
+      15%,
+      rgba(
+        31,
+        108,
+        255,
+        .18
+      ),
+      transparent
+      45%
+    ),
+
+    linear-gradient(
+      145deg,
+      #142b47,
+      #081524
+    );
+
+  color:
+    var(
+      --gold2,
+      #ffc72c
+    );
+}
+
+
+.memory-front::before {
+  content: '';
+
+  position: absolute;
+
+  inset: 5px;
+
+  border-radius: 11px;
+
+  border:
+    1px solid
+    rgba(
+      255,
+      199,
+      44,
+      .10
+    );
+
+  pointer-events: none;
+}
+
+
+.memory-front i {
+  position: relative;
+
+  z-index: 2;
+
+  font-size: 20px;
+
+  margin-bottom: 6px;
+
+  color:
+    var(
+      --gold2,
+      #ffc72c
+    );
+}
+
+
+.memory-front span {
+  position: relative;
+
+  z-index: 2;
+
+  font-size: 9px;
+
+  font-weight: 1000;
+
+  letter-spacing: 1.4px;
+
+  color: white;
+}
+
+
+/* =========================================================
+   VERSO — CARTA ABERTA
+   ========================================================= */
+
+.memory-back {
+  transform:
+    rotateY(180deg);
+
+  background:
+    radial-gradient(
+      circle
+      at
+      50%
+      15%,
+      rgba(
+        255,
+        255,
+        255,
+        .06
+      ),
+      transparent
+      45%
+    ),
+
+    linear-gradient(
+      145deg,
+      #111f33,
+      #07111e
+    );
+}
+
+
+/* =========================================================
+   DESENHO DA BIKE
+   ========================================================= */
+
+.memory-bike-art {
+  width: 100%;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  margin-bottom: 5px;
+}
+
+
+.memory-bike-art svg {
+  width: 100%;
+
+  max-width: 75px;
+
+  height: auto;
+
+  display: block;
+}
+
+
+/* =========================================================
+   MARCA
+   ========================================================= */
+
+.memory-bike-brand {
+  width: 100%;
+
+  font-size: 7px;
+
+  line-height: 1.1;
+
+  font-weight: 1000;
+
+  letter-spacing: .5px;
+
+  color:
+    var(
+      --gold2,
+      #ffc72c
+    );
+
+  white-space: nowrap;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+}
+
+
+/* =========================================================
+   MODELO
+   ========================================================= */
+
+.memory-bike-model {
+  width: 100%;
+
+  margin-top: 3px;
+
+  font-size: 6.5px;
+
+  line-height: 1.2;
+
+  font-weight: 800;
+
+  color:
+    var(
+      --muted,
+      #8b9aae
+    );
+
+  overflow-wrap: anywhere;
+}
+
+
+/* =========================================================
+   PAR ENCONTRADO
+   ========================================================= */
+
+.memory-card.matched
+.memory-back {
+  border-color:
+    rgba(
+      49,
+      208,
+      124,
+      .50
+    );
+
+  box-shadow:
+    0
+    0
+    0
+    1px
+    rgba(
+      49,
+      208,
+      124,
+      .15
+    ),
+
+    0
+    0
+    22px
+    rgba(
+      49,
+      208,
+      124,
+      .12
+    ),
+
+    0
+    8px
+    20px
+    rgba(
+      0,
+      0,
+      0,
+      .25
+    );
+}
+
+
+.memory-card.matched
+.memory-bike-brand {
+  color:
+    var(
+      --green,
+      #31d07c
+    );
+}
+
+
+/* =========================================================
+   EFEITO AO TOCAR
+   ========================================================= */
+
+.memory-card:not(.matched):active
+.memory-card-inner {
+  transform:
+    scale(.96);
+}
+
+
+.memory-card.flipped:active
+.memory-card-inner {
+  transform:
+    rotateY(180deg)
+    scale(.96);
+}
+
+
+/* =========================================================
+   CELULARES MUITO PEQUENOS
+   ========================================================= */
+
+@media (
+  max-width: 360px
+) {
+
+  .memory-board {
+    gap: 6px;
+  }
+
+
+  .memory-face {
+    border-radius: 12px;
+
+    padding: 5px;
+  }
+
+
+  .memory-bike-art svg {
+    max-width: 62px;
+  }
+
+
+  .memory-bike-brand {
+    font-size: 6px;
+  }
+
+
+  .memory-bike-model {
+    font-size: 5.8px;
+  }
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (
+  min-width: 600px
+) {
+
+  .memory-board {
+    grid-template-columns:
+      repeat(
+        6,
+        minmax(0, 1fr)
+      );
+
+    gap: 11px;
+  }
+
+
+  .memory-bike-brand {
+    font-size: 8px;
+  }
+
+
+  .memory-bike-model {
+    font-size: 7px;
+  }
+}
+
+
+/* =========================================================
+   DESKTOP
+   ========================================================= */
+
+@media (
+  min-width: 900px
+) {
+
+  .memory-board {
+    grid-template-columns:
+      repeat(
+        8,
+        minmax(0, 1fr)
+      );
+
+    gap: 12px;
+  }
+}
