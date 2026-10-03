@@ -675,9 +675,6 @@ stopMemoryTimer();
 
 
 toast(
-
-
-      toast(
   'PARABÉNS! VOCÊ ENCONTROU TODOS OS PARES!'
 );
     }
