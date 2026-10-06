@@ -327,6 +327,263 @@ let memoryCompletionHandled = false;
 
 let memoryAdvanceTimerId = null;
 
+// ==========================================================
+// JOGO DA MEMÓRIA — SISTEMA DE SONS
+// ==========================================================
+
+let memoryAudioContext = null;
+
+
+function getMemoryAudioContext() {
+
+  const AudioCtx =
+    window.AudioContext ||
+    window.webkitAudioContext;
+
+  if (!AudioCtx) {
+    return null;
+  }
+
+  if (!memoryAudioContext) {
+
+    memoryAudioContext =
+      new AudioCtx();
+  }
+
+  return memoryAudioContext;
+}
+
+
+function playMemoryNote(
+  ctx,
+  frequency,
+  delay,
+  duration,
+  volume = 0.06,
+  type = 'sine'
+) {
+
+  const start =
+    ctx.currentTime +
+    delay;
+
+
+  const oscillator =
+    ctx.createOscillator();
+
+
+  const gain =
+    ctx.createGain();
+
+
+  oscillator.type =
+    type;
+
+
+  oscillator.frequency
+    .setValueAtTime(
+      frequency,
+      start
+    );
+
+
+  gain.gain
+    .setValueAtTime(
+      0.0001,
+      start
+    );
+
+
+  gain.gain
+    .exponentialRampToValueAtTime(
+      Math.max(
+        0.0002,
+        volume
+      ),
+      start + 0.01
+    );
+
+
+  gain.gain
+    .exponentialRampToValueAtTime(
+      0.0001,
+      start + duration
+    );
+
+
+  oscillator.connect(
+    gain
+  );
+
+
+  gain.connect(
+    ctx.destination
+  );
+
+
+  oscillator.start(
+    start
+  );
+
+
+  oscillator.stop(
+    start +
+    duration +
+    0.03
+  );
+}
+
+
+function playMemorySound(
+  type
+) {
+
+  const ctx =
+    getMemoryAudioContext();
+
+
+  if (!ctx) {
+    return;
+  }
+
+
+  const tocar = () => {
+
+
+    // ========================================
+    // ACERTOU O PAR
+    // ========================================
+
+    if (
+      type === 'match'
+    ) {
+
+      playMemoryNote(
+        ctx,
+        659.25,
+        0,
+        0.13,
+        0.065,
+        'sine'
+      );
+
+
+      playMemoryNote(
+        ctx,
+        783.99,
+        0.08,
+        0.16,
+        0.07,
+        'sine'
+      );
+
+
+      return;
+    }
+
+
+    // ========================================
+    // ERROU O PAR
+    // ========================================
+
+    if (
+      type === 'wrong'
+    ) {
+
+      playMemoryNote(
+        ctx,
+        220,
+        0,
+        0.12,
+        0.055,
+        'triangle'
+      );
+
+
+      playMemoryNote(
+        ctx,
+        164.81,
+        0.09,
+        0.18,
+        0.05,
+        'triangle'
+      );
+
+
+      return;
+    }
+
+
+    // ========================================
+    // MUDOU DE NÍVEL
+    // ========================================
+
+    if (
+      type === 'level'
+    ) {
+
+      playMemoryNote(
+        ctx,
+        523.25,
+        0,
+        0.16,
+        0.06,
+        'sine'
+      );
+
+
+      playMemoryNote(
+        ctx,
+        659.25,
+        0.10,
+        0.16,
+        0.065,
+        'sine'
+      );
+
+
+      playMemoryNote(
+        ctx,
+        783.99,
+        0.20,
+        0.18,
+        0.07,
+        'sine'
+      );
+
+
+      playMemoryNote(
+        ctx,
+        1046.50,
+        0.31,
+        0.25,
+        0.075,
+        'sine'
+      );
+    }
+
+  };
+
+
+  if (
+    ctx.state ===
+    'suspended'
+  ) {
+
+    ctx.resume()
+      .then(
+        tocar
+      )
+      .catch(
+        () => {}
+      );
+
+  } else {
+
+    tocar();
+  }
+}
+  
   // Guarda a ordem da partida anterior
 // para evitar repetir exatamente o mesmo tabuleiro.
 
@@ -527,19 +784,41 @@ function startMemoryGame(level = memoryLevel) {
   }
 
   const requestedLevel =
-    Number(level) || 1;
+  Number(level) || 1;
 
-  memoryLevel =
-    Math.max(
-      1,
-      Math.min(
-        5,
-        requestedLevel
-      )
-    );
 
-  memoryCompletionHandled =
-    false;
+const previousLevel =
+  memoryLevel;
+
+
+const nextLevel =
+  Math.max(
+    1,
+    Math.min(
+      5,
+      requestedLevel
+    )
+  );
+
+
+// ==========================================
+// TOCA SOM SOMENTE SE REALMENTE
+// HOUVER MUDANÇA DE NÍVEL
+// ==========================================
+
+if (
+  nextLevel !==
+  previousLevel
+) {
+
+  playMemorySound(
+    'level'
+  );
+}
+
+
+memoryLevel =
+  nextLevel;
 
   memoryDeck =
     buildMemoryDeck();
@@ -707,13 +986,28 @@ if (
       2;
 
 
-    memoryFlipped =
-      [];
+   memoryFlipped =
+  [];
+
+memoryBusy =
+  false;
 
 
-    memoryBusy =
-      false;
+// SOM DE ACERTO
 
+playMemorySound(
+  'match'
+);
+
+
+// ------------------------------------------------------
+// TERMINOU TODOS OS PARES DO NÍVEL ATUAL
+// ------------------------------------------------------
+
+if (
+  memoryMatched ===
+  memoryDeck.length
+) {
 
     // ------------------------------------------------------
     // TERMINOU OS 16 PARES
@@ -761,6 +1055,12 @@ if (
   // Mantém as duas cartas abertas
   // durante 850 ms.
 
+// SOM DE ERRO
+
+playMemorySound(
+  'wrong'
+);
+    
   setTimeout(
     () => {
 
