@@ -290,7 +290,19 @@ if(c === "PCD") return "PCD (EXTRA)"; return c; };
 window.isSuperAdmin = function(u) {
     if (!u) return false;
 
-    return u.role === 'ADMIN';
+    // Administradores definidos no cadastro
+    if (u.role === 'ADMIN') {
+        return true;
+    }
+
+    // Administrador Geral do sistema
+    const cpf = cleanCPF(u.cpf);
+
+    if (cpf === "08327632418") {
+        return true;
+    }
+
+    return false;
 };
 
 window.canManageEvent = function(evtId) {
