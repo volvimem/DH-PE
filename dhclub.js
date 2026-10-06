@@ -59,7 +59,8 @@ let club = {
   sponsors: {},
   x1_duels: {},
   challenge_entries: {},
-  training_presence: {}
+  training_presence: {},
+  memory_game: {}
 };
 
 let currentView = 'home';
@@ -73,8 +74,51 @@ let currentView = 'home';
 // 16 PARES / 32 CARTAS
 // ==========================================================
 
-const MEMORY_BEST_KEY =
-  'dhclub_memory_best_v1';
+const MEMORY_LEVELS = {
+  1: {
+    pairs: 5,
+    cards: 10,
+    colsMobile: 3,
+    colsTablet: 4,
+    colsDesktop: 6
+  },
+
+  2: {
+    pairs: 10,
+    cards: 20,
+    colsMobile: 4,
+    colsTablet: 6,
+    colsDesktop: 8
+  },
+
+  3: {
+    pairs: 15,
+    cards: 30,
+    colsMobile: 5,
+    colsTablet: 7,
+    colsDesktop: 9
+  },
+
+  4: {
+    pairs: 20,
+    cards: 40,
+    colsMobile: 6,
+    colsTablet: 8,
+    colsDesktop: 10
+  },
+
+  5: {
+    pairs: 25,
+    cards: 50,
+    colsMobile: 7,
+    colsTablet: 9,
+    colsDesktop: 12
+  }
+};
+
+let memoryLevel = 1;
+
+let memoryCompletionHandled = false;
 
 
 // ==========================================================
@@ -284,13 +328,33 @@ function buildMemoryDeck() {
   // 16 bikes x 2 = 32 cartas
   // --------------------------------------------------------
 
-  const selectedBikes =
+  const levelConfig =
+  MEMORY_LEVELS[memoryLevel] ||
+  MEMORY_LEVELS[1];
+
+const totalPairs =
+  levelConfig.pairs;
+
+if (MEMORY_BIKES.length < totalPairs) {
+
+  console.error(
+    `Nível ${memoryLevel} precisa de ${totalPairs} bikes diferentes.`
+  );
+
+  toast(
+    `FALTAM BIKES PARA O NÍVEL ${memoryLevel}`
+  );
+
+  return [];
+}
+
+const selectedBikes =
   shuffleMemoryArray(
     MEMORY_BIKES
   )
     .slice(
       0,
-      10
+      totalPairs
     );
 
 
@@ -443,7 +507,18 @@ const cards =
 // JOGO DA MEMÓRIA — INICIAR / REINICIAR PARTIDA
 // ==========================================================
 
-function startMemoryGame() {
+function startMemoryGame(level = memoryLevel) {
+
+  memoryLevel =
+    Math.max(
+      1,
+      Math.min(
+        5,
+        Number(level) || 1
+      )
+    );
+
+  memoryCompletionHandled = false;
 
   stopMemoryTimer();
   
@@ -663,20 +738,24 @@ if (
     // ------------------------------------------------------
 
     if (
-      memoryMatched ===
-      memoryDeck.length
-    ) {
+  memoryMatched ===
+  memoryDeck.length
+) {
 
-      memoryFinishedAt =
-  Date.now();
+  memoryFinishedAt =
+    Date.now();
 
+  stopMemoryTimer();
 
-stopMemoryTimer();
+  const finalTime =
+    memoryFinishedAt -
+    memoryStartedAt;
 
-
-toast(
-  'PARABÉNS! VOCÊ ENCONTROU TODOS OS PARES!'
-);
+  handleMemoryLevelCompleted(
+    finalTime,
+    memoryMoves
+  );
+}
     }
 
 
@@ -732,9 +811,263 @@ toast(
 // JOGO DA MEMÓRIA — FORMATAR TEMPO
 // ==========================================================
 
+async function handleMemoryLevelCompleted(
+  finalTime,
+  moves
+) {
+
+  if (memoryCompletionHandled) {
+    return;
+  }
+
+  memoryCompletionHandled = true;
+
+  const finishedLevel =
+    memoryLevel;
+
+  try {
+
+    await saveMemoryRecord(
+      finishedLevel,
+      finalTime,
+      moves
+    );
+
+  } catch (error) {
+
+    console.error(
+      '[MEMORY] Erro ao salvar recorde:',
+      error
+    );
+  }
+
+
+  if (finishedLevel < 5) {
+
+    toast(
+      `NÍVEL ${finishedLevel} CONCLUÍDO! INDO PARA O NÍVEL ${finishedLevel + 1}`
+    );
+
+    setTimeout(
+      () => {
+
+        memoryLevel =
+          finishedLevel + 1;
+
+        startMemoryGame(
+          memoryLevel
+        );
+
+      },
+      2200
+    );
+
+    return;
+  }
+
+
+  toast(
+    '🏆 PARABÉNS! VOCÊ CONCLUIU OS 5 NÍVEIS!'
+  );
+
+  if (
+    currentView === 'games'
+  ) {
+
+    renderGames();
+  }
+}
+
+async function saveMemoryRecord(
+  level,
+  timeMs,
+  moves
+) {
+
+  if (!loggedUser) {
+    return;
+  }
+
+  const cpf =
+    cleanCPF(
+      loggedUser.cpf
+    );
+
+  if (!cpf) {
+    return;
+  }
+
+  const athleteName =
+    loggedUser.nome ||
+    'ATLETA';
+
+
+  const levelKey =
+    `level_${level}`;
+
+
+  // ==========================================
+  // TOP 5 PESSOAL
+  // ==========================================
+
+  const personalRef =
+    database.ref(
+      `${CLUB_ROOT}/memory_game/users/${cpf}/${levelKey}/best5`
+    );
+
+
+  const personalSnap =
+    await personalRef.once(
+      'value'
+    );
+
+
+  let records =
+    objValues(
+      personalSnap.val()
+    );
+
+
+  records.push({
+
+    timeMs:
+      Number(timeMs),
+
+    moves:
+      Number(moves || 0),
+
+    level:
+      Number(level),
+
+    date:
+      Date.now()
+
+  });
+
+
+  records =
+    records
+      .filter(
+        item =>
+          Number(item.timeMs) > 0
+      )
+      .sort(
+        (a, b) =>
+          Number(a.timeMs) -
+          Number(b.timeMs)
+      )
+      .slice(
+        0,
+        5
+      );
+
+
+  await personalRef.set(
+    records
+  );
+
+
+  // ==========================================
+  // RECORDE GERAL
+  // ==========================================
+
+  const globalRef =
+    database.ref(
+      `${CLUB_ROOT}/memory_game/global/${levelKey}`
+    );
+
+
+  await globalRef.transaction(
+    current => {
+
+      const oldTime =
+        Number(
+          current?.timeMs ||
+          Infinity
+        );
+
+
+      if (
+        Number(timeMs) <
+        oldTime
+      ) {
+
+        return {
+
+          cpf,
+
+          name:
+            athleteName,
+
+          timeMs:
+            Number(timeMs),
+
+          moves:
+            Number(moves || 0),
+
+          level:
+            Number(level),
+
+          updatedAt:
+            Date.now()
+
+        };
+      }
+
+
+      return current;
+    }
+  );
+}
+
 function formatMemoryDuration(
   milliseconds
 ) {
+
+  const totalMs =
+    Math.max(
+      0,
+      Math.floor(
+        Number(
+          milliseconds || 0
+        )
+      )
+    );
+
+
+  const minutes =
+    Math.floor(
+      totalMs / 60000
+    );
+
+
+  const seconds =
+    Math.floor(
+      (
+        totalMs % 60000
+      ) / 1000
+    );
+
+
+  const centiseconds =
+    Math.floor(
+      (
+        totalMs % 1000
+      ) / 10
+    );
+
+
+  return (
+    String(minutes)
+      .padStart(2, '0') +
+    ':' +
+    String(seconds)
+      .padStart(2, '0') +
+    '.' +
+    String(centiseconds)
+      .padStart(2, '0')
+  );
+}
 
   const totalSeconds =
     Math.max(
@@ -1124,6 +1457,45 @@ function renderGames() {
 
   ensureMemoryGameReady();
 
+  const levelConfig =
+  MEMORY_LEVELS[memoryLevel];
+
+
+const levelKey =
+  `level_${memoryLevel}`;
+
+
+const myCpf =
+  cleanCPF(
+    loggedUser?.cpf
+  );
+
+
+const globalRecord =
+  club.memory_game
+    ?.global
+    ?.[levelKey] ||
+  null;
+
+
+const myRecords =
+  objValues(
+    club.memory_game
+      ?.users
+      ?.[myCpf]
+      ?.[levelKey]
+      ?.best5
+  )
+    .sort(
+      (a, b) =>
+        Number(a.timeMs) -
+        Number(b.timeMs)
+    )
+    .slice(
+      0,
+      5
+    );
+
 
   const totalPairs =
   Math.floor(
@@ -1180,8 +1552,12 @@ const totalCards =
 
 
       <h2>
-        Jogo da Memória
-      </h2>
+  Jogo da Memória
+</h2>
+
+<div class="memory-level-badge">
+  NÍVEL ${memoryLevel} DE 5
+</div>
 
 
       <p>
@@ -1266,6 +1642,99 @@ const totalCards =
 
     </div>
 
+<div class="memory-global-record">
+
+  <div class="eyebrow">
+    🏆 RECORDE GERAL • NÍVEL ${memoryLevel}
+  </div>
+
+  ${
+    globalRecord
+
+      ? `
+
+        <div class="memory-record-time">
+
+          ${
+            formatMemoryDuration(
+              globalRecord.timeMs
+            )
+          }
+
+        </div>
+
+        <div class="memory-record-owner">
+
+          ${
+            esc(
+              globalRecord.name ||
+              'ATLETA'
+            )
+          }
+
+        </div>
+
+      `
+
+      : `
+
+        <div class="memory-no-record">
+          AINDA NÃO HÁ RECORDE
+        </div>
+
+      `
+  }
+
+</div>
+
+<div class="memory-my-records">
+
+  <div class="eyebrow">
+    MEUS 5 MELHORES • NÍVEL ${memoryLevel}
+  </div>
+
+  ${
+    myRecords.length
+
+      ? myRecords
+          .map(
+            (record, index) => `
+
+              <div class="memory-record-row">
+
+                <span>
+                  ${index + 1}º
+                </span>
+
+                <b>
+                  ${
+                    formatMemoryDuration(
+                      record.timeMs
+                    )
+                  }
+                </b>
+
+                <small>
+                  ${record.moves || 0}
+                  jogadas
+                </small>
+
+              </div>
+
+            `
+          )
+          .join('')
+
+      : `
+
+        <div class="memory-no-record">
+          COMPLETE ESTE NÍVEL PARA REGISTRAR SEU TEMPO
+        </div>
+
+      `
+  }
+
+</div>
 
     <!-- NOVO JOGO -->
 
@@ -16584,7 +17053,10 @@ function normalizeClub(raw) {
       raw?.challenge_entries || {},
 
     training_presence:
-      raw?.training_presence || {}
+      raw?.training_presence || {},
+
+    memory_game:
+  raw?.memory_game || {}
 
   };
 }
