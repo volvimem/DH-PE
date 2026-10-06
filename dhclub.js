@@ -69,12 +69,12 @@ let currentView = 'home';
   'TODAS';
 
 
-  // ==========================================================
-// JOGOS — JOGO DA MEMÓRIA
-// 16 PARES / 32 CARTAS
+  // JOGOS — JOGO DA MEMÓRIA
+// 5 NÍVEIS PROGRESSIVOS
 // ==========================================================
 
 const MEMORY_LEVELS = {
+
   1: {
     pairs: 5,
     cards: 10,
@@ -114,11 +114,8 @@ const MEMORY_LEVELS = {
     colsTablet: 9,
     colsDesktop: 12
   }
+
 };
-
-let memoryLevel = 1;
-
-let memoryCompletionHandled = false;
 
 
 // ==========================================================
@@ -233,14 +230,76 @@ const MEMORY_BIKES = [
   },
 
   {
-    key: 'intense-m29',
-    brand: 'INTENSE',
-    model: 'M29',
-    accent: '#f1c0e8'
-  }
+  key: 'intense-m29',
+  brand: 'INTENSE',
+  model: 'M29',
+  accent: '#f1c0e8'
+},
+
+{
+  key: 'propain-rage',
+  brand: 'PROPAIN',
+  model: 'RAGE CF',
+  accent: '#ff8fab'
+},
+
+{
+  key: 'cube-two15',
+  brand: 'CUBE',
+  model: 'TWO15',
+  accent: '#90dbf4'
+},
+
+{
+  key: 'saracen-myst',
+  brand: 'SARACEN',
+  model: 'MYST',
+  accent: '#f9c74f'
+},
+
+{
+  key: 'devinci-wilson',
+  brand: 'DEVINCI',
+  model: 'WILSON',
+  accent: '#43aa8b'
+},
+
+{
+  key: 'kona-operator',
+  brand: 'KONA',
+  model: 'OPERATOR',
+  accent: '#f9844a'
+},
+
+{
+  key: 'polygon-collosus',
+  brand: 'POLYGON',
+  model: 'COLLOSUS DH',
+  accent: '#577590'
+},
+
+{
+  key: 'lapierre-dh',
+  brand: 'LAPIERRE',
+  model: 'DH',
+  accent: '#b8f2e6'
+},
+
+{
+  key: 'banshee-legend',
+  brand: 'BANSHEE',
+  model: 'LEGEND',
+  accent: '#e4c1f9'
+},
+
+{
+  key: 'canfield-jedi',
+  brand: 'CANFIELD',
+  model: 'JEDI',
+  accent: '#f694c1'
+}
 
 ];
-
 
 // ==========================================================
 // ESTADO DO JOGO DA MEMÓRIA
@@ -261,6 +320,12 @@ let memoryStartedAt = 0;
 let memoryFinishedAt = 0;
 
 let memoryTimerId = null;
+
+  let memoryLevel = 1;
+
+let memoryCompletionHandled = false;
+
+let memoryAdvanceTimerId = null;
 
   // Guarda a ordem da partida anterior
 // para evitar repetir exatamente o mesmo tabuleiro.
@@ -322,115 +387,75 @@ function shuffleMemoryArray(
 
 function buildMemoryDeck() {
 
-  // --------------------------------------------------------
-  // CRIA DUAS CARTAS PARA CADA BIKE
-  //
-  // 16 bikes x 2 = 32 cartas
-  // --------------------------------------------------------
-
   const levelConfig =
-  MEMORY_LEVELS[memoryLevel] ||
-  MEMORY_LEVELS[1];
+    MEMORY_LEVELS[memoryLevel] ||
+    MEMORY_LEVELS[1];
 
-const totalPairs =
-  levelConfig.pairs;
+  const totalPairs =
+    levelConfig.pairs;
 
-if (MEMORY_BIKES.length < totalPairs) {
+  if (
+    MEMORY_BIKES.length <
+    totalPairs
+  ) {
 
-  console.error(
-    `Nível ${memoryLevel} precisa de ${totalPairs} bikes diferentes.`
-  );
-
-  toast(
-    `FALTAM BIKES PARA O NÍVEL ${memoryLevel}`
-  );
-
-  return [];
-}
-
-const selectedBikes =
-  shuffleMemoryArray(
-    MEMORY_BIKES
-  )
-    .slice(
-      0,
-      totalPairs
+    console.error(
+      `[MEMORY] Nível ${memoryLevel} precisa de ${totalPairs} bikes diferentes.`
     );
 
+    toast(
+      `FALTAM BIKES PARA O NÍVEL ${memoryLevel}`
+    );
 
-const cards =
-  selectedBikes
-    .flatMap(
+    return [];
+  }
+
+  const selectedBikes =
+    shuffleMemoryArray(
+      MEMORY_BIKES
+    )
+      .slice(
+        0,
+        totalPairs
+      );
+
+  const cards =
+    selectedBikes
+      .flatMap(
         bike => [
 
           {
-            uid:
-              `${bike.key}-A`,
-
-            pairId:
-              bike.key,
-
-            brand:
-              bike.brand,
-
-            model:
-              bike.model,
-
-            accent:
-              bike.accent,
-
-            matched:
-              false
+            uid: `${bike.key}-A`,
+            pairId: bike.key,
+            brand: bike.brand,
+            model: bike.model,
+            accent: bike.accent,
+            matched: false
           },
 
-
           {
-            uid:
-              `${bike.key}-B`,
-
-            pairId:
-              bike.key,
-
-            brand:
-              bike.brand,
-
-            model:
-              bike.model,
-
-            accent:
-              bike.accent,
-
-            matched:
-              false
+            uid: `${bike.key}-B`,
+            pairId: bike.key,
+            brand: bike.brand,
+            model: bike.model,
+            accent: bike.accent,
+            matched: false
           }
 
         ]
       );
-
-
-  // --------------------------------------------------------
-  // PRIMEIRO EMBARALHAMENTO
-  // --------------------------------------------------------
 
   let shuffled =
     shuffleMemoryArray(
       cards
     );
 
-
   let signature =
     shuffled
       .map(
-        card =>
-          card.uid
+        card => card.uid
       )
       .join('|');
-
-
-  // --------------------------------------------------------
-  // EVITA REPETIR EXATAMENTE
-  // O TABULEIRO DA PARTIDA ANTERIOR
-  // --------------------------------------------------------
 
   if (
     signature ===
@@ -442,23 +467,13 @@ const cards =
         cards
       );
 
-
     signature =
       shuffled
         .map(
-          card =>
-            card.uid
+          card => card.uid
         )
         .join('|');
   }
-
-
-  // --------------------------------------------------------
-  // PROTEÇÃO EXTRA
-  //
-  // Se mesmo assim a ordem fosse igual,
-  // move a primeira carta para o final.
-  // --------------------------------------------------------
 
   if (
     signature ===
@@ -469,35 +484,25 @@ const cards =
     const firstCard =
       shuffled.shift();
 
-
     shuffled.push(
       firstCard
     );
 
-
     signature =
       shuffled
         .map(
-          card =>
-            card.uid
+          card => card.uid
         )
         .join('|');
   }
 
-
-  // --------------------------------------------------------
-  // GUARDA A ORDEM DA PARTIDA ATUAL
-  // --------------------------------------------------------
-
-    lastMemoryOrderSignature =
+  lastMemoryOrderSignature =
     signature;
-
 
   sessionStorage.setItem(
     'dhclub_memory_last_order',
     signature
   );
-
 
   return shuffled;
 }
@@ -509,70 +514,47 @@ const cards =
 
 function startMemoryGame(level = memoryLevel) {
 
+  stopMemoryTimer();
+
+  if (memoryAdvanceTimerId) {
+
+    clearTimeout(
+      memoryAdvanceTimerId
+    );
+
+    memoryAdvanceTimerId =
+      null;
+  }
+
+  const requestedLevel =
+    Number(level) || 1;
+
   memoryLevel =
     Math.max(
       1,
       Math.min(
         5,
-        Number(level) || 1
+        requestedLevel
       )
     );
 
-  memoryCompletionHandled = false;
+  memoryCompletionHandled =
+    false;
 
-  stopMemoryTimer();
-  
   memoryDeck =
     buildMemoryDeck();
 
-
-  // --------------------------------------------------------
-  // ZERA AS CARTAS VIRADAS
-  // --------------------------------------------------------
-
   memoryFlipped = [];
-
-
-  // --------------------------------------------------------
-  // ZERA OS PARES ENCONTRADOS
-  // --------------------------------------------------------
 
   memoryMatched = 0;
 
-
-  // --------------------------------------------------------
-  // ZERA O NÚMERO DE JOGADAS
-  // --------------------------------------------------------
-
   memoryMoves = 0;
-
-
-  // --------------------------------------------------------
-  // LIBERA O TABULEIRO
-  // --------------------------------------------------------
 
   memoryBusy = false;
 
-
-  // --------------------------------------------------------
-  // INICIA O CRONÔMETRO DA NOVA PARTIDA
-  // --------------------------------------------------------
-
- memoryStartedAt =
-  0;
-
-
-  // --------------------------------------------------------
-  // REMOVE O TEMPO FINAL DA PARTIDA ANTERIOR
-  // --------------------------------------------------------
+  memoryStartedAt = 0;
 
   memoryFinishedAt = 0;
-
-
-  // --------------------------------------------------------
-  // QUANDO A TELA JOGOS EXISTIR,
-  // ATUALIZA VISUALMENTE O TABULEIRO
-  // --------------------------------------------------------
 
   if (
     currentView === 'games' &&
