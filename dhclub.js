@@ -394,14 +394,21 @@ function playMemoryNote(
     );
 
 
-  gain.gain
-    .exponentialRampToValueAtTime(
-      Math.max(
-        0.0002,
-        volume
-      ),
-      start + 0.01
-    );
+ const boostedVolume =
+  Math.min(
+    volume * 3,
+    0.25
+  );
+
+
+gain.gain
+  .exponentialRampToValueAtTime(
+    Math.max(
+      0.0002,
+      boostedVolume
+    ),
+    start + 0.01
+  );
 
 
   gain.gain
