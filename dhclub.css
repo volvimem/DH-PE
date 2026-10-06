@@ -327,25 +327,31 @@ body:before{content:"";position:fixed;inset:0;background-image:linear-gradient(r
 
 .memory-bike-art {
   width: 100%;
+  min-height: 54px;
 
   display: flex;
-
   align-items: center;
-
   justify-content: center;
-
-  margin-bottom: 5px;
 }
 
-
-.memory-bike-art svg {
-  width: 100%;
-
-  max-width: 75px;
-
-  height: auto;
-
+.memory-bike-photo {
   display: block;
+  width: 100%;
+  max-width: 78px;
+  max-height: 46px;
+  object-fit: contain;
+
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,.28));
+}
+
+.memory-bike-svg-fallback {
+  width: 100%;
+}
+
+.memory-bike-svg-fallback svg {
+  width: 100%;
+  max-width: 78px;
+  height: auto;
 }
 
 
@@ -766,7 +772,15 @@ body:before{content:"";position:fixed;inset:0;background-image:linear-gradient(r
 
 
 .memory-board[data-level="4"]
-.memory-bike-art svg {
+.memory-bike-photo {
+
+  max-width: 52px;
+  max-height: 30px;
+}
+
+
+.memory-board[data-level="4"]
+.memory-bike-svg-fallback svg {
 
   max-width: 52px;
 }
@@ -816,7 +830,15 @@ body:before{content:"";position:fixed;inset:0;background-image:linear-gradient(r
 
 
 .memory-board[data-level="5"]
-.memory-bike-art svg {
+.memory-bike-photo {
+
+  max-width: 42px;
+  max-height: 24px;
+}
+
+
+.memory-board[data-level="5"]
+.memory-bike-svg-fallback svg {
 
   max-width: 42px;
 }
