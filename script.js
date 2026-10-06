@@ -113,14 +113,50 @@ function uploadImageToStorage(base64Data, path) {
     });
 }
 
-function validarCPF(strCPF) { 
-    let Soma; let Resto; Soma = 0; if (strCPF == "00000000000") return false;
-    for (let i=1; i<=9; i++) Soma = Soma + parseInt(strCPF.substring(i-1, i)) * (11 - i);
-    Resto = (Soma * 10) % 11; if ((Resto == 10) || (Resto == 11)) Resto = 0;
-    if (Resto != parseInt(strCPF.substring(9, 10)) ) return false; Soma = 0;
-    for (let i = 1; i <= 10; i++) Soma = Soma + parseInt(strCPF.substring(i-1, i)) * (12 - i);
-    Resto = (Soma * 10) % 11; if ((Resto == 10) || (Resto == 11)) Resto = 0;
-    if (Resto != parseInt(strCPF.substring(10, 11) ) ) return false; return true; 
+function validarCPF(strCPF) {
+    const cpf = cleanCPF(strCPF);
+
+    // CPF precisa ter exatamente 11 números
+    if (cpf.length !== 11) return false;
+
+    // Bloqueia CPFs com todos os números iguais
+    if (/^(\d)\1{10}$/.test(cpf)) return false;
+
+    // Primeiro dígito verificador
+    let soma = 0;
+
+    for (let i = 0; i < 9; i++) {
+        soma += parseInt(cpf.charAt(i), 10) * (10 - i);
+    }
+
+    let digito1 = 11 - (soma % 11);
+
+    if (digito1 >= 10) {
+        digito1 = 0;
+    }
+
+    if (digito1 !== parseInt(cpf.charAt(9), 10)) {
+        return false;
+    }
+
+    // Segundo dígito verificador
+    soma = 0;
+
+    for (let i = 0; i < 10; i++) {
+        soma += parseInt(cpf.charAt(i), 10) * (11 - i);
+    }
+
+    let digito2 = 11 - (soma % 11);
+
+    if (digito2 >= 10) {
+        digito2 = 0;
+    }
+
+    if (digito2 !== parseInt(cpf.charAt(10), 10)) {
+        return false;
+    }
+
+    return true;
 }
 
 function mascaraCPF(i){ var v = i.value; v=v.replace(/\D/g,""); v=v.replace(/(\d{3})(\d)/,"$1.$2"); v=v.replace(/(\d{3})(\d)/,"$1.$2");
@@ -209,6 +245,28 @@ function tempoParaMilissegundos(tempoStr) {
     let segundosEms = (partes[1] || "0").split('.');
     let segundos = parseInt(segundosEms[0]) || 0; let ms = parseInt(segundosEms[1]) || 0;
     return (minutos * 60000) + (segundos * 1000) + ms;
+}
+
+function msToTime(ms) {
+    const valor = Number(ms);
+
+    if (!Number.isFinite(valor) || valor < 0) {
+        return "--:--.---";
+    }
+
+    const totalMs = Math.round(valor);
+
+    const minutos = Math.floor(totalMs / 60000);
+    const segundos = Math.floor((totalMs % 60000) / 1000);
+    const milissegundos = totalMs % 1000;
+
+    return (
+        String(minutos).padStart(2, '0') +
+        ':' +
+        String(segundos).padStart(2, '0') +
+        '.' +
+        String(milissegundos).padStart(3, '0')
+    );
 }
 
 function formatarDiferenca(msDiferenca) {
@@ -1538,6 +1596,26 @@ const liberacaoUsuario =
     currentInscricaoPendente = { id: evtId, status: 'PENDENTE', date: new Date().toISOString(), extraCat: mode === 'MAIN' ? null : mode }; 
     abrirModalPagamento(evt, currentInscricaoPendente);
 };
+
+
+window.redirectFromLockToExtra = function() {
+    const evtId = tempEvtIdExtra;
+
+    fecharModal('modal-lock-alert');
+
+    if (!evtId) {
+        return toast(
+            "EVENTO NÃO ENCONTRADO",
+            "error"
+        );
+    }
+
+    window.iniciarInscricao(
+        evtId,
+        'EXTRA'
+    );
+};
+
 
 window.confirmarInscricaoExtra = function() { const catEscolhida = document.getElementById('extra-sub-cat').value;
 if(!catEscolhida) return toast("SELECIONE A CATEGORIA!", "error"); const jaTem = loggedUser.inscricoes.some(i => String(i.id) === String(tempEvtIdExtra) && window.normalizeCatName(i.extraCat) === window.normalizeCatName(catEscolhida));
@@ -5061,6 +5139,164 @@ db.config.allowAllIDs =
 function renderPointsInputs(pts, containerId = 'evt-points-grid', prefix = 'pt-') { const grid = document.getElementById(containerId);
 if(!grid) return; grid.innerHTML = pts.map((p, i) => { const saved = localStorage.getItem(`autosave_${prefix}${i}`); const val = saved !== null ? saved : p; return `<input type="number" id="${prefix}${i}" value="${val}" class="input-field" style="text-align:center" placeholder="${i+1}º" oninput="localStorage.setItem('autosave_${prefix}${i}', this.value)">`; }).join('');
 }
+window.copiarPontosDe = function() {
+    const select = document.getElementById('adm-evt-copy-source');
+
+    if (!select || !select.value) {
+        return toast(
+            "SELECIONE O EVENTO DE ONDE DESEJA COPIAR A PONTUAÇÃO",
+            "error"
+        );
+    }
+
+    const eventoOrigem = db.events.find(
+        e => String(e.id) === String(select.value)
+    );
+
+    if (!eventoOrigem) {
+        return toast("EVENTO DE ORIGEM NÃO ENCONTRADO", "error");
+    }
+
+    const pontosOficiais = Array.from(
+        { length: 20 },
+        (_, i) => {
+            if (
+                eventoOrigem.points &&
+                eventoOrigem.points[i] !== undefined
+            ) {
+                return eventoOrigem.points[i];
+            }
+
+            return "";
+        }
+    );
+
+    const pontosQualify = Array.from(
+        { length: 20 },
+        (_, i) => {
+            if (
+                eventoOrigem.qPoints &&
+                eventoOrigem.qPoints[i] !== undefined
+            ) {
+                return eventoOrigem.qPoints[i];
+            }
+
+            return "";
+        }
+    );
+
+    // Atualiza os campos visuais
+    renderPointsInputs(
+        pontosOficiais,
+        'evt-points-grid',
+        'pt-'
+    );
+
+    renderPointsInputs(
+        pontosQualify,
+        'evt-q-points-grid',
+        'q-pt-'
+    );
+
+    // Atualiza o autosave
+    for (let i = 0; i < 20; i++) {
+        localStorage.setItem(
+            'autosave_pt-' + i,
+            pontosOficiais[i] !== "" ? pontosOficiais[i] : ""
+        );
+
+        localStorage.setItem(
+            'autosave_q-pt-' + i,
+            pontosQualify[i] !== "" ? pontosQualify[i] : ""
+        );
+    }
+
+    toast(
+        "PONTUAÇÃO COPIADA DE " + eventoOrigem.t,
+        "success"
+    );
+};
+
+
+window.copiarPontosDe = function() {
+    const select = document.getElementById('adm-evt-copy-source');
+
+    if (!select || !select.value) {
+        return toast(
+            "SELECIONE O EVENTO DE ONDE DESEJA COPIAR A PONTUAÇÃO",
+            "error"
+        );
+    }
+
+    const eventoOrigem = db.events.find(
+        e => String(e.id) === String(select.value)
+    );
+
+    if (!eventoOrigem) {
+        return toast("EVENTO DE ORIGEM NÃO ENCONTRADO", "error");
+    }
+
+    const pontosOficiais = Array.from(
+        { length: 20 },
+        (_, i) => {
+            if (
+                eventoOrigem.points &&
+                eventoOrigem.points[i] !== undefined
+            ) {
+                return eventoOrigem.points[i];
+            }
+
+            return "";
+        }
+    );
+
+    const pontosQualify = Array.from(
+        { length: 20 },
+        (_, i) => {
+            if (
+                eventoOrigem.qPoints &&
+                eventoOrigem.qPoints[i] !== undefined
+            ) {
+                return eventoOrigem.qPoints[i];
+            }
+
+            return "";
+        }
+    );
+
+    // Atualiza os campos visuais
+    renderPointsInputs(
+        pontosOficiais,
+        'evt-points-grid',
+        'pt-'
+    );
+
+    renderPointsInputs(
+        pontosQualify,
+        'evt-q-points-grid',
+        'q-pt-'
+    );
+
+    // Atualiza o autosave
+    for (let i = 0; i < 20; i++) {
+        localStorage.setItem(
+            'autosave_pt-' + i,
+            pontosOficiais[i] !== "" ? pontosOficiais[i] : ""
+        );
+
+        localStorage.setItem(
+            'autosave_q-pt-' + i,
+            pontosQualify[i] !== "" ? pontosQualify[i] : ""
+        );
+    }
+
+    toast(
+        "PONTUAÇÃO COPIADA DE " + eventoOrigem.t,
+        "success"
+    );
+};
+
+
 function renderAdmEvents() { const list = document.getElementById('adm-list-events'); if(!list) return; if(!db.events || db.events.length === 0) { list.innerHTML = '<div style="color:#666; padding:10px">Nenhum evento.</div>';
 return; } list.innerHTML = db.events.map(e => `<div class="adm-card" style="display:flex; justify-content:space-between; align-items:center;"><div><b>${e.t}</b> (${e.type})<br><span style="font-size:10px; color:#666">${e.d} | ${e.city} | ${e.status}</span></div><div style="display:flex; gap:5px;"><button class="btn-mini-adm" style="background:#3b82f6" onclick="editEvent(${e.id})"><i class="fas fa-pen"></i></button><button class="btn-mini-adm" style="background:#ef4444" onclick="delEvent(${e.id})"><i class="fas fa-trash"></i></button></div></div>`).join('');
 }
@@ -7221,7 +7457,11 @@ window.syncLiveTimes = function(liveData) {
             let cpf = liveAthlete.originalCpf; let cat = liveAthlete.category; let times = liveAthlete.times;
             const updateOrAddTime = (runTypeKey, runTypeDb) => {
                 let msVal = times[runTypeKey]; let clockVal = liveAthlete.startClocks ? liveAthlete.startClocks[runTypeKey] : null;
-                if (msVal !== null) {
+                if (
+    msVal !== null &&
+    msVal !== undefined &&
+    Number.isFinite(Number(msVal))
+) {
                     let strVal = msToTime(msVal); let existingIndex = db.tempos.findIndex(t => t && String(t.evtId) === String(evtId) && t.cpf === cpf && t.cat === cat && t.runType === runTypeDb);
                     if (existingIndex > -1) { if(db.tempos[existingIndex].val !== strVal) { db.tempos[existingIndex].val = strVal; db.tempos[existingIndex].startClock = clockVal; hasChanges = true; } } else { db.tempos.push({ evtId: evtId, cpf: cpf, name: liveAthlete.name, city: liveAthlete.city, cat: cat, val: strVal, startClock: clockVal, status: 'OK', runType: runTypeDb }); hasChanges = true; }
                 }
