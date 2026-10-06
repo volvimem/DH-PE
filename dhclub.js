@@ -820,8 +820,13 @@ if (
 memoryLevel =
   nextLevel;
 
-  memoryDeck =
-    buildMemoryDeck();
+
+memoryCompletionHandled =
+  false;
+
+
+memoryDeck =
+  buildMemoryDeck();
 
   memoryFlipped = [];
 
@@ -854,64 +859,43 @@ function flipMemoryCard(
   index
 ) {
 
-  // Bloqueia cliques enquanto
-  // duas cartas estão sendo comparadas.
-  if (
-    memoryBusy
-  ) {
+  if (memoryBusy) {
     return;
   }
-
 
   const card =
     memoryDeck[index];
 
-
-  // Carta inexistente.
   if (!card) {
     return;
   }
 
+  if (card.matched) {
+    return;
+  }
 
-  // Par já encontrado.
   if (
-    card.matched
+    memoryFlipped.includes(index)
   ) {
     return;
   }
 
 
-  // Impede clicar duas vezes
-  // na mesma carta.
+  // ========================================================
+  // INICIA O CRONÔMETRO NO PRIMEIRO CLIQUE
+  // ========================================================
+
   if (
-    memoryFlipped.includes(
-      index
-    )
+    memoryStartedAt === 0
   ) {
-    return;
+
+    memoryStartedAt =
+      Date.now();
+
+    startMemoryTimer();
   }
 
 
-  // --------------------------------------------------------
-  // VIRA A CARTA
-  // --------------------------------------------------------
-
-// --------------------------------------------------------
-// INICIA O CRONÔMETRO SOMENTE
-// NO PRIMEIRO CLIQUE VÁLIDO
-// --------------------------------------------------------
-
-if (
-  memoryStartedAt === 0
-) {
-
-  memoryStartedAt =
-    Date.now();
-
-
-  startMemoryTimer();
-}
-  
   memoryFlipped.push(
     index
   );
@@ -927,17 +911,15 @@ if (
   }
 
 
-  // Ainda falta a segunda carta.
+  // Aguarda a segunda carta
+
   if (
     memoryFlipped.length < 2
   ) {
+
     return;
   }
 
-
-  // --------------------------------------------------------
-  // SEGUNDA CARTA = UMA JOGADA
-  // --------------------------------------------------------
 
   memoryMoves++;
 
@@ -986,52 +968,47 @@ if (
       2;
 
 
-   memoryFlipped =
-  [];
-
-memoryBusy =
-  false;
+    memoryFlipped =
+      [];
 
 
-// SOM DE ACERTO
-
-playMemorySound(
-  'match'
-);
+    memoryBusy =
+      false;
 
 
-// ------------------------------------------------------
-// TERMINOU TODOS OS PARES DO NÍVEL ATUAL
-// ------------------------------------------------------
+    // SOM DE ACERTO
 
-if (
-  memoryMatched ===
-  memoryDeck.length
-) {
+    playMemorySound(
+      'match'
+    );
 
-    // ------------------------------------------------------
-    // TERMINOU OS 16 PARES
-    // ------------------------------------------------------
+
+    // ======================================================
+    // TERMINOU TODOS OS PARES DO NÍVEL
+    // ======================================================
 
     if (
-  memoryMatched ===
-  memoryDeck.length
-) {
+      memoryMatched ===
+      memoryDeck.length
+    ) {
 
-  memoryFinishedAt =
-    Date.now();
+      memoryFinishedAt =
+        Date.now();
 
-  stopMemoryTimer();
 
-  const finalTime =
-    memoryFinishedAt -
-    memoryStartedAt;
+      stopMemoryTimer();
 
-  handleMemoryLevelCompleted(
-    finalTime,
-    memoryMoves
-  );
-}
+
+      const finalTime =
+        memoryFinishedAt -
+        memoryStartedAt;
+
+
+      handleMemoryLevelCompleted(
+        finalTime,
+        memoryMoves
+      );
+    }
 
 
     if (
@@ -1052,15 +1029,11 @@ if (
   // ERROU O PAR
   // ========================================================
 
-  // Mantém as duas cartas abertas
-  // durante 850 ms.
+  playMemorySound(
+    'wrong'
+  );
 
-// SOM DE ERRO
 
-playMemorySound(
-  'wrong'
-);
-    
   setTimeout(
     () => {
 
