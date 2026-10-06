@@ -58,11 +58,11 @@ body:before{content:"";position:fixed;inset:0;background-image:linear-gradient(r
 
   grid-template-columns:
     repeat(
-      4,
+      var(--memory-cols-mobile, 4),
       minmax(0, 1fr)
     );
 
-  gap: 9px;
+  gap: clamp(4px, 1.5vw, 9px);
 
   margin-top: 12px;
 
