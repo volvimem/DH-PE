@@ -128,176 +128,201 @@ const MEMORY_BIKES = [
     key: 'trek-session',
     brand: 'TREK',
     model: 'SESSION',
-    accent: '#76e9aa'
+    accent: '#76e9aa',
+    image: 'bikes/trek-session.png'
   },
 
   {
     key: 'santa-v10',
     brand: 'SANTA CRUZ',
     model: 'V10',
-    accent: '#ffc72c'
+    accent: '#ffc72c',
+    image: 'bikes/santa-v10.png'
   },
 
   {
     key: 'commencal-supreme',
     brand: 'COMMENCAL',
     model: 'SUPREME DH V5',
-    accent: '#8fa5ff'
+    accent: '#8fa5ff',
+    image: 'bikes/commencal-supreme.png'
   },
 
   {
     key: 'specialized-demo',
     brand: 'SPECIALIZED',
     model: 'DEMO RACE',
-    accent: '#ff7f7f'
+    accent: '#ff7f7f',
+    image: 'bikes/specialized-demo.png'
   },
 
   {
     key: 'canyon-sender',
     brand: 'CANYON',
     model: 'SENDER CFR',
-    accent: '#70d6ff'
+    accent: '#70d6ff',
+    image: 'bikes/canyon-sender.png'
   },
 
   {
     key: 'yt-tues',
     brand: 'YT',
     model: 'TUES',
-    accent: '#ffd166'
+    accent: '#ffd166',
+    image: 'bikes/yt-tues.png'
   },
 
   {
     key: 'pivot-phoenix',
     brand: 'PIVOT',
     model: 'PHOENIX',
-    accent: '#c77dff'
+    accent: '#c77dff',
+    image: 'bikes/pivot-phoenix.png'
   },
 
   {
     key: 'norco-aurum',
     brand: 'NORCO',
     model: 'AURUM HSP',
-    accent: '#7ae582'
+    accent: '#7ae582',
+    image: 'bikes/norco-aurum.png'
   },
 
   {
     key: 'giant-glory',
     brand: 'GIANT',
     model: 'GLORY ADVANCED',
-    accent: '#ffb703'
+    accent: '#ffb703',
+    image: 'bikes/giant-glory.png'
   },
 
   {
     key: 'scott-gambler',
     brand: 'SCOTT',
     model: 'GAMBLER',
-    accent: '#9bf6ff'
+    accent: '#9bf6ff',
+    image: 'bikes/scott-gambler.png'
   },
 
   {
     key: 'atherton-a200',
     brand: 'ATHERTON',
     model: 'A.200.G',
-    accent: '#bdb2ff'
+    accent: '#bdb2ff',
+    image: 'bikes/atherton-a200.png'
   },
 
   {
     key: 'gt-fury',
     brand: 'GT',
     model: 'FURY',
-    accent: '#ffd6a5'
+    accent: '#ffd6a5',
+    image: 'bikes/gt-fury.png'
   },
 
   {
     key: 'mondraker-summum',
     brand: 'MONDRAKER',
     model: 'SUMMUM',
-    accent: '#ffadad'
+    accent: '#ffadad',
+    image: 'bikes/mondraker-summum.png'
   },
 
   {
     key: 'transition-tr11',
     brand: 'TRANSITION',
     model: 'TR11',
-    accent: '#caffbf'
+    accent: '#caffbf',
+    image: 'bikes/transition-tr11.png'
   },
 
   {
     key: 'nukeproof-dissent',
     brand: 'NUKEPROOF',
     model: 'DISSENT',
-    accent: '#a0c4ff'
+    accent: '#a0c4ff',
+    image: 'bikes/nukeproof-dissent.png'
   },
 
   {
-  key: 'intense-m29',
-  brand: 'INTENSE',
-  model: 'M29',
-  accent: '#f1c0e8'
-},
+    key: 'intense-m29',
+    brand: 'INTENSE',
+    model: 'M29',
+    accent: '#f1c0e8',
+    image: 'bikes/intense-m29.png'
+  },
 
-{
-  key: 'propain-rage',
-  brand: 'PROPAIN',
-  model: 'RAGE CF',
-  accent: '#ff8fab'
-},
+  {
+    key: 'propain-rage',
+    brand: 'PROPAIN',
+    model: 'RAGE CF',
+    accent: '#ff8fab',
+    image: 'bikes/propain-rage.png'
+  },
 
-{
-  key: 'cube-two15',
-  brand: 'CUBE',
-  model: 'TWO15',
-  accent: '#90dbf4'
-},
+  {
+    key: 'cube-two15',
+    brand: 'CUBE',
+    model: 'TWO15',
+    accent: '#90dbf4',
+    image: 'bikes/cube-two15.png'
+  },
 
-{
-  key: 'saracen-myst',
-  brand: 'SARACEN',
-  model: 'MYST',
-  accent: '#f9c74f'
-},
+  {
+    key: 'saracen-myst',
+    brand: 'SARACEN',
+    model: 'MYST',
+    accent: '#f9c74f',
+    image: 'bikes/saracen-myst.png'
+  },
 
-{
-  key: 'devinci-wilson',
-  brand: 'DEVINCI',
-  model: 'WILSON',
-  accent: '#43aa8b'
-},
+  {
+    key: 'devinci-wilson',
+    brand: 'DEVINCI',
+    model: 'WILSON',
+    accent: '#43aa8b',
+    image: 'bikes/devinci-wilson.png'
+  },
 
-{
-  key: 'kona-operator',
-  brand: 'KONA',
-  model: 'OPERATOR',
-  accent: '#f9844a'
-},
+  {
+    key: 'kona-operator',
+    brand: 'KONA',
+    model: 'OPERATOR',
+    accent: '#f9844a',
+    image: 'bikes/kona-operator.png'
+  },
 
-{
-  key: 'polygon-collosus',
-  brand: 'POLYGON',
-  model: 'COLLOSUS DH',
-  accent: '#577590'
-},
+  {
+    key: 'polygon-collosus',
+    brand: 'POLYGON',
+    model: 'COLLOSUS DH',
+    accent: '#577590',
+    image: 'bikes/polygon-collosus.png'
+  },
 
-{
-  key: 'lapierre-dh',
-  brand: 'LAPIERRE',
-  model: 'DH',
-  accent: '#b8f2e6'
-},
+  {
+    key: 'lapierre-dh',
+    brand: 'LAPIERRE',
+    model: 'DH',
+    accent: '#b8f2e6',
+    image: 'bikes/lapierre-dh.png'
+  },
 
-{
-  key: 'banshee-legend',
-  brand: 'BANSHEE',
-  model: 'LEGEND',
-  accent: '#e4c1f9'
-},
+  {
+    key: 'banshee-legend',
+    brand: 'BANSHEE',
+    model: 'LEGEND',
+    accent: '#e4c1f9',
+    image: 'bikes/banshee-legend.png'
+  },
 
-{
-  key: 'canfield-jedi',
-  brand: 'CANFIELD',
-  model: 'JEDI',
-  accent: '#f694c1'
-}
+  {
+    key: 'canfield-jedi',
+    brand: 'CANFIELD',
+    model: 'JEDI',
+    accent: '#f694c1',
+    image: 'bikes/canfield-jedi.png'
+  }
 
 ];
 
@@ -694,6 +719,7 @@ function buildMemoryDeck() {
             brand: bike.brand,
             model: bike.model,
             accent: bike.accent,
+            image: bike.image,
             matched: false
           },
 
@@ -703,6 +729,7 @@ function buildMemoryDeck() {
             brand: bike.brand,
             model: bike.model,
             accent: bike.accent,
+            image: bike.image,
             matched: false
           }
 
@@ -1693,17 +1720,31 @@ function memoryCardMarkup(
           "
         >
 
-          <div
-            class="memory-bike-art"
-          >
+          <div class="memory-bike-art">
 
-            ${
-              memoryBikeArt(
-                card.accent
-              )
-            }
+  <img
+    class="memory-bike-photo"
+    src="${esc(card.image || '')}"
+    alt="${esc(card.brand + ' ' + card.model)}"
+    loading="lazy"
+    onerror="
+      this.style.display='none';
+      this.nextElementSibling.style.display='block';
+    "
+  />
 
-          </div>
+  <div
+    class="memory-bike-svg-fallback"
+    style="display:none;"
+  >
+    ${
+      memoryBikeArt(
+        card.accent
+      )
+    }
+  </div>
+
+</div>
 
 
           <div
