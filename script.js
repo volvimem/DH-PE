@@ -1368,10 +1368,10 @@ const cpfLogado = loggedUser
     : '';
 
 const usuarioTemAcessoAdm =
-    loggedUser &&
+    !!loggedUser &&
     (
-        isSuperAdmin(loggedUser) ||
         cpfLogado === "08327632418" ||
+        isSuperAdmin(loggedUser) ||
         loggedUser.role === 'ADMIN' ||
         loggedUser.role === 'ORGANIZER'
     );
@@ -1379,8 +1379,7 @@ const usuarioTemAcessoAdm =
 if (btnAdm) {
     btnAdm.style.display =
         usuarioTemAcessoAdm ? 'flex' : 'none';
-}
-else { document.getElementById('btn-adm').style.display = 'none'; } 
+} 
     let savedTab = localStorage.getItem(LAST_TAB_KEY) || 'calendar';
     if(savedTab === 'adm' && (!loggedUser || (!isSuperAdmin(loggedUser) && loggedUser.role !== 'ORGANIZER' && loggedUser.role !== 'ADMIN'))) { savedTab = 'calendar';
     }
