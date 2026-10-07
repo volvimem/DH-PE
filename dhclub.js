@@ -112,200 +112,80 @@ const MEMORY_BIKES = [
     key: 'trek-session',
     brand: 'TREK',
     model: 'SESSION',
-    accent: '#76e9aa',
-    image: 'bikes/trek-session.webp'
+    accent: '#39e69d',
+    image: 'bikes/trek-session.png'
   },
 
   {
-    key: 'santa-v10',
+    key: 'santa-cruz-v10',
     brand: 'SANTA CRUZ',
     model: 'V10',
-    accent: '#ffc72c',
-    image: 'bikes/santa-v10.webp'
+    accent: '#246bff',
+    image: 'bikes/santa-cruz-v10.png'
   },
 
   {
-    key: 'commencal-supreme',
+    key: 'commencal-supreme-dh-v5',
     brand: 'COMMENCAL',
     model: 'SUPREME DH V5',
-    accent: '#8fa5ff',
-    image: 'bikes/commencal-supreme.jpg'
+    accent: '#ff7a00',
+    image: 'bikes/commencal-supreme-dh-v5.png'
   },
 
   {
-    key: 'specialized-demo',
+    key: 'specialized-demo-race',
     brand: 'SPECIALIZED',
     model: 'DEMO RACE',
-    accent: '#ff7f7f',
-    image: 'bikes/specialized-demo.webp'
+    accent: '#ff3030',
+    image: 'bikes/specialized-demo-race.png'
   },
 
   {
-    key: 'canyon-sender',
+    key: 'canyon-sender-cfr',
     brand: 'CANYON',
     model: 'SENDER CFR',
-    accent: '#70d6ff',
-    image: 'bikes/canyon-sender.png'
+    accent: '#12ddea',
+    image: 'bikes/canyon-sender-cfr.png'
   },
 
   {
     key: 'yt-tues',
     brand: 'YT',
     model: 'TUES',
-    accent: '#ffd166',
+    accent: '#ffc928',
     image: 'bikes/yt-tues.png'
   },
 
   {
-    key: 'pivot-phoenix',
-    brand: 'PIVOT',
-    model: 'PHOENIX',
-    accent: '#c77dff',
-    image: 'bikes/pivot-phoenix.webp'
-  },
-
-  {
-    key: 'norco-aurum',
-    brand: 'NORCO',
-    model: 'AURUM HSP',
-    accent: '#7ae582',
-    image: 'bikes/norco-aurum.png'
-  },
-
-  {
-    key: 'giant-glory',
+    key: 'giant-glory-advanced',
     brand: 'GIANT',
     model: 'GLORY ADVANCED',
-    accent: '#ffb703',
-    image: 'bikes/giant-glory.png'
+    accent: '#a347ff',
+    image: 'bikes/giant-glory-advanced.png'
   },
 
   {
     key: 'scott-gambler',
     brand: 'SCOTT',
     model: 'GAMBLER',
-    accent: '#9bf6ff',
-    image: 'bikes/scott-gambler.webp'
+    accent: '#d6d9df',
+    image: 'bikes/scott-gambler.png'
   },
 
   {
-    key: 'atherton-a200',
-    brand: 'ATHERTON',
-    model: 'A.200.G',
-    accent: '#bdb2ff',
-    image: 'bikes/atherton-a200.png'
+    key: 'pivot-phoenix',
+    brand: 'PIVOT',
+    model: 'PHOENIX',
+    accent: '#85f018',
+    image: 'bikes/pivot-phoenix.png'
   },
 
   {
     key: 'gt-fury',
     brand: 'GT',
     model: 'FURY',
-    accent: '#ffd6a5',
-    image: 'bikes/gt-fury.webp'
-  },
-
-  {
-    key: 'mondraker-summum',
-    brand: 'MONDRAKER',
-    model: 'SUMMUM',
-    accent: '#ffadad',
-    image: 'bikes/mondraker-summum.png'
-  },
-
-  {
-    key: 'transition-tr11',
-    brand: 'TRANSITION',
-    model: 'TR11',
-    accent: '#caffbf',
-    image: 'bikes/transition-tr11.png'
-  },
-
-  {
-    key: 'nukeproof-dissent',
-    brand: 'NUKEPROOF',
-    model: 'DISSENT',
-    accent: '#a0c4ff',
-    image: 'bikes/nukeproof-dissent.png'
-  },
-
-  {
-    key: 'intense-m29',
-    brand: 'INTENSE',
-    model: 'M29',
-    accent: '#f1c0e8',
-    image: 'bikes/intense-m29.png'
-  },
-
-  {
-    key: 'propain-rage',
-    brand: 'PROPAIN',
-    model: 'RAGE CF',
-    accent: '#ff8fab',
-    image: 'bikes/propain-rage.png'
-  },
-
-  {
-    key: 'cube-two15',
-    brand: 'CUBE',
-    model: 'TWO15',
-    accent: '#90dbf4',
-    image: 'bikes/cube-two15.webp'
-  },
-
-  {
-    key: 'saracen-myst',
-    brand: 'SARACEN',
-    model: 'MYST',
-    accent: '#f9c74f',
-    image: 'bikes/saracen-myst.webp'
-  },
-
-  {
-    key: 'devinci-wilson',
-    brand: 'DEVINCI',
-    model: 'WILSON',
-    accent: '#43aa8b',
-    image: 'bikes/devinci-wilson.png'
-  },
-
-  {
-    key: 'kona-operator',
-    brand: 'KONA',
-    model: 'OPERATOR',
-    accent: '#f9844a',
-    image: 'bikes/kona-operator.png'
-  },
-
-  {
-    key: 'polygon-collosus',
-    brand: 'POLYGON',
-    model: 'COLLOSUS DH',
-    accent: '#577590',
-    image: 'bikes/polygon-collosus.webp'
-  },
-
-  {
-    key: 'lapierre-dh',
-    brand: 'LAPIERRE',
-    model: 'DH',
-    accent: '#b8f2e6',
-    image: 'bikes/lapierre-dh.webp'
-  },
-
-  {
-    key: 'banshee-legend',
-    brand: 'BANSHEE',
-    model: 'LEGEND',
-    accent: '#e4c1f9',
-    image: 'bikes/banshee-legend.webp'
-  },
-
-  {
-    key: 'canfield-jedi',
-    brand: 'CANFIELD',
-    model: 'JEDI',
-    accent: '#f694c1',
-    image: 'bikes/canfield-jedi.webp'
+    accent: '#ff36a8',
+    image: 'bikes/gt-fury.png'
   }
 
 ];
