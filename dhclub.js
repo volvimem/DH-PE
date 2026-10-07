@@ -129,7 +129,7 @@ const MEMORY_BIKES = [
     brand: 'TREK',
     model: 'SESSION',
     accent: '#76e9aa',
-    image: 'bikes/trek-session.webp'
+    image: 'bikes/trek-session.png'
   },
 
   {
@@ -153,7 +153,7 @@ const MEMORY_BIKES = [
     brand: 'SPECIALIZED',
     model: 'DEMO RACE',
     accent: '#ff7f7f',
-    image: 'bikes/specialized-demo.webp'
+    image: 'bikes/specialized-demo.png'
   },
 
   {
@@ -193,7 +193,7 @@ const MEMORY_BIKES = [
     brand: 'GIANT',
     model: 'GLORY ADVANCED',
     accent: '#ffb703',
-    image: 'bikes/giant-glory.jpg'
+    image: 'bikes/giant-glory.webp'
   },
 
   {
@@ -201,7 +201,7 @@ const MEMORY_BIKES = [
     brand: 'SCOTT',
     model: 'GAMBLER',
     accent: '#9bf6ff',
-    image: 'bikes/scott-gambler.jpg'
+    image: 'bikes/scott-gambler.webp'
   },
 
   {
@@ -217,7 +217,7 @@ const MEMORY_BIKES = [
     brand: 'GT',
     model: 'FURY',
     accent: '#ffd6a5',
-    image: 'bikes/gt-fury.jpg'
+    image: 'bikes/gt-fury.webp'
   },
 
   {
@@ -225,7 +225,7 @@ const MEMORY_BIKES = [
     brand: 'MONDRAKER',
     model: 'SUMMUM',
     accent: '#ffadad',
-    image: 'bikes/mondraker-summum.jpg'
+    image: 'bikes/mondraker-summum.png'
   },
 
   {
@@ -233,7 +233,7 @@ const MEMORY_BIKES = [
     brand: 'TRANSITION',
     model: 'TR11',
     accent: '#caffbf',
-    image: 'bikes/transition-tr11.jpg'
+    image: 'bikes/transition-tr11.png'
   },
 
   {
@@ -241,7 +241,7 @@ const MEMORY_BIKES = [
     brand: 'NUKEPROOF',
     model: 'DISSENT',
     accent: '#a0c4ff',
-    image: 'bikes/nukeproof-dissent.jpg'
+    image: 'bikes/nukeproof-dissent.webp'
   },
 
   {
@@ -265,7 +265,7 @@ const MEMORY_BIKES = [
     brand: 'CUBE',
     model: 'TWO15',
     accent: '#90dbf4',
-    image: 'bikes/cube-two15.jpg'
+    image: 'bikes/cube-two15.webp'
   },
 
   {
@@ -273,7 +273,7 @@ const MEMORY_BIKES = [
     brand: 'SARACEN',
     model: 'MYST',
     accent: '#f9c74f',
-    image: 'bikes/saracen-myst.jpg'
+    image: 'bikes/saracen-myst.webp'
   },
 
   {
@@ -281,7 +281,7 @@ const MEMORY_BIKES = [
     brand: 'DEVINCI',
     model: 'WILSON',
     accent: '#43aa8b',
-    image: 'bikes/devinci-wilson.jpg'
+    image: 'bikes/devinci-wilson.png'
   },
 
   {
@@ -289,7 +289,7 @@ const MEMORY_BIKES = [
     brand: 'KONA',
     model: 'OPERATOR',
     accent: '#f9844a',
-    image: 'bikes/kona-operator.jpg'
+    image: 'bikes/kona-operator.png'
   },
 
   {
@@ -305,7 +305,7 @@ const MEMORY_BIKES = [
     brand: 'LAPIERRE',
     model: 'DH',
     accent: '#b8f2e6',
-    image: 'bikes/lapierre-dh.jpg'
+    image: 'bikes/lapierre-dh.webp'
   },
 
   {
@@ -313,7 +313,7 @@ const MEMORY_BIKES = [
     brand: 'BANSHEE',
     model: 'LEGEND',
     accent: '#e4c1f9',
-    image: 'bikes/banshee-legend.jpg'
+    image: 'bikes/banshee-legend.webp'
   },
 
   {
@@ -321,7 +321,7 @@ const MEMORY_BIKES = [
     brand: 'CANFIELD',
     model: 'JEDI',
     accent: '#f694c1',
-    image: 'bikes/canfield-jedi.jpg'
+    image: 'bikes/canfield-jedi.webp'
   }
 
 ];
