@@ -60,7 +60,9 @@ let club = {
   x1_duels: {},
   challenge_entries: {},
   training_presence: {},
-  memory_game: {}
+  memory_game: {},
+  draws: {},
+draw_cycles: {}
 };
 
 let currentView = 'home';
@@ -2339,6 +2341,56 @@ const isAdmin = u =>
   !!u &&
   u.role === 'ADMIN';
 
+const isOrganizer = u =>
+  !!u &&
+  u.role === 'ORGANIZER';
+
+
+function organizerCanManageEvent(
+  user,
+  eventId
+) {
+
+  if (!user) {
+    return false;
+  }
+
+
+  // ADMIN pode gerenciar qualquer evento
+
+  if (
+    isAdmin(user)
+  ) {
+
+    return true;
+  }
+
+
+  // ORGANIZADOR somente eventos liberados
+
+  if (
+    !isOrganizer(user)
+  ) {
+
+    return false;
+  }
+
+
+  const allowed =
+    Array.isArray(
+      user.allowedEvts
+    )
+
+      ? user.allowedEvts
+          .map(String)
+
+      : [];
+
+
+  return allowed.includes(
+    String(eventId)
+  );
+}  
 
 // ==========================================================
 // SESSÃO
@@ -2379,9 +2431,13 @@ function memberRecord() {
 
 function hasClubAccess() {
 
-  if (isAdmin(loggedUser)) {
-    return true;
-  }
+ if (
+  isAdmin(loggedUser) ||
+  isOrganizer(loggedUser)
+) {
+
+  return true;
+}
 
   const m = memberRecord();
 
@@ -10966,6 +11022,14 @@ if (
   renderGames();
 }
 
+  if (
+  view ===
+  'draws'
+) {
+
+  renderDraws();
+}
+
 
 if (view === 'admin') {
   renderAdmin();
@@ -17428,9 +17492,17 @@ function normalizeClub(raw) {
       raw?.training_presence || {},
 
     memory_game:
-  raw?.memory_game || {}
+  raw?.memory_game || {},
 
-  };
+
+draws:
+  raw?.draws || {},
+
+
+draw_cycles:
+  raw?.draw_cycles || {}
+
+};
 }
 
 
