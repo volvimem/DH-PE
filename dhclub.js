@@ -816,16 +816,20 @@ function flipMemoryCard(
     return;
   }
 
+
   const card =
     memoryDeck[index];
+
 
   if (!card) {
     return;
   }
 
+
   if (card.matched) {
     return;
   }
+
 
   if (
     memoryFlipped.includes(index)
@@ -848,79 +852,69 @@ function flipMemoryCard(
     startMemoryTimer();
   }
 
-  if (
-  memoryStartedAt === 0
-) {
 
-  memoryStartedAt =
-    Date.now();
-
-  startMemoryTimer();
-}
-
-
-// ========================================================
-// CARTA BÔNUS DO NÍVEL 1
-// ========================================================
-
-if (
-  card.bonus
-) {
-
-  card.matched =
-    true;
-
-
-  memoryMatched +=
-    1;
-
-
-  playMemorySound(
-    'match'
-  );
-
+  // ========================================================
+  // CARTA BÔNUS DO NÍVEL 1
+  // ========================================================
 
   if (
-    memoryMatched ===
-    memoryDeck.length
+    card.bonus
   ) {
 
-    memoryFinishedAt =
-      Date.now();
+    card.matched =
+      true;
 
 
-    stopMemoryTimer();
+    memoryMatched +=
+      1;
 
 
-    const finalTime =
-      memoryFinishedAt -
-      memoryStartedAt;
-
-
-    handleMemoryLevelCompleted(
-      finalTime,
-      memoryMoves
+    playMemorySound(
+      'match'
     );
+
+
+    if (
+      memoryMatched ===
+      memoryDeck.length
+    ) {
+
+      memoryFinishedAt =
+        Date.now();
+
+
+      stopMemoryTimer();
+
+
+      const finalTime =
+        memoryFinishedAt -
+        memoryStartedAt;
+
+
+      handleMemoryLevelCompleted(
+        finalTime,
+        memoryMoves
+      );
+    }
+
+
+    if (
+      currentView === 'games' &&
+      typeof renderGames ===
+        'function'
+    ) {
+
+      renderGames();
+    }
+
+
+    return;
   }
 
 
-  if (
-    currentView === 'games' &&
-    typeof renderGames ===
-      'function'
-  ) {
-
-    renderGames();
-  }
-
-
-  return;
-}
-
-
-memoryFlipped.push(
-  index
-);
+  // ========================================================
+  // VIRA A CARTA
+  // ========================================================
 
   memoryFlipped.push(
     index
@@ -937,7 +931,9 @@ memoryFlipped.push(
   }
 
 
-  // Aguarda a segunda carta
+  // ========================================================
+  // AGUARDA A SEGUNDA CARTA
+  // ========================================================
 
   if (
     memoryFlipped.length < 2
@@ -948,6 +944,7 @@ memoryFlipped.push(
 
 
   memoryMoves++;
+
 
   memoryBusy =
     true;
@@ -1002,15 +999,13 @@ memoryFlipped.push(
       false;
 
 
-    // SOM DE ACERTO
-
     playMemorySound(
       'match'
     );
 
 
     // ======================================================
-    // TERMINOU TODOS OS PARES DO NÍVEL
+    // TERMINOU O NÍVEL
     // ======================================================
 
     if (
