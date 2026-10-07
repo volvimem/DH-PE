@@ -1,5 +1,9 @@
 const { onValueCreated } = require("firebase-functions/v2/database");
-const { onRequest } = require("firebase-functions/v2/https");
+const {
+    onRequest,
+    onCall,
+    HttpsError
+} = require("firebase-functions/v2/https");
 const { logger } = require("firebase-functions");
 const { defineSecret } = require("firebase-functions/params");
 
@@ -9,6 +13,7 @@ const {
 } = require("firebase-admin/app");
 const { getMessaging } = require("firebase-admin/messaging");
 const { getDatabase } = require("firebase-admin/database");
+const crypto = require("node:crypto");
 
 initializeApp({
     credential: applicationDefault(),
