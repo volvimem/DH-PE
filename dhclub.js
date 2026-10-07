@@ -10714,43 +10714,6 @@ function getDrawEligibleUsers(
     )
       .toUpperCase();
 
-
-  // --------------------------------------------------------
-  // PROTEÇÃO DO ORGANIZADOR
-  // --------------------------------------------------------
-
-  if (
-    isOrganizer(
-      loggedUser
-    )
-  ) {
-
-    // Organizador só pode criar
-    // sorteio vinculado a evento
-
-    if (
-      type !==
-      'EVENT'
-    ) {
-
-      return [];
-    }
-
-
-    // E somente evento autorizado
-
-    if (
-      !organizerCanManageEvent(
-        loggedUser,
-        eventId
-      )
-    ) {
-
-      return [];
-    }
-  }
-
-
   let eligible =
     core.users
       .filter(
@@ -11085,6 +11048,4220 @@ function getDrawAllowedEvents() {
   return [];
 }
 
+// ==========================================================
+// SORTEIOS — INTERFACE E CADASTRO
+// ==========================================================
+
+
+// ----------------------------------------------------------
+// NOME DO EVENTO
+// ----------------------------------------------------------
+
+function drawEventName(
+  eventId
+) {
+
+  const event =
+    core.events.find(
+      item =>
+        String(
+          item.id
+        ) ===
+        String(
+          eventId
+        )
+    );
+
+
+  if (!event) {
+    return 'EVENTO';
+  }
+
+
+  return (
+    event.t ||
+    event.title ||
+    event.name ||
+    'EVENTO'
+  );
+}
+
+
+
+// ----------------------------------------------------------
+// NOME DO FILTRO
+// ----------------------------------------------------------
+
+function drawFilterLabel(
+  draw
+) {
+
+  const type =
+    String(
+      draw?.filterType ||
+      ''
+    )
+      .toUpperCase();
+
+
+  if (
+    type ===
+    'ALL_APP'
+  ) {
+
+    return 'TODOS OS ATLETAS DO APP';
+  }
+
+
+  if (
+    type ===
+    'DIGITAL_CARD'
+  ) {
+
+    return 'CARTEIRA DIGITAL ATIVA';
+  }
+
+
+  if (
+    type ===
+    'DH_CLUB'
+  ) {
+
+    return 'MEMBROS DH-CLUB';
+  }
+
+
+  if (
+    type ===
+    'EVENT'
+  ) {
+
+    return (
+      'INSCRITOS • ' +
+      (
+        draw.eventName ||
+        drawEventName(
+          draw.eventId
+        )
+      )
+    );
+  }
+
+
+  return 'SORTEIO DH-CLUB';
+}
+
+
+
+// ----------------------------------------------------------
+// FORMATA DATA/HORA
+// ----------------------------------------------------------
+
+function drawDateTimeText(
+  value
+) {
+
+  if (!value) {
+    return 'DATA A DEFINIR';
+  }
+
+
+  const date =
+    new Date(
+      Number(value)
+    );
+
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+
+    return 'DATA A DEFINIR';
+  }
+
+
+  return date
+    .toLocaleString(
+      'pt-BR',
+      {
+        dateStyle:
+          'short',
+
+        timeStyle:
+          'short'
+      }
+    );
+}
+
+
+
+// ----------------------------------------------------------
+// USUÁRIO PODE CRIAR SORTEIO?
+// ----------------------------------------------------------
+
+function canCreateDraw() {
+
+  return (
+    isAdmin(
+      loggedUser
+    ) ||
+
+    isOrganizer(
+      loggedUser
+    )
+  );
+}
+
+// ==========================================================
+// SORTEIOS — TRANSPARÊNCIA E AUDITORIA
+// ==========================================================
+
+
+// ----------------------------------------------------------
+// ID PÚBLICO
+// ----------------------------------------------------------
+
+function getDrawPublicId(
+  draw
+) {
+
+  if (
+    draw?.publicId
+  ) {
+
+    return String(
+      draw.publicId
+    );
+  }
+
+
+  const raw =
+    String(
+      draw?.id ||
+      'SORTEIO'
+    )
+      .replace(
+        /[^a-zA-Z0-9]/g,
+        ''
+      )
+      .toUpperCase();
+
+
+  return (
+    'DH-' +
+    SYSTEM_YEAR +
+    '-' +
+    raw.slice(
+      0,
+      10
+    )
+  );
+}
+
+
+
+// ----------------------------------------------------------
+// DATA/HORA COMPLETA
+// ----------------------------------------------------------
+
+function drawExactDateTime(
+  value
+) {
+
+  if (!value) {
+    return '--';
+  }
+
+
+  const date =
+    new Date(
+      Number(value)
+    );
+
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+
+    return '--';
+  }
+
+
+  return date
+    .toLocaleString(
+      'pt-BR',
+      {
+
+        day:
+          '2-digit',
+
+        month:
+          '2-digit',
+
+        year:
+          'numeric',
+
+        hour:
+          '2-digit',
+
+        minute:
+          '2-digit',
+
+        second:
+          '2-digit',
+
+        hour12:
+          false
+
+      }
+    );
+}
+
+
+
+// ----------------------------------------------------------
+// NOME DO PERFIL RESPONSÁVEL
+// ----------------------------------------------------------
+
+function drawRoleLabel(
+  role
+) {
+
+  const value =
+    String(
+      role ||
+      ''
+    )
+      .toUpperCase();
+
+
+  if (
+    value ===
+    'ADMIN'
+  ) {
+
+    return 'ADMINISTRAÇÃO';
+  }
+
+
+  if (
+    value ===
+    'ORGANIZER'
+  ) {
+
+    return 'ORGANIZADOR';
+  }
+
+
+  return 'USUÁRIO';
+}
+
+
+
+// ----------------------------------------------------------
+// GERAR HASH SHA-256 DO RESULTADO
+//
+// IMPORTANTE:
+// Isso cria um registro de integridade.
+// Não substitui validação em servidor.
+// ----------------------------------------------------------
+
+// ----------------------------------------------------------
+// IDENTIFICADOR TÉCNICO DO ATLETA PARA SORTEIOS
+//
+// O CPF é transformado em SHA-256.
+// O CPF original NÃO é salvo no sorteio público.
+// ----------------------------------------------------------
+
+async function drawOpaqueIdFromCpf(
+  cpf
+) {
+
+  const clean =
+    cleanCPF(
+      cpf
+    );
+
+
+  if (!clean) {
+    return '';
+  }
+
+
+  if (
+    !window.crypto ||
+    !window.crypto.subtle ||
+    typeof TextEncoder ===
+      'undefined'
+  ) {
+
+    throw new Error(
+      'Navegador sem suporte ao identificador seguro.'
+    );
+  }
+
+
+  const encoded =
+    new TextEncoder()
+      .encode(
+        'DHCLUB-RAFFLE-ID-V1|' +
+        clean
+      );
+
+
+  const buffer =
+    await window.crypto
+      .subtle
+      .digest(
+        'SHA-256',
+        encoded
+      );
+
+
+  return Array
+    .from(
+      new Uint8Array(
+        buffer
+      )
+    )
+    .map(
+      byte =>
+        byte
+          .toString(16)
+          .padStart(
+            2,
+            '0'
+          )
+    )
+    .join('');
+}
+  
+
+async function createDrawAuditHash(
+  draw,
+  participants,
+  winners,
+  drawnAt,
+  cycleRound
+) {
+
+  if (
+    !window.crypto ||
+    !window.crypto.subtle ||
+    typeof TextEncoder ===
+      'undefined'
+  ) {
+
+    return '';
+  }
+
+
+  const payload = {
+
+    version:
+      2,
+
+    drawId:
+      String(
+        draw?.id ||
+        ''
+      ),
+
+    publicId:
+      String(
+        draw?.publicId ||
+        ''
+      ),
+
+    filterType:
+      String(
+        draw?.filterType ||
+        ''
+      ),
+
+    eventId:
+      draw?.eventId ||
+      null,
+
+    participants:
+      participants
+        .map(
+          participant =>
+            String(
+              participant.participantId ||
+              ''
+            )
+        )
+        .filter(Boolean)
+        .sort(),
+
+    winners:
+      winners
+        .map(
+          winner =>
+            String(
+              winner.participantId ||
+              ''
+            )
+        ),
+
+    drawnAt:
+      Number(
+        drawnAt ||
+        0
+      ),
+
+    cycleRound:
+      Number(
+        cycleRound ||
+        1
+      )
+
+  };
+
+
+  const encoded =
+    new TextEncoder()
+      .encode(
+        JSON.stringify(
+          payload
+        )
+      );
+
+
+  const buffer =
+    await window.crypto
+      .subtle
+      .digest(
+        'SHA-256',
+        encoded
+      );
+
+
+  return Array
+    .from(
+      new Uint8Array(
+        buffer
+      )
+    )
+    .map(
+      byte =>
+        byte
+          .toString(16)
+          .padStart(
+            2,
+            '0'
+          )
+    )
+    .join('');
+}
+  
+// ----------------------------------------------------------
+// CARD DE UM SORTEIO
+// ----------------------------------------------------------
+
+function drawCardMarkup(
+  draw
+) {
+
+  const status =
+    String(
+      draw?.status ||
+      'WAITING'
+    )
+      .toUpperCase();
+
+
+  const finished =
+    status ===
+    'DRAWN';
+
+
+  let participants =
+    [];
+
+
+  // Sorteio encerrado:
+  // usa a lista congelada do momento do sorteio.
+
+  if (
+    finished &&
+    draw.participants
+  ) {
+
+    participants =
+      objValues(
+        draw.participants
+      );
+
+  } else {
+
+    // Sorteio aguardando:
+    // mostra quantidade atual de elegíveis.
+
+    participants =
+      getDrawEligibleUsers(
+        draw.filterType,
+        draw.eventId
+      );
+  }
+
+
+  const myCpf =
+    cleanCPF(
+      loggedUser?.cpf
+    );
+
+
+  const participating =
+    participants.some(
+      participant =>
+
+        cleanCPF(
+          participant?.cpf
+        ) ===
+        myCpf
+    );
+
+
+  const winners =
+    objValues(
+      draw.winners
+    );
+
+
+  return `
+
+    <div
+      class="benefit-card"
+      style="
+        margin-bottom:12px;
+        border:
+          1px solid
+          ${
+            finished
+              ? '#2ecc71'
+              : 'rgba(255,255,255,.12)'
+          };
+      "
+    >
+
+      <div
+        style="
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          gap:10px;
+          margin-bottom:8px;
+        "
+      >
+
+        <span
+          class="
+            tag
+            ${
+              finished
+                ? 'green'
+                : 'gold'
+            }
+          "
+        >
+
+          ${
+            finished
+              ? 'ENCERRADO'
+              : 'AGUARDANDO'
+          }
+
+        </span>
+
+
+        <span
+          style="
+            font-size:10px;
+            color:var(--muted);
+          "
+        >
+
+          ${
+            participants.length
+          }
+
+          participantes
+
+        </span>
+
+      </div>
+
+
+      <h4
+        style="
+          margin-bottom:4px;
+        "
+      >
+
+        ${esc(
+          draw.title ||
+          'SORTEIO DH-CLUB'
+        )}
+
+      </h4>
+
+
+      ${
+        draw.prize
+
+          ? `
+
+            <div
+              style="
+                color:var(--gold2);
+                font-size:12px;
+                font-weight:900;
+                margin-bottom:8px;
+              "
+            >
+
+              <i
+                class="
+                  fa-solid
+                  fa-gift
+                "
+              ></i>
+
+              ${esc(
+                draw.prize
+              )}
+
+            </div>
+
+          `
+
+          : ''
+      }
+
+
+      <p
+        style="
+          margin-bottom:8px;
+        "
+      >
+
+        ${esc(
+          draw.description ||
+          ''
+        )}
+
+      </p>
+
+
+      <div
+        style="
+          font-size:10px;
+          color:var(--muted);
+          line-height:1.7;
+        "
+      >
+
+        <div>
+
+          <b>
+            PÚBLICO:
+          </b>
+
+          ${esc(
+            drawFilterLabel(
+              draw
+            )
+          )}
+
+        </div>
+
+
+        <div>
+
+          <b>
+            SORTEIO:
+          </b>
+
+          ${esc(
+            drawDateTimeText(
+              draw.drawAt
+            )
+          )}
+
+        </div>
+
+
+        <div>
+
+          <b>
+            VENCEDORES:
+          </b>
+
+          ${Number(
+            draw.winnersCount ||
+            1
+          )}
+
+        </div>
+
+      </div>
+
+
+      ${
+        !finished
+
+          ? `
+
+            <div
+              style="
+                margin-top:10px;
+                padding:8px;
+                border-radius:8px;
+                background:
+                  ${
+                    participating
+                      ? 'rgba(46,204,113,.12)'
+                      : 'rgba(255,255,255,.05)'
+                  };
+                font-size:10px;
+                font-weight:900;
+              "
+            >
+
+              ${
+                participating
+
+                  ? `
+
+                    <i
+                      class="
+                        fa-solid
+                        fa-circle-check
+                      "
+                      style="
+                        color:#2ecc71;
+                      "
+                    ></i>
+
+                    VOCÊ ESTÁ PARTICIPANDO
+
+                  `
+
+                  : `
+
+                    <i
+                      class="
+                        fa-solid
+                        fa-circle-xmark
+                      "
+                    ></i>
+
+                    VOCÊ NÃO ESTÁ ELEGÍVEL
+
+                  `
+              }
+
+            </div>
+
+          `
+
+          : ''
+      }
+
+
+      ${
+        finished &&
+        winners.length
+
+          ? `
+
+            <div
+              style="
+                margin-top:12px;
+                padding:12px;
+                border-radius:10px;
+                background:
+                  rgba(46,204,113,.10);
+              "
+            >
+
+              <div
+                style="
+                  font-size:10px;
+                  font-weight:900;
+                  color:#2ecc71;
+                  margin-bottom:6px;
+                "
+              >
+
+                🏆
+                ${
+                  winners.length > 1
+                    ? 'VENCEDORES'
+                    : 'VENCEDOR'
+                }
+
+              </div>
+
+
+              ${
+                winners
+                  .map(
+                    (
+                      winner,
+                      index
+                    ) => `
+
+                      <div
+                        style="
+                          font-weight:900;
+                          margin-top:4px;
+                        "
+                      >
+
+                        ${index + 1}º
+
+                        ${esc(
+                          winner.name ||
+                          winner.nome ||
+                          'ATLETA'
+                        )}
+
+                      </div>
+
+                    `
+                  )
+                  .join('')
+              }
+
+            </div>
+
+          `
+
+          : ''
+            }
+
+
+      <div
+        style="
+          display:flex;
+          gap:8px;
+          margin-top:12px;
+        "
+      >
+
+        <button
+          class="secondary-btn"
+          style="
+            flex:1;
+          "
+          onclick="
+            Club.showDrawParticipants(
+              '${esc(draw.id)}'
+            )
+          "
+        >
+
+          <i
+            class="
+              fa-solid
+              fa-users
+            "
+          ></i>
+
+          PARTICIPANTES
+
+        </button>
+
+
+        ${
+          !finished &&
+          canManageDraw(
+            draw
+          )
+
+            ? `
+
+              <button
+                class="primary-btn"
+                style="
+                  flex:1;
+                "
+                onclick="
+                  Club.confirmDraw(
+                    '${esc(draw.id)}'
+                  )
+                "
+              >
+
+                <i
+                  class="
+                    fa-solid
+                    fa-shuffle
+                  "
+                ></i>
+
+                SORTEAR
+
+              </button>
+
+            `
+
+            : ''
+        }
+
+      </div>
+
+      <button
+        class="secondary-btn"
+
+        style="
+          width:100%;
+          margin-top:8px;
+        "
+
+        onclick="
+          Club.showDrawDetails(
+            '${esc(draw.id)}'
+          )
+        "
+      >
+
+        <i
+          class="
+            fa-solid
+            fa-circle-info
+          "
+        ></i>
+
+        DETALHES DO SORTEIO
+
+      </button>
+
+    </div>
+
+  `;
+}
+
+
+
+// ----------------------------------------------------------
+// TELA PRINCIPAL DOS SORTEIOS
+// ----------------------------------------------------------
+
+function renderDraws() {
+
+  const view =
+    document.getElementById(
+      'view-draws'
+    );
+
+
+  if (!view) {
+    return;
+  }
+
+
+  const draws =
+    objValues(
+      club.draws
+    )
+      .sort(
+        (
+          a,
+          b
+        ) =>
+
+          Number(
+            b.createdAt ||
+            0
+          ) -
+
+          Number(
+            a.createdAt ||
+            0
+          )
+      );
+
+
+  const waiting =
+    draws.filter(
+      draw =>
+        String(
+          draw.status ||
+          'WAITING'
+        )
+          .toUpperCase() !==
+        'DRAWN'
+    );
+
+
+  const finished =
+    draws.filter(
+      draw =>
+        String(
+          draw.status ||
+          ''
+        )
+          .toUpperCase() ===
+        'DRAWN'
+    );
+
+
+  view.innerHTML = `
+
+    <div class="hero">
+
+      <div class="eyebrow">
+
+        DH-CLUB
+
+      </div>
+
+
+      <h2>
+
+        Sorteios
+
+      </h2>
+
+
+      <p>
+
+        Sorteios transparentes
+        entre atletas elegíveis.
+
+        <br>
+
+        Todos participam
+        com a mesma chance.
+
+      </p>
+
+
+      <div class="member-chip">
+
+        <i
+          class="
+            fa-solid
+            fa-shuffle
+          "
+        ></i>
+
+        SORTEIO JUSTO
+
+      </div>
+
+    </div>
+
+
+    ${
+      canCreateDraw()
+
+        ? `
+
+          <button
+            class="primary-btn"
+            style="
+              width:100%;
+              margin-bottom:16px;
+            "
+
+            onclick="
+              Club.openNewDraw()
+            "
+          >
+
+            <i
+              class="
+                fa-solid
+                fa-plus
+              "
+            ></i>
+
+            CRIAR NOVO SORTEIO
+
+          </button>
+
+        `
+
+        : ''
+    }
+
+
+    <div class="section-title">
+
+      <h3>
+
+        AGUARDANDO SORTEIO
+
+      </h3>
+
+      <span>
+
+        ${waiting.length}
+
+      </span>
+
+    </div>
+
+
+    <div class="list">
+
+      ${
+        waiting.length
+
+          ? waiting
+              .map(
+                drawCardMarkup
+              )
+              .join('')
+
+          : `
+
+            <div class="empty">
+
+              Nenhum sorteio
+              aguardando realização.
+
+            </div>
+
+          `
+      }
+
+    </div>
+
+
+    <div
+      class="section-title"
+      style="
+        margin-top:18px;
+      "
+    >
+
+      <h3>
+
+        ÚLTIMOS RESULTADOS
+
+      </h3>
+
+      <span>
+
+        ${finished.length}
+
+      </span>
+
+    </div>
+
+
+    <div class="list">
+
+      ${
+        finished.length
+
+          ? finished
+              .map(
+                drawCardMarkup
+              )
+              .join('')
+
+          : `
+
+            <div class="empty">
+
+              Nenhum sorteio
+              realizado ainda.
+
+            </div>
+
+          `
+      }
+
+    </div>
+
+  `;
+}
+
+
+
+// ----------------------------------------------------------
+// ABRIR FORMULÁRIO PARA NOVO SORTEIO
+// ----------------------------------------------------------
+
+function openNewDraw() {
+
+  if (
+    !canCreateDraw()
+  ) {
+
+    toast(
+      'SEM PERMISSÃO PARA CRIAR SORTEIO'
+    );
+
+    return;
+  }
+
+
+  const organizerOnly =
+    isOrganizer(
+      loggedUser
+    ) &&
+    !isAdmin(
+      loggedUser
+    );
+
+
+  const events =
+    getDrawAllowedEvents();
+
+
+  if (
+    organizerOnly &&
+    events.length === 0
+  ) {
+
+    toast(
+      'VOCÊ NÃO POSSUI EVENTOS LIBERADOS'
+    );
+
+    return;
+  }
+
+
+  const defaultType =
+    organizerOnly
+      ? 'EVENT'
+      : 'ALL_APP';
+
+
+  const defaultEventId =
+    organizerOnly &&
+    events.length
+
+      ? String(
+          events[0].id
+        )
+
+      : '';
+
+
+  const initialParticipants =
+    getDrawEligibleUsers(
+      defaultType,
+      defaultEventId
+    );
+
+
+  const eventOptions =
+    events
+      .map(
+        event => `
+
+          <option
+            value="${esc(
+              event.id
+            )}"
+          >
+
+            ${esc(
+              event.t ||
+              event.title ||
+              event.name ||
+              'EVENTO'
+            )}
+
+          </option>
+
+        `
+      )
+      .join('');
+
+
+  openModal(`
+
+    <div class="eyebrow">
+
+      SORTEIO DH-CLUB
+
+    </div>
+
+
+    <h2>
+
+      Novo Sorteio
+
+    </h2>
+
+
+    <p
+      style="
+        color:var(--muted);
+        font-size:11px;
+        margin-bottom:15px;
+      "
+    >
+
+      Defina o prêmio
+      e quem poderá participar.
+
+    </p>
+
+
+    <div class="field">
+
+      <label>
+
+        TÍTULO DO SORTEIO
+
+      </label>
+
+      <input
+        id="draw-title"
+        maxlength="80"
+
+        placeholder="
+          Ex: CAPACETE FULL FACE
+        "
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+
+        PRÊMIO
+
+      </label>
+
+      <input
+        id="draw-prize"
+        maxlength="100"
+
+        placeholder="
+          Ex: 1 Capacete Full Face
+        "
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+
+        DESCRIÇÃO
+
+      </label>
+
+      <textarea
+        id="draw-description"
+
+        rows="3"
+
+        style="
+          width:100%;
+          padding:12px;
+          border-radius:8px;
+          border:
+            1px solid
+            rgba(255,255,255,.15);
+          background:
+            rgba(255,255,255,.06);
+          color:white;
+          resize:vertical;
+        "
+
+        placeholder="
+          Informações sobre o sorteio...
+        "
+      ></textarea>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+
+        QUANTIDADE DE VENCEDORES
+
+      </label>
+
+      <input
+        id="draw-winners-count"
+
+        type="number"
+
+        min="1"
+
+        max="20"
+
+        value="1"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+
+        QUEM PARTICIPA?
+
+      </label>
+
+
+      ${
+        organizerOnly
+
+          ? `
+
+            <select
+              id="draw-filter-type"
+              onchange="
+                Club.changeDrawFilter()
+              "
+            >
+
+              <option
+                value="EVENT"
+              >
+
+                INSCRITOS EM EVENTO
+
+              </option>
+
+            </select>
+
+          `
+
+          : `
+
+            <select
+              id="draw-filter-type"
+
+              onchange="
+                Club.changeDrawFilter()
+              "
+            >
+
+              <option
+                value="ALL_APP"
+              >
+
+                TODOS OS ATLETAS DO APP
+
+              </option>
+
+
+              <option
+                value="DIGITAL_CARD"
+              >
+
+                CARTEIRA DIGITAL ATIVA
+
+              </option>
+
+
+              <option
+                value="DH_CLUB"
+              >
+
+                MEMBROS DO DH-CLUB
+
+              </option>
+
+
+              <option
+                value="EVENT"
+              >
+
+                INSCRITOS EM EVENTO
+
+              </option>
+
+            </select>
+
+          `
+      }
+
+    </div>
+
+
+    <div
+      class="field"
+
+      id="draw-event-area"
+
+      style="
+        display:
+          ${
+            organizerOnly
+              ? 'block'
+              : 'none'
+          };
+      "
+    >
+
+      <label>
+
+        EVENTO
+
+      </label>
+
+
+      <select
+        id="draw-event-id"
+
+        onchange="
+          Club.updateDrawPreview()
+        "
+      >
+
+        ${
+          organizerOnly
+
+            ? ''
+
+            : `
+
+              <option value="">
+
+                SELECIONE O EVENTO
+
+              </option>
+
+            `
+        }
+
+        ${eventOptions}
+
+      </select>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+
+        DATA/HORA PREVISTA
+
+      </label>
+
+      <input
+        id="draw-date"
+
+        type="datetime-local"
+      >
+
+    </div>
+
+
+    <div
+      style="
+        margin:14px 0;
+        padding:12px;
+        border-radius:10px;
+        background:
+          rgba(46,204,113,.10);
+        border:
+          1px solid
+          rgba(46,204,113,.25);
+      "
+    >
+
+      <div
+        style="
+          font-size:10px;
+          color:var(--muted);
+        "
+      >
+
+        ATLETAS ELEGÍVEIS AGORA
+
+      </div>
+
+
+      <div
+        id="draw-preview-count"
+
+        style="
+          font-size:26px;
+          font-weight:900;
+          margin-top:4px;
+        "
+      >
+
+        ${initialParticipants.length}
+
+      </div>
+
+
+      <div
+        style="
+          font-size:9px;
+          color:var(--muted);
+          margin-top:4px;
+        "
+      >
+
+        A lista definitiva
+        será congelada
+        somente no momento
+        da realização do sorteio.
+
+      </div>
+
+    </div>
+
+
+    <div
+      style="
+        padding:10px;
+        border-radius:8px;
+        background:
+          rgba(255,193,7,.08);
+        font-size:9px;
+        line-height:1.6;
+        margin-bottom:10px;
+      "
+    >
+
+      <b>
+
+        REGRA DE JUSTIÇA
+
+      </b>
+
+      <br>
+
+      Nenhum atleta recebe
+      vantagem por ranking,
+      pódio ou pontuação.
+
+      <br>
+
+      O sistema também utilizará
+      proteção contra repetição
+      de vencedores.
+
+    </div>
+
+
+    <button
+      class="primary-btn"
+      style="
+        width:100%;
+      "
+
+      onclick="
+        Club.createDraw()
+      "
+    >
+
+      <i
+        class="
+          fa-solid
+          fa-floppy-disk
+        "
+      ></i>
+
+      PUBLICAR SORTEIO
+
+    </button>
+
+  `);
+
+
+  setTimeout(
+    () => {
+
+      updateDrawPreview();
+
+    },
+    50
+  );
+}
+
+
+
+// ----------------------------------------------------------
+// ALTEROU O TIPO DE FILTRO
+// ----------------------------------------------------------
+
+function changeDrawFilter() {
+
+  const typeEl =
+    document.getElementById(
+      'draw-filter-type'
+    );
+
+
+  const eventArea =
+    document.getElementById(
+      'draw-event-area'
+    );
+
+
+  if (
+    !typeEl ||
+    !eventArea
+  ) {
+
+    return;
+  }
+
+
+  const type =
+    String(
+      typeEl.value ||
+      ''
+    );
+
+
+  eventArea.style.display =
+    type === 'EVENT'
+      ? 'block'
+      : 'none';
+
+
+  updateDrawPreview();
+}
+
+
+
+// ----------------------------------------------------------
+// ATUALIZA QUANTIDADE DE ELEGÍVEIS
+// ----------------------------------------------------------
+
+function updateDrawPreview() {
+
+  const typeEl =
+    document.getElementById(
+      'draw-filter-type'
+    );
+
+
+  const eventEl =
+    document.getElementById(
+      'draw-event-id'
+    );
+
+
+  const countEl =
+    document.getElementById(
+      'draw-preview-count'
+    );
+
+
+  if (
+    !typeEl ||
+    !countEl
+  ) {
+
+    return;
+  }
+
+
+  const type =
+    typeEl.value;
+
+
+  const eventId =
+    eventEl
+      ? eventEl.value
+      : null;
+
+
+  const participants =
+    getDrawEligibleUsers(
+      type,
+      eventId
+    );
+
+
+  countEl.textContent =
+    participants.length;
+}
+
+
+
+// ----------------------------------------------------------
+// SALVAR / PUBLICAR NOVO SORTEIO
+// ----------------------------------------------------------
+
+async function createDraw() {
+
+  if (
+    !canCreateDraw()
+  ) {
+
+    toast(
+      'SEM PERMISSÃO'
+    );
+
+    return;
+  }
+
+
+  const title =
+    String(
+      document
+        .getElementById(
+          'draw-title'
+        )
+        ?.value ||
+      ''
+    )
+      .trim();
+
+
+  const prize =
+    String(
+      document
+        .getElementById(
+          'draw-prize'
+        )
+        ?.value ||
+      ''
+    )
+      .trim();
+
+
+  const description =
+    String(
+      document
+        .getElementById(
+          'draw-description'
+        )
+        ?.value ||
+      ''
+    )
+      .trim();
+
+
+  let filterType =
+    String(
+      document
+        .getElementById(
+          'draw-filter-type'
+        )
+        ?.value ||
+      ''
+    )
+      .toUpperCase();
+
+
+  const eventId =
+    String(
+      document
+        .getElementById(
+          'draw-event-id'
+        )
+        ?.value ||
+      ''
+    );
+
+
+  const winnersCount =
+    Math.min(
+      20,
+
+      Math.max(
+        1,
+
+        Number(
+          document
+            .getElementById(
+              'draw-winners-count'
+            )
+            ?.value ||
+          1
+        )
+      )
+    );
+
+
+  const dateValue =
+    document
+      .getElementById(
+        'draw-date'
+      )
+      ?.value ||
+    '';
+
+
+  if (!title) {
+
+    toast(
+      'INFORME O TÍTULO DO SORTEIO'
+    );
+
+    return;
+  }
+
+
+  // Organizador sempre fica
+  // limitado a sorteio por evento.
+
+  if (
+    isOrganizer(
+      loggedUser
+    ) &&
+    !isAdmin(
+      loggedUser
+    )
+  ) {
+
+    filterType =
+      'EVENT';
+  }
+
+
+  const validTypes = [
+    'ALL_APP',
+    'DIGITAL_CARD',
+    'DH_CLUB',
+    'EVENT'
+  ];
+
+
+  if (
+    !validTypes.includes(
+      filterType
+    )
+  ) {
+
+    toast(
+      'FILTRO INVÁLIDO'
+    );
+
+    return;
+  }
+
+
+  if (
+    filterType ===
+    'EVENT'
+  ) {
+
+    if (!eventId) {
+
+      toast(
+        'SELECIONE UM EVENTO'
+      );
+
+      return;
+    }
+
+
+    if (
+      !organizerCanManageEvent(
+        loggedUser,
+        eventId
+      )
+    ) {
+
+      toast(
+        'VOCÊ NÃO PODE GERENCIAR ESTE EVENTO'
+      );
+
+      return;
+    }
+  }
+
+
+  const eligibleNow =
+    getDrawEligibleUsers(
+      filterType,
+      eventId
+    );
+
+
+  let drawAt =
+    null;
+
+
+  if (dateValue) {
+
+    const timestamp =
+      new Date(
+        dateValue
+      )
+        .getTime();
+
+
+    if (
+      Number.isFinite(
+        timestamp
+      )
+    ) {
+
+      drawAt =
+        timestamp;
+    }
+  }
+
+
+  const id =
+    window.crypto &&
+    typeof window.crypto.randomUUID ===
+      'function'
+
+      ? window.crypto
+          .randomUUID()
+
+      : (
+          'draw_' +
+          Date.now()
+        );
+
+    const createdAt =
+    Date.now();
+
+
+  const publicId =
+    (
+      'DH-' +
+      SYSTEM_YEAR +
+      '-' +
+      String(
+        createdAt
+      )
+        .slice(
+          -6
+        ) +
+      '-' +
+      String(
+        id
+      )
+        .replace(
+          /[^a-zA-Z0-9]/g,
+          ''
+        )
+        .slice(
+          0,
+          4
+        )
+        .toUpperCase()
+    );
+
+    const creatorId =
+    await drawOpaqueIdFromCpf(
+      loggedUser?.cpf
+    );
+  
+  const draw = {
+
+    id,
+
+    publicId,
+
+    title,
+
+    prize,
+
+    description,
+
+    status:
+      'WAITING',
+
+    filterType,
+
+    eventId:
+      filterType ===
+      'EVENT'
+
+        ? eventId
+
+        : null,
+
+    eventName:
+      filterType ===
+      'EVENT'
+
+        ? drawEventName(
+            eventId
+          )
+
+        : null,
+
+    winnersCount,
+
+    drawAt,
+
+    antiRepeat:
+      true,
+
+    cycleKey:
+      getDrawCycleKey(
+        filterType,
+        eventId
+      ),
+
+    eligiblePreview:
+      eligibleNow.length,
+
+    createdAt,
+
+createdBy: {
+
+  participantId:
+    creatorId,
+
+  name:
+    loggedUser?.nome ||
+    'ORGANIZAÇÃO',
+
+  role:
+    loggedUser?.role ||
+    'USER'
+
+}
+
+  };
+
+
+  try {
+
+    await database
+      .ref(
+        `${CLUB_ROOT}/draws/${id}`
+      )
+      .set(
+        draw
+      );
+
+
+    if (!club.draws) {
+
+      club.draws =
+        {};
+    }
+
+
+    club.draws[
+      id
+    ] =
+      draw;
+
+
+    closeModal();
+
+
+    renderDraws();
+
+
+    toast(
+      'SORTEIO PUBLICADO!'
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      '[DH-CLUB] Erro ao criar sorteio:',
+      error
+    );
+
+
+    toast(
+      'ERRO AO PUBLICAR SORTEIO'
+    );
+  }
+}
+
+// ==========================================================
+// SORTEIOS — REALIZAÇÃO, ANTI-REPETIÇÃO E AUDITORIA
+// ==========================================================
+
+
+// ----------------------------------------------------------
+// CHAVE SEGURA PARA CAMINHO FIREBASE
+// ----------------------------------------------------------
+
+function safeDrawCycleKey(
+  value
+) {
+
+  return String(
+    value || 'GERAL'
+  )
+    .replace(
+      /[.#$\[\]\/]/g,
+      '_'
+    );
+}
+
+
+
+// ----------------------------------------------------------
+// PODE ADMINISTRAR ESTE SORTEIO?
+// ----------------------------------------------------------
+
+function canManageDraw(
+  draw
+) {
+
+  if (
+    !draw ||
+    !loggedUser
+  ) {
+
+    return false;
+  }
+
+
+  // ADMIN pode gerenciar qualquer sorteio
+
+  if (
+    isAdmin(
+      loggedUser
+    )
+  ) {
+
+    return true;
+  }
+
+
+  // ORGANIZADOR somente sorteio de evento
+
+  if (
+    isOrganizer(
+      loggedUser
+    ) &&
+    String(
+      draw.filterType
+    )
+      .toUpperCase() ===
+      'EVENT'
+  ) {
+
+    return organizerCanManageEvent(
+      loggedUser,
+      draw.eventId
+    );
+  }
+
+
+  return false;
+}
+
+
+
+// ----------------------------------------------------------
+// TRANSFORMA USUÁRIO EM REGISTRO PÚBLICO DO SORTEIO
+// Não salvamos senha, telefone etc.
+// ----------------------------------------------------------
+
+function drawPublicParticipant(
+  user
+) {
+
+  return {
+
+    name:
+      user?.nome ||
+      user?.name ||
+      'ATLETA',
+
+    city:
+      user?.city ||
+      '',
+
+    uf:
+      user?.uf ||
+      'PE',
+
+    category:
+      user?.cat ||
+      user?.category ||
+      ''
+
+  };
+}
+
+// ----------------------------------------------------------
+// ABRIR CONFIRMAÇÃO ANTES DE SORTEAR
+// ----------------------------------------------------------
+
+function confirmDraw(
+  drawId
+) {
+
+  const draw =
+    club.draws?.[
+      drawId
+    ];
+
+
+  if (!draw) {
+
+    toast(
+      'SORTEIO NÃO ENCONTRADO'
+    );
+
+    return;
+  }
+
+
+  if (
+    !canManageDraw(
+      draw
+    )
+  ) {
+
+    toast(
+      'SEM PERMISSÃO PARA ESTE SORTEIO'
+    );
+
+    return;
+  }
+
+
+  if (
+    String(
+      draw.status
+    )
+      .toUpperCase() !==
+      'WAITING'
+  ) {
+
+    toast(
+      'ESTE SORTEIO NÃO ESTÁ DISPONÍVEL'
+    );
+
+    return;
+  }
+
+
+  const eligible =
+    getDrawEligibleUsers(
+      draw.filterType,
+      draw.eventId
+    );
+
+
+  const winnersCount =
+    Math.max(
+      1,
+      Number(
+        draw.winnersCount ||
+        1
+      )
+    );
+
+
+  openModal(`
+
+    <div class="eyebrow">
+
+      CONFIRMAÇÃO FINAL
+
+    </div>
+
+
+    <h2>
+
+      Realizar Sorteio
+
+    </h2>
+
+
+    <div
+      style="
+        padding:14px;
+        border-radius:12px;
+        background:
+          rgba(255,193,7,.10);
+        border:
+          1px solid
+          rgba(255,193,7,.25);
+        margin:15px 0;
+      "
+    >
+
+      <div
+        style="
+          font-size:11px;
+          color:var(--muted);
+        "
+      >
+
+        SORTEIO
+
+      </div>
+
+
+      <div
+        style="
+          font-size:17px;
+          font-weight:900;
+          margin-top:3px;
+        "
+      >
+
+        ${esc(
+          draw.title ||
+          'SORTEIO DH-CLUB'
+        )}
+
+      </div>
+
+
+      <div
+        style="
+          margin-top:12px;
+          font-size:11px;
+          line-height:1.8;
+        "
+      >
+
+        <b>
+          Participantes elegíveis:
+        </b>
+
+        ${eligible.length}
+
+        <br>
+
+
+        <b>
+          Quantidade de vencedores:
+        </b>
+
+        ${winnersCount}
+
+        <br>
+
+
+        <b>
+          Público:
+        </b>
+
+        ${esc(
+          drawFilterLabel(
+            draw
+          )
+        )}
+
+      </div>
+
+    </div>
+
+
+    <div
+      style="
+        padding:12px;
+        background:
+          rgba(213,0,0,.08);
+        border:
+          1px solid
+          rgba(213,0,0,.20);
+        border-radius:10px;
+        font-size:10px;
+        line-height:1.6;
+        margin-bottom:12px;
+      "
+    >
+
+      <b>
+        ATENÇÃO
+      </b>
+
+      <br>
+
+      Ao confirmar, a lista de participantes será congelada.
+
+      <br><br>
+
+      O resultado ficará registrado e este sorteio
+      não poderá ser realizado novamente.
+
+    </div>
+
+
+    <button
+      class="primary-btn"
+
+      style="
+        width:100%;
+      "
+
+      onclick="
+        Club.performDraw(
+          '${esc(drawId)}'
+        )
+      "
+    >
+
+      <i
+        class="
+          fa-solid
+          fa-shuffle
+        "
+      ></i>
+
+      CONFIRMAR E SORTEAR
+
+    </button>
+
+  `);
+}
+
+
+
+// ----------------------------------------------------------
+// REALIZAR SORTEIO
+// ----------------------------------------------------------
+
+async function performDraw(
+  drawId
+) {
+
+  const draw =
+    club.draws?.[
+      drawId
+    ];
+
+
+  if (!draw) {
+
+    toast(
+      'SORTEIO NÃO ENCONTRADO'
+    );
+
+    return;
+  }
+
+
+  if (
+    !canManageDraw(
+      draw
+    )
+  ) {
+
+    toast(
+      'SEM PERMISSÃO'
+    );
+
+    return;
+  }
+
+
+  const drawRef =
+    database.ref(
+      `${CLUB_ROOT}/draws/${drawId}`
+    );
+
+
+  const statusRef =
+    drawRef.child(
+      'status'
+    );
+
+
+  try {
+
+    // ======================================================
+    // TRAVA O SORTEIO
+    // WAITING -> DRAWING
+    // ======================================================
+
+    const lock =
+      await statusRef
+        .transaction(
+          current => {
+
+            if (
+              String(
+                current ||
+                ''
+              )
+                .toUpperCase() !==
+                'WAITING'
+            ) {
+
+              return;
+            }
+
+
+            return 'DRAWING';
+          }
+        );
+
+
+    if (
+      !lock.committed
+    ) {
+
+      closeModal();
+
+      toast(
+        'ESTE SORTEIO JÁ FOI INICIADO OU REALIZADO'
+      );
+
+      return;
+    }
+
+
+    // ======================================================
+    // PARTICIPANTES ELEGÍVEIS
+    //
+    // CPF existe somente temporariamente na memória.
+    // ======================================================
+
+    const eligibleUsers =
+      getDrawEligibleUsers(
+        draw.filterType,
+        draw.eventId
+      );
+
+
+    const uniqueUsers =
+      drawUniqueUsers(
+        eligibleUsers
+      );
+
+
+    const participants =
+      (
+        await Promise.all(
+
+          uniqueUsers.map(
+            async user => {
+
+              const cpf =
+                cleanCPF(
+                  user?.cpf
+                );
+
+
+              const participantId =
+                await drawOpaqueIdFromCpf(
+                  cpf
+                );
+
+
+              if (
+                !cpf ||
+                !participantId
+              ) {
+
+                return null;
+              }
+
+
+              return {
+
+                participantId,
+
+                // SOMENTE MEMÓRIA.
+                // ESTE CAMPO NÃO SERÁ SALVO.
+                _privateCpf:
+                  cpf,
+
+                ...drawPublicParticipant(
+                  user
+                )
+
+              };
+            }
+          )
+        )
+      )
+        .filter(Boolean)
+        .sort(
+          (
+            a,
+            b
+          ) =>
+
+            String(
+              a.participantId
+            )
+              .localeCompare(
+                String(
+                  b.participantId
+                )
+              )
+        );
+
+
+    const winnersCount =
+      Math.max(
+        1,
+        Number(
+          draw.winnersCount ||
+          1
+        )
+      );
+
+
+    if (
+      participants.length <
+      winnersCount
+    ) {
+
+      await statusRef
+        .set(
+          'WAITING'
+        );
+
+
+      closeModal();
+
+
+      toast(
+        'NÃO HÁ PARTICIPANTES SUFICIENTES'
+      );
+
+
+      return;
+    }
+
+
+    // ======================================================
+    // CICLO ANTI-REPETIÇÃO
+    // ======================================================
+
+    const originalCycleKey =
+      draw.cycleKey ||
+      getDrawCycleKey(
+        draw.filterType,
+        draw.eventId
+      );
+
+
+    const cycleKey =
+      safeDrawCycleKey(
+        originalCycleKey
+      );
+
+
+    const cycle =
+      club.draw_cycles?.[
+        cycleKey
+      ] ||
+      {};
+
+
+    let used =
+      cycle.used &&
+      typeof cycle.used ===
+        'object'
+
+        ? {
+            ...cycle.used
+          }
+
+        : {};
+
+
+    let round =
+      Math.max(
+        1,
+        Number(
+          cycle.round ||
+          1
+        )
+      );
+
+
+    let cycleReset =
+      false;
+
+
+    // ======================================================
+    // MIGRA CICLOS ANTIGOS QUE AINDA USAVAM CPF
+    // ======================================================
+
+    participants.forEach(
+      participant => {
+
+        if (
+          used[
+            participant._privateCpf
+          ]
+        ) {
+
+          used[
+            participant.participantId
+          ] =
+            true;
+        }
+      }
+    );
+
+
+    // Remove chaves antigas que eram CPF
+
+    Object.keys(
+      used
+    )
+      .forEach(
+        key => {
+
+          if (
+            /^\d{11}$/.test(
+              key
+            )
+          ) {
+
+            delete used[
+              key
+            ];
+          }
+        }
+      );
+
+
+    let available =
+      participants.filter(
+        participant =>
+          !used[
+            participant.participantId
+          ]
+      );
+
+
+    // ======================================================
+    // NOVO CICLO QUANDO NECESSÁRIO
+    // ======================================================
+
+        // ======================================================
+    // CASO 1:
+    // TODOS JÁ GANHARAM NESTE CICLO
+    //
+    // Só aqui um novo ciclo pode começar.
+    // ======================================================
+
+    if (
+      available.length ===
+      0
+    ) {
+
+      used =
+        {};
+
+
+      available =
+        participants.slice();
+
+
+      round++;
+
+
+      cycleReset =
+        true;
+    }
+
+
+    // ======================================================
+    // CASO 2:
+    // AINDA EXISTEM ATLETAS SEM GANHAR,
+    // MAS NÃO HÁ QUANTIDADE SUFICIENTE
+    // PARA ESTE SORTEIO.
+    //
+    // NÃO reinicia o ciclo.
+    // NÃO permite repetir vencedor.
+    // ======================================================
+
+    else if (
+      available.length <
+      winnersCount
+    ) {
+
+      await statusRef
+        .set(
+          'WAITING'
+        );
+
+
+      closeModal();
+
+
+      toast(
+        `RESTAM ${available.length} ATLETA(S) NESTE CICLO. ESTE SORTEIO PEDE ${winnersCount} VENCEDOR(ES).`
+      );
+
+
+      return;
+    }
+
+
+    // ======================================================
+    // ESCOLHE VENCEDORES
+    // ======================================================
+
+    const selected =
+      securePickWinners(
+        available,
+        winnersCount
+      );
+
+
+    // ======================================================
+    // VENCEDORES PÚBLICOS
+    //
+    // SEM CPF.
+    // ======================================================
+
+    const winners =
+      selected.map(
+        (
+          participant,
+          index
+        ) => ({
+
+          position:
+            index + 1,
+
+          participantId:
+            participant.participantId,
+
+          name:
+            participant.name,
+
+          city:
+            participant.city,
+
+          uf:
+            participant.uf,
+
+          category:
+            participant.category
+
+        })
+      );
+
+
+    // ======================================================
+    // MARCA VENCEDORES NO CICLO
+    // ======================================================
+
+    winners.forEach(
+      winner => {
+
+        used[
+          winner.participantId
+        ] =
+          true;
+      }
+    );
+
+
+    // ======================================================
+    // CONGELA PARTICIPANTES SEM CPF
+    // ======================================================
+
+    const participantsObject =
+      {};
+
+
+    participants.forEach(
+      participant => {
+
+        participantsObject[
+          participant.participantId
+        ] = {
+
+          participantId:
+            participant.participantId,
+
+          name:
+            participant.name,
+
+          city:
+            participant.city,
+
+          uf:
+            participant.uf,
+
+          category:
+            participant.category
+
+        };
+      }
+    );
+
+
+    const now =
+      Date.now();
+
+
+    // Identificador técnico de quem realizou o sorteio
+
+    const actorId =
+      await drawOpaqueIdFromCpf(
+        loggedUser?.cpf
+      );
+
+
+    // ======================================================
+    // HASH DE AUDITORIA
+    // ======================================================
+
+    const auditHash =
+      await createDrawAuditHash(
+        draw,
+        participants,
+        winners,
+        now,
+        round
+      );
+
+
+    // ======================================================
+    // ATUALIZAÇÃO ATÔMICA
+    // ======================================================
+
+    const updates =
+      {};
+
+
+    updates[
+      `${CLUB_ROOT}/draws/${drawId}/status`
+    ] =
+      'DRAWN';
+
+
+    updates[
+      `${CLUB_ROOT}/draws/${drawId}/participants`
+    ] =
+      participantsObject;
+
+
+    updates[
+      `${CLUB_ROOT}/draws/${drawId}/participantCount`
+    ] =
+      participants.length;
+
+
+    updates[
+      `${CLUB_ROOT}/draws/${drawId}/winners`
+    ] =
+      winners;
+
+
+    updates[
+      `${CLUB_ROOT}/draws/${drawId}/drawnAt`
+    ] =
+      now;
+
+
+    updates[
+      `${CLUB_ROOT}/draws/${drawId}/eligibleBeforeAntiRepeat`
+    ] =
+      participants.length;
+
+
+    updates[
+      `${CLUB_ROOT}/draws/${drawId}/antiRepeatPool`
+    ] =
+      available.length;
+
+
+    updates[
+      `${CLUB_ROOT}/draws/${drawId}/cycleRound`
+    ] =
+      round;
+
+
+    updates[
+      `${CLUB_ROOT}/draws/${drawId}/cycleReset`
+    ] =
+      cycleReset;
+
+
+    updates[
+      `${CLUB_ROOT}/draws/${drawId}/locked`
+    ] =
+      true;
+
+
+    updates[
+      `${CLUB_ROOT}/draws/${drawId}/auditHash`
+    ] =
+      auditHash;
+
+
+    updates[
+      `${CLUB_ROOT}/draws/${drawId}/auditVersion`
+    ] =
+      2;
+
+
+    updates[
+      `${CLUB_ROOT}/draws/${drawId}/randomMethod`
+    ] =
+      'CRYPTO_GET_RANDOM_VALUES';
+
+
+    updates[
+      `${CLUB_ROOT}/draws/${drawId}/integrityRegistered`
+    ] =
+      !!auditHash;
+
+
+    // ======================================================
+    // QUEM REALIZOU
+    //
+    // SEM CPF.
+    // ======================================================
+
+    updates[
+      `${CLUB_ROOT}/draws/${drawId}/drawnBy`
+    ] = {
+
+      participantId:
+        actorId,
+
+      name:
+        loggedUser?.nome ||
+        'ORGANIZAÇÃO',
+
+      role:
+        loggedUser?.role ||
+        'USER'
+
+    };
+
+
+    // ======================================================
+    // CICLO ANTI-REPETIÇÃO
+    //
+    // agora também usa participantId
+    // ======================================================
+
+    updates[
+      `${CLUB_ROOT}/draw_cycles/${cycleKey}`
+    ] = {
+
+      key:
+        originalCycleKey,
+
+      round,
+
+      used,
+
+      updatedAt:
+        now
+
+    };
+
+
+    await database
+      .ref()
+      .update(
+        updates
+      );
+
+
+    // ======================================================
+    // ATUALIZA MEMÓRIA LOCAL
+    // ======================================================
+
+    if (
+      !club.draw_cycles
+    ) {
+
+      club.draw_cycles =
+        {};
+    }
+
+
+    club.draw_cycles[
+      cycleKey
+    ] = {
+
+      key:
+        originalCycleKey,
+
+      round,
+
+      used,
+
+      updatedAt:
+        now
+
+    };
+
+
+    if (
+      club.draws?.[
+        drawId
+      ]
+    ) {
+
+      club.draws[
+        drawId
+      ] = {
+
+        ...club.draws[
+          drawId
+        ],
+
+        status:
+          'DRAWN',
+
+        participants:
+          participantsObject,
+
+        participantCount:
+          participants.length,
+
+        winners,
+
+        drawnAt:
+          now,
+
+        eligibleBeforeAntiRepeat:
+          participants.length,
+
+        antiRepeatPool:
+          available.length,
+
+        cycleRound:
+          round,
+
+        cycleReset,
+
+        locked:
+          true,
+
+        auditHash,
+
+        auditVersion:
+          2,
+
+        randomMethod:
+          'CRYPTO_GET_RANDOM_VALUES',
+
+        integrityRegistered:
+          !!auditHash,
+
+        drawnBy: {
+
+          participantId:
+            actorId,
+
+          name:
+            loggedUser?.nome ||
+            'ORGANIZAÇÃO',
+
+          role:
+            loggedUser?.role ||
+            'USER'
+
+        }
+
+      };
+    }
+
+
+    closeModal();
+
+
+    renderDraws();
+
+
+    toast(
+      winners.length > 1
+
+        ? 'SORTEIO REALIZADO! TEMOS VENCEDORES!'
+
+        : 'SORTEIO REALIZADO! TEMOS UM VENCEDOR!'
+    );
+
+
+  } catch (
+    error
+  ) {
+
+    console.error(
+      '[DH-CLUB] Erro ao realizar sorteio:',
+      error
+    );
+
+
+    try {
+
+      const current =
+        (
+          await statusRef
+            .once(
+              'value'
+            )
+        )
+          .val();
+
+
+      if (
+        current ===
+        'DRAWING'
+      ) {
+
+        await statusRef
+          .set(
+            'WAITING'
+          );
+      }
+
+    } catch {}
+
+
+    closeModal();
+
+
+    toast(
+      'ERRO AO REALIZAR SORTEIO'
+    );
+  }
+}
+  
+// ----------------------------------------------------------
+// DETALHES / TRANSPARÊNCIA DO SORTEIO
+// ----------------------------------------------------------
+
+function showDrawDetails(
+  drawId
+) {
+
+  const draw =
+    club.draws?.[
+      drawId
+    ];
+
+
+  if (!draw) {
+
+    toast(
+      'SORTEIO NÃO ENCONTRADO'
+    );
+
+    return;
+  }
+
+
+  const status =
+    String(
+      draw.status ||
+      'WAITING'
+    )
+      .toUpperCase();
+
+
+  const finished =
+    status ===
+    'DRAWN';
+
+
+  const creator =
+    draw.createdBy ||
+    {};
+
+
+  const responsible =
+    draw.drawnBy ||
+    {};
+
+
+  const winners =
+    objValues(
+      draw.winners
+    );
+
+
+  const participantCount =
+    finished
+
+      ? Number(
+          draw.participantCount ||
+          objValues(
+            draw.participants
+          ).length ||
+          0
+        )
+
+      : getDrawEligibleUsers(
+          draw.filterType,
+          draw.eventId
+        ).length;
+
+
+  const publicId =
+    getDrawPublicId(
+      draw
+    );
+
+
+  openModal(`
+
+    <div class="eyebrow">
+
+      TRANSPARÊNCIA DO SORTEIO
+
+    </div>
+
+
+    <h2>
+
+      ${esc(
+        draw.title ||
+        'SORTEIO DH-CLUB'
+      )}
+
+    </h2>
+
+
+    <div
+      style="
+        margin:12px 0;
+        padding:12px;
+        border-radius:10px;
+        background:
+          ${
+            finished
+              ? 'rgba(46,204,113,.10)'
+              : 'rgba(255,193,7,.08)'
+          };
+        border:
+          1px solid
+          ${
+            finished
+              ? 'rgba(46,204,113,.30)'
+              : 'rgba(255,193,7,.25)'
+          };
+      "
+    >
+
+      <div
+        style="
+          font-size:10px;
+          font-weight:900;
+          color:
+            ${
+              finished
+                ? '#2ecc71'
+                : 'var(--gold2)'
+            };
+        "
+      >
+
+        ${
+          finished
+            ? '✓ SORTEIO REGISTRADO'
+            : 'AGUARDANDO REALIZAÇÃO'
+        }
+
+      </div>
+
+
+      <div
+        style="
+          font-size:10px;
+          color:var(--muted);
+          margin-top:5px;
+        "
+      >
+
+        ID PÚBLICO
+
+      </div>
+
+
+      <div
+        style="
+          font-size:14px;
+          font-weight:900;
+          margin-top:2px;
+          word-break:break-word;
+        "
+      >
+
+        ${esc(
+          publicId
+        )}
+
+      </div>
+
+    </div>
+
+
+    <div
+      class="premium-card"
+      style="
+        margin-top:10px;
+      "
+    >
+
+      <div
+        style="
+          font-size:10px;
+          line-height:1.9;
+        "
+      >
+
+        <div>
+
+          <b>
+            STATUS:
+          </b>
+
+          ${
+            finished
+              ? 'ENCERRADO'
+              : 'AGUARDANDO'
+          }
+
+        </div>
+
+
+        <div>
+
+          <b>
+            PÚBLICO:
+          </b>
+
+          ${esc(
+            drawFilterLabel(
+              draw
+            )
+          )}
+
+        </div>
+
+
+        <div>
+
+          <b>
+            PARTICIPANTES:
+          </b>
+
+          ${participantCount}
+
+        </div>
+
+
+        <div>
+
+          <b>
+            Nº DE VENCEDORES:
+          </b>
+
+          ${Number(
+            draw.winnersCount ||
+            1
+          )}
+
+        </div>
+
+
+        <div>
+
+          <b>
+            CRIADO EM:
+          </b>
+
+          ${esc(
+            drawExactDateTime(
+              draw.createdAt
+            )
+          )}
+
+        </div>
+
+
+        <div>
+
+          <b>
+            CRIADO POR:
+          </b>
+
+          ${esc(
+            creator.name ||
+            'ORGANIZAÇÃO'
+          )}
+
+          •
+
+          ${esc(
+            drawRoleLabel(
+              creator.role
+            )
+          )}
+
+        </div>
+
+
+        ${
+          draw.drawAt
+
+            ? `
+
+              <div>
+
+                <b>
+                  DATA PREVISTA:
+                </b>
+
+                ${esc(
+                  drawExactDateTime(
+                    draw.drawAt
+                  )
+                )}
+
+              </div>
+
+            `
+
+            : ''
+        }
+
+
+        ${
+          finished
+
+            ? `
+
+              <div>
+
+                <b>
+                  REALIZADO EM:
+                </b>
+
+                ${esc(
+                  drawExactDateTime(
+                    draw.drawnAt
+                  )
+                )}
+
+              </div>
+
+
+              <div>
+
+                <b>
+                  REALIZADO POR:
+                </b>
+
+                ${esc(
+                  responsible.name ||
+                  'ORGANIZAÇÃO'
+                )}
+
+                •
+
+                ${esc(
+                  drawRoleLabel(
+                    responsible.role
+                  )
+                )}
+
+              </div>
+
+
+              <div>
+
+                <b>
+                  CICLO ANTI-REPETIÇÃO:
+                </b>
+
+                ${Number(
+                  draw.cycleRound ||
+                  1
+                )}
+
+              </div>
+
+
+              <div>
+
+                <b>
+                  POOL DISPONÍVEL:
+                </b>
+
+                ${Number(
+                  draw.antiRepeatPool ||
+                  0
+                )}
+
+              </div>
+
+
+              <div>
+
+                <b>
+                  MÉTODO ALEATÓRIO:
+                </b>
+
+                Web Crypto API
+
+              </div>
+
+            `
+
+            : ''
+        }
+
+      </div>
+
+    </div>
+
+
+    ${
+      finished &&
+      winners.length
+
+        ? `
+
+          <div
+            style="
+              margin-top:12px;
+              padding:14px;
+              border-radius:10px;
+              background:
+                rgba(46,204,113,.10);
+              border:
+                1px solid
+                rgba(46,204,113,.20);
+            "
+          >
+
+            <div
+              class="eyebrow"
+              style="
+                color:#2ecc71;
+              "
+            >
+
+              🏆 RESULTADO OFICIAL
+
+            </div>
+
+
+            ${
+              winners
+                .map(
+                  (
+                    winner,
+                    index
+                  ) => `
+
+                    <div
+                      style="
+                        margin-top:8px;
+                        font-size:14px;
+                        font-weight:900;
+                      "
+                    >
+
+                      ${index + 1}º
+
+                      ${esc(
+                        winner.name ||
+                        'ATLETA'
+                      )}
+
+                    </div>
+
+                  `
+                )
+                .join('')
+            }
+
+          </div>
+
+        `
+
+        : ''
+    }
+
+
+    ${
+      finished &&
+      draw.auditHash
+
+        ? `
+
+          <div
+            style="
+              margin-top:12px;
+              padding:12px;
+              border-radius:10px;
+              background:
+                rgba(255,255,255,.04);
+              border:
+                1px solid
+                rgba(255,255,255,.10);
+            "
+          >
+
+            <div
+              class="eyebrow"
+            >
+
+              CÓDIGO DE INTEGRIDADE
+
+            </div>
+
+
+            <div
+              style="
+                margin-top:7px;
+                font-family:monospace;
+                font-size:9px;
+                line-height:1.6;
+                word-break:break-all;
+                color:var(--muted);
+              "
+            >
+
+              ${esc(
+                draw.auditHash
+              )}
+
+            </div>
+
+
+            <p
+              style="
+                margin-top:8px;
+                font-size:9px;
+                color:var(--muted);
+              "
+            >
+
+              SHA-256 gerado no momento
+              da realização do sorteio.
+
+            </p>
+
+          </div>
+
+        `
+
+        : ''
+    }
+
+
+    <button
+      class="secondary-btn"
+      style="
+        width:100%;
+        margin-top:12px;
+      "
+      onclick="
+        Club.showDrawParticipants(
+          '${esc(draw.id)}'
+        )
+      "
+    >
+
+      <i class="fa-solid fa-users"></i>
+
+      VER PARTICIPANTES
+
+    </button>
+
+  `);
+}
+
+
+
+// ----------------------------------------------------------
+// MOSTRAR PARTICIPANTES
+// ----------------------------------------------------------
+
+function showDrawParticipants(
+  drawId
+) {
+
+  const draw =
+    club.draws?.[
+      drawId
+    ];
+
+
+  if (!draw) {
+
+    toast(
+      'SORTEIO NÃO ENCONTRADO'
+    );
+
+    return;
+  }
+
+
+  const finished =
+    String(
+      draw.status ||
+      ''
+    )
+      .toUpperCase() ===
+      'DRAWN';
+
+
+  let participants;
+
+
+  if (
+    finished &&
+    draw.participants
+  ) {
+
+    // Depois do sorteio:
+    // usa obrigatoriamente a lista congelada.
+
+    participants =
+      objValues(
+        draw.participants
+      );
+
+  } else {
+
+    // Antes:
+    // mostra a lista elegível neste momento.
+
+    participants =
+      getDrawEligibleUsers(
+        draw.filterType,
+        draw.eventId
+      )
+        .map(
+          drawPublicParticipant
+        );
+  }
+
+
+    participants =
+    participants
+      .filter(Boolean)
+      .sort(
+        (
+          a,
+          b
+        ) =>
+
+          String(
+            a.name ||
+            a.nome ||
+            ''
+          )
+            .localeCompare(
+              String(
+                b.name ||
+                b.nome ||
+                ''
+              ),
+              'pt-BR'
+            )
+      );
+
+
+  openModal(`
+
+    <div class="eyebrow">
+
+      ${
+        finished
+          ? 'LISTA OFICIAL'
+          : 'LISTA ATUAL'
+      }
+
+    </div>
+
+
+    <h2>
+
+      Participantes
+
+    </h2>
+
+
+    <p
+      style="
+        font-size:11px;
+        color:var(--muted);
+        margin-bottom:12px;
+      "
+    >
+
+      ${participants.length}
+      atleta(s)
+
+      ${
+        finished
+          ? 'na lista congelada deste sorteio.'
+          : 'elegível(is) neste momento.'
+      }
+
+    </p>
+
+
+    ${
+      !finished
+
+        ? `
+
+          <div
+            style="
+              padding:8px;
+              margin-bottom:10px;
+              border-radius:8px;
+              background:
+                rgba(255,193,7,.08);
+              font-size:9px;
+            "
+          >
+
+            A lista definitiva
+            será congelada
+            somente quando
+            o sorteio for realizado.
+
+          </div>
+
+        `
+
+        : ''
+    }
+
+
+    <div
+      style="
+        max-height:55vh;
+        overflow:auto;
+      "
+    >
+
+      ${
+        participants.length
+
+          ? participants
+              .map(
+                (
+                  participant,
+                  index
+                ) => `
+
+                  <div
+                    style="
+                      display:flex;
+                      align-items:center;
+                      gap:10px;
+                      padding:10px 4px;
+                      border-bottom:
+                        1px solid
+                        rgba(255,255,255,.08);
+                    "
+                  >
+
+                    <div
+                      style="
+                        width:28px;
+                        height:28px;
+                        border-radius:50%;
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        background:
+                          rgba(255,255,255,.08);
+                        font-size:10px;
+                        font-weight:900;
+                        flex-shrink:0;
+                      "
+                    >
+
+                      ${index + 1}
+
+                    </div>
+
+
+                    <div
+                      style="
+                        flex:1;
+                        min-width:0;
+                      "
+                    >
+
+                      <div
+                        style="
+                          font-size:11px;
+                          font-weight:900;
+                        "
+                      >
+
+                        ${esc(
+                          participant.name ||
+                          participant.nome ||
+                          'ATLETA'
+                        )}
+
+                      </div>
+
+
+                      <div
+                        style="
+                          font-size:9px;
+                          color:var(--muted);
+                        "
+                      >
+
+                        ${esc(
+                          participant.city ||
+                          ''
+                        )}
+
+                        ${
+                          participant.uf
+                            ? ` - ${esc(participant.uf)}`
+                            : ''
+                        }
+
+                        ${
+                          participant.category
+                            ? ` • ${esc(participant.category)}`
+                            : ''
+                        }
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                `
+              )
+              .join('')
+
+          : `
+
+            <div class="empty">
+
+              Nenhum atleta elegível.
+
+            </div>
+
+          `
+      }
+
+
+    </div>
+
+  `);
+}
+  
 // ==========================================================
 // BENEFÍCIOS
 // ==========================================================
@@ -18921,6 +23098,22 @@ window.Club = {
   startMemoryGame,
 
   flipMemoryCard,
+
+  openNewDraw,
+
+changeDrawFilter,
+
+updateDrawPreview,
+
+createDraw,
+
+  confirmDraw,
+
+performDraw,
+
+showDrawDetails,
+
+showDrawParticipants,
 
   closeModal,
 
