@@ -129,7 +129,7 @@ const MEMORY_BIKES = [
     brand: 'TREK',
     model: 'SESSION',
     accent: '#76e9aa',
-    image: 'bikes/trek-session.png'
+    image: 'bikes/trek-session.webp'
   },
 
   {
@@ -153,7 +153,7 @@ const MEMORY_BIKES = [
     brand: 'SPECIALIZED',
     model: 'DEMO RACE',
     accent: '#ff7f7f',
-    image: 'bikes/specialized-demo.png'
+    image: 'bikes/specialized-demo.webp'
   },
 
   {
@@ -193,7 +193,7 @@ const MEMORY_BIKES = [
     brand: 'GIANT',
     model: 'GLORY ADVANCED',
     accent: '#ffb703',
-    image: 'bikes/giant-glory.webp'
+    image: 'bikes/giant-glory.png'
   },
 
   {
@@ -241,7 +241,7 @@ const MEMORY_BIKES = [
     brand: 'NUKEPROOF',
     model: 'DISSENT',
     accent: '#a0c4ff',
-    image: 'bikes/nukeproof-dissent.webp'
+    image: 'bikes/nukeproof-dissent.png'
   },
 
   {
@@ -249,7 +249,7 @@ const MEMORY_BIKES = [
     brand: 'INTENSE',
     model: 'M29',
     accent: '#f1c0e8',
-    image: 'bikes/intense-m29.webp'
+    image: 'bikes/intense-m29.png'
   },
 
   {
