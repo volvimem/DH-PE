@@ -10455,6 +10455,636 @@ function x1Card(d) {
 }
 
 
+  // ==========================================================
+// SORTEIOS — MOTOR DE ELEGIBILIDADE E ALEATORIEDADE
+// ==========================================================
+
+
+// ----------------------------------------------------------
+// VERIFICA SE A CARTEIRA DIGITAL ESTÁ ATIVA
+// Usa a mesma regra do sistema principal DH-PE
+// ----------------------------------------------------------
+
+function drawHasActiveDigitalCard(
+  user
+) {
+
+  if (!user) {
+    return false;
+  }
+
+
+  // Liberação global para o ano atual
+
+  if (
+    Number(
+      core.config?.allowAllIDsYear
+    ) ===
+    Number(
+      SYSTEM_YEAR
+    )
+  ) {
+
+    return true;
+  }
+
+
+  // Compatibilidade com 2026
+
+  if (
+    SYSTEM_YEAR === 2026 &&
+    core.config?.allowAllIDs === true
+  ) {
+
+    return true;
+  }
+
+
+  // Carteira individual liberada
+  // no ano atual
+
+  if (
+    Number(
+      user.cardReleasedYear
+    ) ===
+    Number(
+      SYSTEM_YEAR
+    )
+  ) {
+
+    return true;
+  }
+
+
+  // Compatibilidade com atletas
+  // já liberados em 2026
+
+  if (
+    SYSTEM_YEAR === 2026 &&
+    user.idReleased === true
+  ) {
+
+    return true;
+  }
+
+
+  return false;
+}
+
+
+
+// ----------------------------------------------------------
+// VERIFICA SE O ATLETA É MEMBRO ATIVO DO DH-CLUB
+// ----------------------------------------------------------
+
+function drawIsClubMember(
+  user
+) {
+
+  if (!user) {
+    return false;
+  }
+
+
+  const cpf =
+    cleanCPF(
+      user.cpf
+    );
+
+
+  const member =
+    club.members?.[
+      cpf
+    ];
+
+
+  if (!member) {
+    return false;
+  }
+
+
+  const status =
+    String(
+      member.status ||
+      ''
+    )
+      .toUpperCase();
+
+
+  return [
+    'BETA',
+    'ACTIVE',
+    'FOUNDER'
+  ].includes(
+    status
+  );
+}
+
+
+
+// ----------------------------------------------------------
+// VERIFICA INSCRIÇÃO VÁLIDA EM UM EVENTO
+// CONFIRMADO OU ISENTO
+// ----------------------------------------------------------
+
+function drawIsRegisteredInEvent(
+  user,
+  eventId
+) {
+
+  if (
+    !user ||
+    !eventId
+  ) {
+
+    return false;
+  }
+
+
+  const registrations =
+    objValues(
+      user.inscricoes
+    );
+
+
+  return registrations.some(
+    registration => {
+
+      if (
+        String(
+          registration.id
+        ) !==
+        String(
+          eventId
+        )
+      ) {
+
+        return false;
+      }
+
+
+      const status =
+        String(
+          registration.status ||
+          ''
+        )
+          .toUpperCase();
+
+
+      return (
+        status ===
+          'CONFIRMADO' ||
+
+        status ===
+          'ISENTO'
+      );
+    }
+  );
+}
+
+
+
+// ----------------------------------------------------------
+// REMOVE CPFs DUPLICADOS
+// ----------------------------------------------------------
+
+function drawUniqueUsers(
+  users
+) {
+
+  const map =
+    new Map();
+
+
+  users.forEach(
+    user => {
+
+      const cpf =
+        cleanCPF(
+          user?.cpf
+        );
+
+
+      if (!cpf) {
+        return;
+      }
+
+
+      if (
+        !map.has(
+          cpf
+        )
+      ) {
+
+        map.set(
+          cpf,
+          user
+        );
+      }
+    }
+  );
+
+
+  return Array.from(
+    map.values()
+  );
+}
+
+
+
+// ----------------------------------------------------------
+// MONTA A LISTA DE ATLETAS ELEGÍVEIS
+//
+// TIPOS:
+// ALL_APP
+// DIGITAL_CARD
+// DH_CLUB
+// EVENT
+// ----------------------------------------------------------
+
+function getDrawEligibleUsers(
+  filterType,
+  eventId = null
+) {
+
+  const type =
+    String(
+      filterType ||
+      ''
+    )
+      .toUpperCase();
+
+
+  // --------------------------------------------------------
+  // PROTEÇÃO DO ORGANIZADOR
+  // --------------------------------------------------------
+
+  if (
+    isOrganizer(
+      loggedUser
+    )
+  ) {
+
+    // Organizador só pode criar
+    // sorteio vinculado a evento
+
+    if (
+      type !==
+      'EVENT'
+    ) {
+
+      return [];
+    }
+
+
+    // E somente evento autorizado
+
+    if (
+      !organizerCanManageEvent(
+        loggedUser,
+        eventId
+      )
+    ) {
+
+      return [];
+    }
+  }
+
+
+  let eligible =
+    core.users
+      .filter(
+        user =>
+          user &&
+          cleanCPF(
+            user.cpf
+          )
+      );
+
+
+  // --------------------------------------------------------
+  // TODOS OS ATLETAS DO APP
+  // --------------------------------------------------------
+
+  if (
+    type ===
+    'ALL_APP'
+  ) {
+
+    eligible =
+      eligible.slice();
+  }
+
+
+  // --------------------------------------------------------
+  // CARTEIRA DIGITAL ATIVA
+  // --------------------------------------------------------
+
+  else if (
+    type ===
+    'DIGITAL_CARD'
+  ) {
+
+    eligible =
+      eligible.filter(
+        user =>
+          drawHasActiveDigitalCard(
+            user
+          )
+      );
+  }
+
+
+  // --------------------------------------------------------
+  // MEMBROS DO DH-CLUB
+  // --------------------------------------------------------
+
+  else if (
+    type ===
+    'DH_CLUB'
+  ) {
+
+    eligible =
+      eligible.filter(
+        user =>
+          drawIsClubMember(
+            user
+          )
+      );
+  }
+
+
+  // --------------------------------------------------------
+  // INSCRITOS NO EVENTO
+  // --------------------------------------------------------
+
+  else if (
+    type ===
+    'EVENT'
+  ) {
+
+    if (!eventId) {
+      return [];
+    }
+
+
+    eligible =
+      eligible.filter(
+        user =>
+          drawIsRegisteredInEvent(
+            user,
+            eventId
+          )
+      );
+  }
+
+
+  else {
+
+    return [];
+  }
+
+
+  return drawUniqueUsers(
+    eligible
+  );
+}
+
+
+
+// ----------------------------------------------------------
+// CHAVE DO CICLO ANTI-REPETIÇÃO
+// ----------------------------------------------------------
+
+function getDrawCycleKey(
+  filterType,
+  eventId = null
+) {
+
+  const type =
+    String(
+      filterType ||
+      ''
+    )
+      .toUpperCase();
+
+
+  if (
+    type ===
+    'EVENT'
+  ) {
+
+    return (
+      'EVENT_' +
+      String(
+        eventId
+      )
+    );
+  }
+
+
+  return type;
+}
+
+
+
+// ----------------------------------------------------------
+// NÚMERO ALEATÓRIO SEGURO
+//
+// Evita Math.random()
+// Usa crypto.getRandomValues()
+// ----------------------------------------------------------
+
+function secureRandomIndex(
+  max
+) {
+
+  const size =
+    Number(
+      max
+    );
+
+
+  if (
+    !Number.isInteger(
+      size
+    ) ||
+    size <= 0
+  ) {
+
+    throw new Error(
+      'Quantidade inválida para sorteio.'
+    );
+  }
+
+
+  if (
+    !window.crypto ||
+    !window.crypto.getRandomValues
+  ) {
+
+    throw new Error(
+      'Navegador sem suporte ao sorteio seguro.'
+    );
+  }
+
+
+  const range =
+    0x100000000;
+
+
+  const limit =
+    Math.floor(
+      range /
+      size
+    ) *
+    size;
+
+
+  const buffer =
+    new Uint32Array(
+      1
+    );
+
+
+  let number;
+
+
+  do {
+
+    window.crypto
+      .getRandomValues(
+        buffer
+      );
+
+
+    number =
+      buffer[0];
+
+  } while (
+    number >=
+    limit
+  );
+
+
+  return (
+    number %
+    size
+  );
+}
+
+
+
+// ----------------------------------------------------------
+// ESCOLHE VENCEDORES SEM REPETIR
+// DENTRO DO MESMO SORTEIO
+// ----------------------------------------------------------
+
+function securePickWinners(
+  participants,
+  quantity = 1
+) {
+
+  const available =
+    participants.slice();
+
+
+  const winners =
+    [];
+
+
+  const total =
+    Math.min(
+      Math.max(
+        1,
+        Number(
+          quantity
+        ) || 1
+      ),
+      available.length
+    );
+
+
+  while (
+    winners.length <
+    total
+  ) {
+
+    const index =
+      secureRandomIndex(
+        available.length
+      );
+
+
+    const winner =
+      available.splice(
+        index,
+        1
+      )[0];
+
+
+    winners.push(
+      winner
+    );
+  }
+
+
+  return winners;
+}
+
+
+
+// ----------------------------------------------------------
+// LISTA DE EVENTOS QUE O USUÁRIO PODE USAR
+// ----------------------------------------------------------
+
+function getDrawAllowedEvents() {
+
+  // ADMIN vê todos
+
+  if (
+    isAdmin(
+      loggedUser
+    )
+  ) {
+
+    return core.events.slice();
+  }
+
+
+  // ORGANIZADOR vê somente allowedEvts
+
+  if (
+    isOrganizer(
+      loggedUser
+    )
+  ) {
+
+    const allowed =
+      Array.isArray(
+        loggedUser.allowedEvts
+      )
+
+        ? loggedUser.allowedEvts
+            .map(String)
+
+        : [];
+
+
+    return core.events.filter(
+      event =>
+        allowed.includes(
+          String(
+            event.id
+          )
+        )
+    );
+  }
+
+
+  return [];
+}
+
 // ==========================================================
 // BENEFÍCIOS
 // ==========================================================
