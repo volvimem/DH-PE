@@ -76,43 +76,27 @@ let currentView = 'home';
 const MEMORY_LEVELS = {
 
   1: {
-    pairs: 5,
-    cards: 10,
+    pairs: 4,
+    cards: 9,
     colsMobile: 3,
-    colsTablet: 4,
-    colsDesktop: 6
+    colsTablet: 3,
+    colsDesktop: 3
   },
 
   2: {
-    pairs: 10,
-    cards: 20,
-    colsMobile: 4,
-    colsTablet: 6,
-    colsDesktop: 8
+    pairs: 6,
+    cards: 12,
+    colsMobile: 3,
+    colsTablet: 4,
+    colsDesktop: 4
   },
 
   3: {
-    pairs: 15,
-    cards: 30,
-    colsMobile: 5,
-    colsTablet: 7,
-    colsDesktop: 9
-  },
-
-  4: {
-    pairs: 20,
-    cards: 40,
-    colsMobile: 6,
-    colsTablet: 8,
-    colsDesktop: 10
-  },
-
-  5: {
-    pairs: 25,
-    cards: 50,
-    colsMobile: 7,
-    colsTablet: 9,
-    colsDesktop: 12
+    pairs: 10,
+    cards: 20,
+    colsMobile: 4,
+    colsTablet: 5,
+    colsDesktop: 5
   }
 
 };
@@ -680,8 +664,10 @@ function buildMemoryDeck() {
     MEMORY_LEVELS[memoryLevel] ||
     MEMORY_LEVELS[1];
 
+
   const totalPairs =
     levelConfig.pairs;
+
 
   if (
     MEMORY_BIKES.length <
@@ -699,6 +685,7 @@ function buildMemoryDeck() {
     return [];
   }
 
+
   const selectedBikes =
     shuffleMemoryArray(
       MEMORY_BIKES
@@ -707,6 +694,7 @@ function buildMemoryDeck() {
         0,
         totalPairs
       );
+
 
   const cards =
     selectedBikes
@@ -720,6 +708,7 @@ function buildMemoryDeck() {
             model: bike.model,
             accent: bike.accent,
             image: bike.image,
+            bonus: false,
             matched: false
           },
 
@@ -730,16 +719,58 @@ function buildMemoryDeck() {
             model: bike.model,
             accent: bike.accent,
             image: bike.image,
+            bonus: false,
             matched: false
           }
 
         ]
       );
 
+
+  // ========================================================
+  // NÍVEL COM QUANTIDADE ÍMPAR
+  // NÍVEL 1 = 8 CARTAS EM PARES + 1 CARTA BÔNUS
+  // ========================================================
+
+  if (
+    levelConfig.cards % 2 !== 0
+  ) {
+
+    cards.push({
+
+      uid:
+        `bonus-level-${memoryLevel}`,
+
+      pairId:
+        `bonus-level-${memoryLevel}`,
+
+      brand:
+        'DH-CLUB',
+
+      model:
+        'CARTA BÔNUS',
+
+      accent:
+        '#ffdf7a',
+
+      image:
+        '',
+
+      bonus:
+        true,
+
+      matched:
+        false
+
+    });
+  }
+
+
   let shuffled =
     shuffleMemoryArray(
       cards
     );
+
 
   let signature =
     shuffled
@@ -747,6 +778,7 @@ function buildMemoryDeck() {
         card => card.uid
       )
       .join('|');
+
 
   if (
     signature ===
@@ -758,6 +790,7 @@ function buildMemoryDeck() {
         cards
       );
 
+
     signature =
       shuffled
         .map(
@@ -765,6 +798,7 @@ function buildMemoryDeck() {
         )
         .join('|');
   }
+
 
   if (
     signature ===
@@ -775,9 +809,11 @@ function buildMemoryDeck() {
     const firstCard =
       shuffled.shift();
 
+
     shuffled.push(
       firstCard
     );
+
 
     signature =
       shuffled
@@ -787,13 +823,16 @@ function buildMemoryDeck() {
         .join('|');
   }
 
+
   lastMemoryOrderSignature =
     signature;
+
 
   sessionStorage.setItem(
     'dhclub_memory_last_order',
     signature
   );
+
 
   return shuffled;
 }
@@ -829,7 +868,7 @@ const nextLevel =
   Math.max(
     1,
     Math.min(
-      5,
+      3,
       requestedLevel
     )
   );
@@ -929,6 +968,79 @@ function flipMemoryCard(
     startMemoryTimer();
   }
 
+  if (
+  memoryStartedAt === 0
+) {
+
+  memoryStartedAt =
+    Date.now();
+
+  startMemoryTimer();
+}
+
+
+// ========================================================
+// CARTA BÔNUS DO NÍVEL 1
+// ========================================================
+
+if (
+  card.bonus
+) {
+
+  card.matched =
+    true;
+
+
+  memoryMatched +=
+    1;
+
+
+  playMemorySound(
+    'match'
+  );
+
+
+  if (
+    memoryMatched ===
+    memoryDeck.length
+  ) {
+
+    memoryFinishedAt =
+      Date.now();
+
+
+    stopMemoryTimer();
+
+
+    const finalTime =
+      memoryFinishedAt -
+      memoryStartedAt;
+
+
+    handleMemoryLevelCompleted(
+      finalTime,
+      memoryMoves
+    );
+  }
+
+
+  if (
+    currentView === 'games' &&
+    typeof renderGames ===
+      'function'
+  ) {
+
+    renderGames();
+  }
+
+
+  return;
+}
+
+
+memoryFlipped.push(
+  index
+);
 
   memoryFlipped.push(
     index
@@ -1320,11 +1432,11 @@ async function handleMemoryLevelCompleted(
 
 
   // ==========================================
-  // NÍVEIS 1 ATÉ 4
+  // NÍVEIS 1 ATÉ 3
   // ==========================================
 
   if (
-    finishedLevel < 5
+    finishedLevel < 3
   ) {
 
     toast(
@@ -1357,15 +1469,15 @@ async function handleMemoryLevelCompleted(
 
 
   // ==========================================
-  // TERMINOU O NÍVEL 5
+  // TERMINOU O NÍVEL 3
   // ==========================================
 
   toast(
     result.newGlobalRecord
 
-      ? '🏆 NOVO RECORDE! VOCÊ CONCLUIU O NÍVEL 5!'
+      ? '🏆 NOVO RECORDE! VOCÊ CONCLUIU O NÍVEL 3!'
 
-      : '🏆 PARABÉNS! VOCÊ CONCLUIU OS 5 NÍVEIS!'
+      : '🏆 PARABÉNS! VOCÊ CONCLUIU OS 3 NÍVEIS!'
   );
 }
 
@@ -1889,7 +2001,7 @@ const totalCards =
 </h2>
 
 <div class="memory-level-badge">
-  NÍVEL ${memoryLevel} DE 5
+  NÍVEL ${memoryLevel} DE 3
 </div>
 
 
@@ -2222,7 +2334,7 @@ const totalCards =
 
 
             ${
-  memoryLevel < 5
+  memoryLevel < 3
 
     ? `
 
@@ -2264,7 +2376,7 @@ const totalCards =
             font-weight:900;
           "
         >
-          VOCÊ CONCLUIU OS 5 NÍVEIS!
+          VOCÊ CONCLUIU OS 3 NÍVEIS!
         </p>
 
         <button
