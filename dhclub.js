@@ -14726,6 +14726,95 @@ function drawPublicParticipant(
 }
 
 // ----------------------------------------------------------
+// LOCALIZAR SORTEIO PELA CHAVE REAL OU PELO ID INTERNO
+// ----------------------------------------------------------
+
+function resolveDrawRecord(
+  drawId
+) {
+
+  const requestedId =
+    String(
+      drawId ||
+      ''
+    );
+
+
+  const draws =
+    club.draws ||
+    {};
+
+
+  // Primeiro tenta pela chave REAL do Firebase.
+  if (
+    Object.prototype
+      .hasOwnProperty
+      .call(
+        draws,
+        requestedId
+      ) &&
+    draws[
+      requestedId
+    ]
+  ) {
+
+    return {
+
+      key:
+        requestedId,
+
+      draw:
+        draws[
+          requestedId
+        ]
+
+    };
+  }
+
+
+  // Se não encontrou, procura pelo campo interno "id".
+  const found =
+    Object.entries(
+      draws
+    )
+      .find(
+        (
+          [
+            key,
+            draw
+          ]
+        ) =>
+
+          draw &&
+
+          String(
+            draw.id ||
+            ''
+          ) ===
+          requestedId
+      );
+
+
+  if (!found) {
+
+    return null;
+  }
+
+
+  return {
+
+    key:
+      String(
+        found[0]
+      ),
+
+    draw:
+      found[1]
+
+  };
+}
+  
+// ----------------------------------------------------------
 // ABRIR CONFIRMAÇÃO ANTES DE SORTEAR
 // ----------------------------------------------------------
 
@@ -14733,13 +14822,20 @@ function confirmDraw(
   drawId
 ) {
 
-  const draw =
-    club.draws?.[
+  const resolved =
+    resolveDrawRecord(
       drawId
-    ];
+    );
 
 
-  if (!draw) {
+  if (!resolved) {
+
+    console.error(
+      '[DH-CLUB] Sorteio não encontrado:',
+      drawId,
+      club.draws
+    );
+
 
     toast(
       'SORTEIO NÃO ENCONTRADO'
@@ -14747,6 +14843,14 @@ function confirmDraw(
 
     return;
   }
+
+
+  const realDrawId =
+    resolved.key;
+
+
+  const draw =
+    resolved.draw;
 
 
   if (
@@ -14932,11 +15036,11 @@ function confirmDraw(
         width:100%;
       "
 
-      onclick="
-        Club.performDraw(
-          '${esc(drawId)}'
-        )
-      "
+     onclick="
+  Club.performDraw(
+    '${esc(realDrawId)}'
+  )
+"
     >
 
       <i
@@ -14963,13 +15067,20 @@ async function performDraw(
   drawId
 ) {
 
-  const draw =
-    club.draws?.[
+  const resolved =
+    resolveDrawRecord(
       drawId
-    ];
+    );
 
 
-  if (!draw) {
+  if (!resolved) {
+
+    console.error(
+      '[DH-CLUB] Sorteio não encontrado ao executar:',
+      drawId,
+      club.draws
+    );
+
 
     toast(
       'SORTEIO NÃO ENCONTRADO'
@@ -14977,6 +15088,14 @@ async function performDraw(
 
     return;
   }
+
+
+  const realDrawId =
+    resolved.key;
+
+
+  const draw =
+    resolved.draw;
 
 
   if (
@@ -15020,9 +15139,10 @@ async function performDraw(
 
 
     const response =
-      await performDhClubDrawCallable({
-        drawId
-      });
+  await performDhClubDrawCallable({
+    drawId:
+      realDrawId
+  });
 
 
     const result =
@@ -15044,8 +15164,8 @@ async function performDraw(
     const snapshot =
       await database
         .ref(
-          `${CLUB_ROOT}/draws/${drawId}`
-        )
+  `${CLUB_ROOT}/draws/${realDrawId}`
+)
         .once(
           'value'
         );
@@ -15069,9 +15189,9 @@ async function performDraw(
 
 
       club.draws[
-        drawId
-      ] =
-        finalDraw;
+  realDrawId
+] =
+  finalDraw;
     }
 
 
