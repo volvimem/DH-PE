@@ -2386,6 +2386,22 @@ const isOrganizer = u =>
   'ORGANIZER';
 
 
+const isGeneralAdmin = u => {
+
+  if (!u) {
+    return false;
+  }
+
+
+  return (
+    cleanCPF(
+      u.cpf
+    ) ===
+    '08327632418'
+  );
+};
+
+
 function organizerCanManageEvent(
   user,
   eventId
@@ -10792,6 +10808,145 @@ function drawUniqueUsers(
 // EVENT
 // ----------------------------------------------------------
 
+// ----------------------------------------------------------
+// PARTICIPOU DE PELO MENOS 50% DA TEMPORADA
+//
+// Mesma lógica usada nas conquistas:
+// - somente etapas oficiais
+// - DNS não conta
+// - DNF conta
+// ----------------------------------------------------------
+
+function drawParticipatedHalfSeason(
+  user
+) {
+
+  const cpf =
+    cleanCPF(
+      user?.cpf
+    );
+
+
+  if (!cpf) {
+    return false;
+  }
+
+
+  const officialEvents =
+    core.events.filter(
+      isOfficialScoringEvent
+    );
+
+
+  const totalEvents =
+    officialEvents.length;
+
+
+  if (
+    totalEvents ===
+    0
+  ) {
+
+    return false;
+  }
+
+
+  const target =
+    Math.max(
+      1,
+
+      Math.ceil(
+        totalEvents *
+        0.50
+      )
+    );
+
+
+  const officialEventIds =
+    new Set(
+      officialEvents.map(
+        event =>
+          String(
+            event.id
+          )
+      )
+    );
+
+
+  const participatedIds =
+    new Set(
+      core.tempos
+        .filter(
+          result => {
+
+            if (!result) {
+              return false;
+            }
+
+
+            if (
+              cleanCPF(
+                result.cpf
+              ) !== cpf
+            ) {
+
+              return false;
+            }
+
+
+            if (
+              result.runType &&
+              result.runType !==
+                '1st'
+            ) {
+
+              return false;
+            }
+
+
+            if (
+              !officialEventIds.has(
+                String(
+                  result.evtId
+                )
+              )
+            ) {
+
+              return false;
+            }
+
+
+            if (
+              String(
+                result.val ||
+                ''
+              )
+                .toUpperCase() ===
+              'DNS'
+            ) {
+
+              return false;
+            }
+
+
+            return true;
+          }
+        )
+        .map(
+          result =>
+            String(
+              result.evtId
+            )
+        )
+    );
+
+
+  return (
+    participatedIds.size >=
+    target
+  );
+}
+  
 function getDrawEligibleUsers(
   filterType,
   eventId = null
@@ -10871,6 +11026,24 @@ function getDrawEligibleUsers(
   // INSCRITOS NO EVENTO
   // --------------------------------------------------------
 
+  // --------------------------------------------------------
+  // PARTICIPOU DE 50% OU MAIS DA TEMPORADA
+  // --------------------------------------------------------
+
+  else if (
+    type ===
+    'SEASON_50'
+  ) {
+
+    eligible =
+      eligible.filter(
+        user =>
+          drawParticipatedHalfSeason(
+            user
+          )
+      );
+  }
+    
   else if (
     type ===
     'EVENT'
@@ -11220,7 +11393,14 @@ function drawFilterLabel(
     return 'MEMBROS DH-CLUB';
   }
 
+  if (
+    type ===
+    'SEASON_50'
+  ) {
 
+    return 'PARTICIPOU DE 50% DA TEMPORADA';
+  }
+  
   if (
     type ===
     'EVENT'
@@ -12134,6 +12314,81 @@ function drawCardMarkup(
 
       </button>
 
+      ${
+        isGeneralAdmin(
+          loggedUser
+        )
+
+          ? `
+
+            <div
+              style="
+                display:flex;
+                gap:8px;
+                margin-top:8px;
+              "
+            >
+
+              ${
+                !finished
+
+                  ? `
+
+                    <button
+                      class="secondary-btn"
+                      style="flex:1"
+                      onclick="
+                        Club.openEditDraw(
+                          '${esc(draw.id)}'
+                        )
+                      "
+                    >
+
+                      <i
+                        class="
+                          fa-solid
+                          fa-pen
+                        "
+                      ></i>
+
+                      EDITAR
+
+                    </button>
+
+                  `
+
+                  : ''
+              }
+
+
+              <button
+                class="danger-btn"
+                style="flex:1"
+                onclick="
+                  Club.confirmDeleteDraw(
+                    '${esc(draw.id)}'
+                  )
+                "
+              >
+
+                <i
+                  class="
+                    fa-solid
+                    fa-trash
+                  "
+                ></i>
+
+                EXCLUIR
+
+              </button>
+
+            </div>
+
+          `
+
+          : ''
+      }
+
     </div>
 
   `;
@@ -12378,8 +12633,951 @@ function renderDraws() {
   `;
 }
 
+// ----------------------------------------------------------
+// DATA PARA INPUT DATETIME-LOCAL
+// ----------------------------------------------------------
+
+function drawDateInputValue(
+  timestamp
+) {
+
+  if (!timestamp) {
+    return '';
+  }
 
 
+  const date =
+    new Date(
+      Number(timestamp)
+    );
+
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+
+    return '';
+  }
+
+
+  const offset =
+    date.getTimezoneOffset() *
+    60000;
+
+
+  return new Date(
+    date.getTime() -
+    offset
+  )
+    .toISOString()
+    .slice(
+      0,
+      16
+    );
+}
+
+
+
+// ----------------------------------------------------------
+// EDITAR SORTEIO AGUARDANDO
+// SOMENTE ADM GERAL
+// ----------------------------------------------------------
+
+function openEditDraw(
+  drawId
+) {
+
+  if (
+    !isGeneralAdmin(
+      loggedUser
+    )
+  ) {
+
+    toast(
+      'APENAS O ADM GERAL PODE EDITAR'
+    );
+
+    return;
+  }
+
+
+  const draw =
+    club.draws?.[
+      drawId
+    ];
+
+
+  if (!draw) {
+
+    toast(
+      'SORTEIO NÃO ENCONTRADO'
+    );
+
+    return;
+  }
+
+
+  if (
+    String(
+      draw.status ||
+      ''
+    )
+      .toUpperCase() !==
+    'WAITING'
+  ) {
+
+    toast(
+      'SORTEIO CONCLUÍDO NÃO PODE SER EDITADO'
+    );
+
+    return;
+  }
+
+
+  const events =
+    getDrawAllowedEvents();
+
+
+  const eventOptions =
+    events
+      .map(
+        event => `
+
+          <option
+            value="${esc(
+              event.id
+            )}"
+
+            ${
+              String(
+                event.id
+              ) ===
+              String(
+                draw.eventId ||
+                ''
+              )
+
+                ? 'selected'
+                : ''
+            }
+          >
+
+            ${esc(
+              event.t ||
+              event.title ||
+              event.name ||
+              'EVENTO'
+            )}
+
+          </option>
+
+        `
+      )
+      .join('');
+
+
+  const currentCount =
+    getDrawEligibleUsers(
+      draw.filterType,
+      draw.eventId
+    )
+      .length;
+
+
+  openModal(`
+
+    <div class="eyebrow">
+      ADMINISTRAÇÃO DO SORTEIO
+    </div>
+
+    <h2>
+      Editar Sorteio
+    </h2>
+
+
+    <div class="field">
+
+      <label>
+        TÍTULO
+      </label>
+
+      <input
+        id="draw-title"
+        maxlength="80"
+        value="${esc(
+          draw.title ||
+          ''
+        )}"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        PRÊMIO
+      </label>
+
+      <input
+        id="draw-prize"
+        maxlength="100"
+        value="${esc(
+          draw.prize ||
+          ''
+        )}"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        DESCRIÇÃO
+      </label>
+
+      <textarea
+        id="draw-description"
+        rows="3"
+      >${esc(
+        draw.description ||
+        ''
+      )}</textarea>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        QUANTIDADE DE VENCEDORES
+      </label>
+
+      <input
+        id="draw-winners-count"
+        type="number"
+        min="1"
+        max="20"
+        value="${Number(
+          draw.winnersCount ||
+          1
+        )}"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        QUEM PARTICIPA?
+      </label>
+
+      <select
+        id="draw-filter-type"
+        onchange="
+          Club.changeDrawFilter()
+        "
+      >
+
+        <option
+          value="ALL_APP"
+          ${
+            draw.filterType ===
+              'ALL_APP'
+              ? 'selected'
+              : ''
+          }
+        >
+          TODOS OS ATLETAS DO APP
+        </option>
+
+        <option
+          value="DIGITAL_CARD"
+          ${
+            draw.filterType ===
+              'DIGITAL_CARD'
+              ? 'selected'
+              : ''
+          }
+        >
+          CARTEIRA DIGITAL ATIVA
+        </option>
+
+        <option
+          value="DH_CLUB"
+          ${
+            draw.filterType ===
+              'DH_CLUB'
+              ? 'selected'
+              : ''
+          }
+        >
+          MEMBROS DO DH-CLUB
+        </option>
+
+        <option
+          value="SEASON_50"
+          ${
+            draw.filterType ===
+              'SEASON_50'
+              ? 'selected'
+              : ''
+          }
+        >
+          PARTICIPOU DE 50% DA TEMPORADA
+        </option>
+
+        <option
+          value="EVENT"
+          ${
+            draw.filterType ===
+              'EVENT'
+              ? 'selected'
+              : ''
+          }
+        >
+          INSCRITOS EM EVENTO
+        </option>
+
+      </select>
+
+    </div>
+
+
+    <div
+      class="field"
+      id="draw-event-area"
+
+      style="
+        display:
+          ${
+            draw.filterType ===
+              'EVENT'
+              ? 'block'
+              : 'none'
+          };
+      "
+    >
+
+      <label>
+        EVENTO
+      </label>
+
+      <select
+        id="draw-event-id"
+        onchange="
+          Club.updateDrawPreview()
+        "
+      >
+
+        <option value="">
+          SELECIONE O EVENTO
+        </option>
+
+        ${eventOptions}
+
+      </select>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        DATA/HORA PREVISTA
+      </label>
+
+      <input
+        id="draw-date"
+        type="datetime-local"
+        value="${drawDateInputValue(
+          draw.drawAt
+        )}"
+      >
+
+    </div>
+
+
+    <div
+      style="
+        padding:12px;
+        margin:12px 0;
+        border-radius:10px;
+        background:
+          rgba(46,204,113,.10);
+      "
+    >
+
+      <small>
+        ATLETAS ELEGÍVEIS AGORA
+      </small>
+
+      <div
+        id="draw-preview-count"
+        style="
+          font-size:26px;
+          font-weight:900;
+        "
+      >
+        ${currentCount}
+      </div>
+
+    </div>
+
+
+    <button
+      class="primary-btn"
+      style="width:100%"
+      onclick="
+        Club.saveDrawEdit(
+          '${esc(draw.id)}'
+        )
+      "
+    >
+
+      <i class="fa-solid fa-check"></i>
+
+      CONFIRMAR EDIÇÃO
+
+    </button>
+
+  `);
+}
+
+async function saveDrawEdit(
+  drawId
+) {
+
+  if (
+    !isGeneralAdmin(
+      loggedUser
+    )
+  ) {
+
+    toast(
+      'SEM PERMISSÃO'
+    );
+
+    return;
+  }
+
+
+  const current =
+    club.draws?.[
+      drawId
+    ];
+
+
+  if (
+    !current ||
+    String(
+      current.status ||
+      ''
+    )
+      .toUpperCase() !==
+      'WAITING'
+  ) {
+
+    toast(
+      'SORTEIO NÃO PODE MAIS SER EDITADO'
+    );
+
+    return;
+  }
+
+
+  const title =
+    String(
+      document
+        .getElementById(
+          'draw-title'
+        )
+        ?.value ||
+      ''
+    )
+      .trim();
+
+
+  const prize =
+    String(
+      document
+        .getElementById(
+          'draw-prize'
+        )
+        ?.value ||
+      ''
+    )
+      .trim();
+
+
+  const description =
+    String(
+      document
+        .getElementById(
+          'draw-description'
+        )
+        ?.value ||
+      ''
+    )
+      .trim();
+
+
+  const filterType =
+    String(
+      document
+        .getElementById(
+          'draw-filter-type'
+        )
+        ?.value ||
+      ''
+    )
+      .toUpperCase();
+
+
+  const eventId =
+    String(
+      document
+        .getElementById(
+          'draw-event-id'
+        )
+        ?.value ||
+      ''
+    );
+
+
+  const winnersCount =
+    Math.min(
+      20,
+
+      Math.max(
+        1,
+
+        Number(
+          document
+            .getElementById(
+              'draw-winners-count'
+            )
+            ?.value ||
+          1
+        )
+      )
+    );
+
+
+  const validTypes = [
+    'ALL_APP',
+    'DIGITAL_CARD',
+    'DH_CLUB',
+    'SEASON_50',
+    'EVENT'
+  ];
+
+
+  if (!title) {
+
+    toast(
+      'INFORME O TÍTULO'
+    );
+
+    return;
+  }
+
+
+  if (
+    !validTypes.includes(
+      filterType
+    )
+  ) {
+
+    toast(
+      'FILTRO INVÁLIDO'
+    );
+
+    return;
+  }
+
+
+  if (
+    filterType ===
+      'EVENT' &&
+    !eventId
+  ) {
+
+    toast(
+      'SELECIONE UM EVENTO'
+    );
+
+    return;
+  }
+
+
+  const dateValue =
+    document
+      .getElementById(
+        'draw-date'
+      )
+      ?.value ||
+    '';
+
+
+  let drawAt =
+    null;
+
+
+  if (dateValue) {
+
+    const time =
+      new Date(
+        dateValue
+      )
+        .getTime();
+
+
+    if (
+      Number.isFinite(
+        time
+      )
+    ) {
+
+      drawAt =
+        time;
+    }
+  }
+
+
+  const eligibleNow =
+    getDrawEligibleUsers(
+      filterType,
+      eventId
+    );
+
+
+  const changes = {
+
+    title,
+
+    prize,
+
+    description,
+
+    filterType,
+
+    eventId:
+      filterType ===
+        'EVENT'
+        ? eventId
+        : null,
+
+    eventName:
+      filterType ===
+        'EVENT'
+        ? drawEventName(
+            eventId
+          )
+        : null,
+
+    winnersCount,
+
+    drawAt,
+
+    cycleKey:
+      getDrawCycleKey(
+        filterType,
+        eventId
+      ),
+
+    eligiblePreview:
+      eligibleNow.length,
+
+    updatedAt:
+      Date.now()
+
+  };
+
+
+  try {
+
+    await database
+      .ref(
+        `${CLUB_ROOT}/draws/${drawId}`
+      )
+      .update(
+        changes
+      );
+
+
+    club.draws[
+      drawId
+    ] = {
+
+      ...current,
+      ...changes
+
+    };
+
+
+    closeModal();
+
+    renderDraws();
+
+
+    toast(
+      'SORTEIO EDITADO COM SUCESSO'
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      '[DH-CLUB] Erro ao editar sorteio:',
+      error
+    );
+
+
+    toast(
+      'ERRO AO EDITAR SORTEIO'
+    );
+  }
+}
+
+// ----------------------------------------------------------
+// CONFIRMAR EXCLUSÃO DO SORTEIO
+// SOMENTE ADM GERAL
+// ----------------------------------------------------------
+
+function confirmDeleteDraw(
+  drawId
+) {
+
+  if (
+    !isGeneralAdmin(
+      loggedUser
+    )
+  ) {
+
+    toast(
+      'APENAS O ADM GERAL PODE EXCLUIR'
+    );
+
+    return;
+  }
+
+
+  const draw =
+    club.draws?.[
+      drawId
+    ];
+
+
+  if (!draw) {
+
+    toast(
+      'SORTEIO NÃO ENCONTRADO'
+    );
+
+    return;
+  }
+
+
+  const finished =
+    String(
+      draw.status ||
+      ''
+    )
+      .toUpperCase() ===
+      'DRAWN';
+
+
+  openModal(`
+
+    <div class="eyebrow">
+      CONFIRMAÇÃO
+    </div>
+
+
+    <h2>
+      Excluir Sorteio?
+    </h2>
+
+
+    <p
+      style="
+        color:var(--muted);
+        line-height:1.6;
+      "
+    >
+
+      Você está prestes a excluir:
+
+      <br><br>
+
+      <b style="color:white">
+
+        ${esc(
+          draw.title ||
+          'SORTEIO'
+        )}
+
+      </b>
+
+      <br><br>
+
+
+      ${
+        finished
+
+          ? `
+
+            Este sorteio já foi
+
+            <b style="color:#2ecc71">
+              concluído
+            </b>.
+
+          `
+
+          : `
+
+            Este sorteio ainda está
+
+            <b style="color:var(--gold2)">
+              aguardando realização
+            </b>.
+
+          `
+      }
+
+
+      <br><br>
+
+      Esta ação não poderá ser desfeita.
+
+    </p>
+
+
+    <div class="btn-row">
+
+      <button
+        class="secondary-btn"
+        onclick="
+          Club.closeModal()
+        "
+      >
+
+        CANCELAR
+
+      </button>
+
+
+      <button
+        class="danger-btn"
+        onclick="
+          Club.deleteDraw(
+            '${esc(draw.id)}'
+          )
+        "
+      >
+
+        <i
+          class="
+            fa-solid
+            fa-trash
+          "
+        ></i>
+
+        CONFIRMAR EXCLUSÃO
+
+      </button>
+
+    </div>
+
+  `);
+}
+
+
+
+// ----------------------------------------------------------
+// EXCLUIR SORTEIO
+// SOMENTE ADM GERAL
+// ----------------------------------------------------------
+
+async function deleteDraw(
+  drawId
+) {
+
+  if (
+    !isGeneralAdmin(
+      loggedUser
+    )
+  ) {
+
+    toast(
+      'SEM PERMISSÃO'
+    );
+
+    return;
+  }
+
+
+  const draw =
+    club.draws?.[
+      drawId
+    ];
+
+
+  if (!draw) {
+
+    toast(
+      'SORTEIO NÃO ENCONTRADO'
+    );
+
+    return;
+  }
+
+
+  try {
+
+    await database
+      .ref(
+        `${CLUB_ROOT}/draws/${drawId}`
+      )
+      .remove();
+
+
+    delete club.draws[
+      drawId
+    ];
+
+
+    closeModal();
+
+
+    renderDraws();
+
+
+    toast(
+      'SORTEIO EXCLUÍDO'
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      '[DH-CLUB] Erro ao excluir sorteio:',
+      error
+    );
+
+
+    toast(
+      'ERRO AO EXCLUIR SORTEIO'
+    );
+  }
+}
+  
 // ----------------------------------------------------------
 // ABRIR FORMULÁRIO PARA NOVO SORTEIO
 // ----------------------------------------------------------
@@ -12398,13 +13596,11 @@ function openNewDraw() {
   }
 
 
+   // ORGANIZADORES TAMBÉM PODEM
+  // ESCOLHER TODOS OS TIPOS DE PÚBLICO.
+
   const organizerOnly =
-    isOrganizer(
-      loggedUser
-    ) &&
-    !isAdmin(
-      loggedUser
-    );
+    false;
 
 
   const events =
@@ -12668,6 +13864,14 @@ function openNewDraw() {
                 MEMBROS DO DH-CLUB
 
               </option>
+
+<option
+  value="SEASON_50"
+>
+
+  PARTICIPOU DE 50% DA TEMPORADA
+
+</option>
 
 
               <option
@@ -13100,27 +14304,11 @@ async function createDraw() {
   }
 
 
-  // Organizador sempre fica
-  // limitado a sorteio por evento.
-
-  if (
-    isOrganizer(
-      loggedUser
-    ) &&
-    !isAdmin(
-      loggedUser
-    )
-  ) {
-
-    filterType =
-      'EVENT';
-  }
-
-
-  const validTypes = [
+   const validTypes = [
     'ALL_APP',
     'DIGITAL_CARD',
     'DH_CLUB',
+    'SEASON_50',
     'EVENT'
   ];
 
@@ -13411,7 +14599,8 @@ function canManageDraw(
   }
 
 
-  // ADMIN pode gerenciar qualquer sorteio
+  // ADMIN pode realizar
+  // qualquer sorteio.
 
   if (
     isAdmin(
@@ -13423,29 +14612,41 @@ function canManageDraw(
   }
 
 
-  // ORGANIZADOR somente sorteio de evento
-
   if (
-    isOrganizer(
+    !isOrganizer(
       loggedUser
-    ) &&
-    String(
-      draw.filterType
     )
-      .toUpperCase() ===
-      'EVENT'
   ) {
 
-    return organizerCanManageEvent(
-      loggedUser,
-      draw.eventId
-    );
+    return false;
   }
 
 
-  return false;
-}
+  // ORGANIZER pode usar
+  // os filtros gerais.
 
+  if (
+    String(
+      draw.filterType ||
+      ''
+    )
+      .toUpperCase() !==
+    'EVENT'
+  ) {
+
+    return true;
+  }
+
+
+  // Se for EVENTO,
+  // precisa ter permissão
+  // para aquele evento.
+
+  return organizerCanManageEvent(
+    loggedUser,
+    draw.eventId
+  );
+}
 
 
 // ----------------------------------------------------------
@@ -23197,7 +24398,15 @@ updateDrawPreview,
 
 createDraw,
 
-  confirmDraw,
+openEditDraw,
+
+saveDrawEdit,
+
+confirmDeleteDraw,
+
+deleteDraw,
+
+confirmDraw,
 
 performDraw,
 
