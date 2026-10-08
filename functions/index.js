@@ -869,6 +869,192 @@ function sorteioInscritoEvento(
     );
 }
 
+function sorteioTemTabelaPontos(
+    table
+) {
+
+    return (
+        Array.isArray(table) &&
+        table.some(
+            value => {
+
+                const points =
+                    Number(value);
+
+                return (
+                    Number.isFinite(points) &&
+                    points > 0
+                );
+            }
+        )
+    );
+}
+
+
+function sorteioEventoOficial(
+    event
+) {
+
+    if (!event) {
+        return false;
+    }
+
+
+    if (
+        String(
+            event.status || ""
+        )
+            .toUpperCase() ===
+        "CANCELLED"
+    ) {
+
+        return false;
+    }
+
+
+    return (
+        sorteioTemTabelaPontos(
+            event.points
+        ) ||
+        sorteioTemTabelaPontos(
+            event.qPoints
+        )
+    );
+}
+
+
+function sorteioParticipouMetadeTemporada(
+    user,
+    coreRoot
+) {
+
+    const cpf =
+        sorteioCpfLimpo(
+            user?.cpf
+        );
+
+
+    if (!cpf) {
+        return false;
+    }
+
+
+    const officialEvents =
+        transformarEmArray(
+            coreRoot.events
+        )
+            .filter(
+                sorteioEventoOficial
+            );
+
+
+    const totalEvents =
+        officialEvents.length;
+
+
+    if (
+        totalEvents === 0
+    ) {
+
+        return false;
+    }
+
+
+    const target =
+        Math.max(
+            1,
+            Math.ceil(
+                totalEvents * 0.50
+            )
+        );
+
+
+    const officialEventIds =
+        new Set(
+            officialEvents.map(
+                event =>
+                    String(
+                        event.id
+                    )
+            )
+        );
+
+
+    const participatedIds =
+        new Set(
+            transformarEmArray(
+                coreRoot.tempos
+            )
+                .filter(
+                    result => {
+
+                        if (!result) {
+                            return false;
+                        }
+
+
+                        if (
+                            sorteioCpfLimpo(
+                                result.cpf
+                            ) !==
+                            cpf
+                        ) {
+
+                            return false;
+                        }
+
+
+                        if (
+                            result.runType &&
+                            result.runType !==
+                            "1st"
+                        ) {
+
+                            return false;
+                        }
+
+
+                        if (
+                            !officialEventIds.has(
+                                String(
+                                    result.evtId
+                                )
+                            )
+                        ) {
+
+                            return false;
+                        }
+
+
+                        if (
+                            String(
+                                result.val || ""
+                            )
+                                .toUpperCase() ===
+                            "DNS"
+                        ) {
+
+                            return false;
+                        }
+
+
+                        return true;
+                    }
+                )
+                .map(
+                    result =>
+                        String(
+                            result.evtId
+                        )
+                )
+        );
+
+
+    return (
+        participatedIds.size >=
+        target
+    );
+}
 
 function sorteioElegiveis(
     coreRoot,
@@ -925,6 +1111,20 @@ function sorteioElegiveis(
                     )
             );
 
+    } else if (
+        tipo === "SEASON_50"
+    ) {
+
+        users =
+            users.filter(
+                user =>
+                    sorteioParticipouMetadeTemporada(
+                        user,
+                        coreRoot
+                    )
+            );
+
+        
     } else if (
         tipo === "EVENT"
     ) {
@@ -1060,24 +1260,46 @@ function sorteioPodeExecutar(
 
 
     // ======================================================
-    // ORGANIZADOR SÓ PODE FAZER SORTEIO DE EVENTO
+    // ORGANIZADOR PODE USAR OS FILTROS GERAIS
     // ======================================================
 
-    if (
+    const filterType =
         String(
             draw?.filterType || ""
         )
-            .toUpperCase() !==
+            .toUpperCase();
+
+
+    const generalTypes = [
+        "ALL_APP",
+        "DIGITAL_CARD",
+        "DH_CLUB",
+        "SEASON_50"
+    ];
+
+
+    if (
+        generalTypes.includes(
+            filterType
+        )
+    ) {
+
+        return true;
+    }
+
+
+    // ======================================================
+    // EVENTO CONTINUA EXIGINDO PERMISSÃO ESPECÍFICA
+    // ======================================================
+
+    if (
+        filterType !==
         "EVENT"
     ) {
 
         return false;
     }
 
-
-    // ======================================================
-    // CONFERE SE O EVENTO ESTÁ NA LISTA PERMITIDA
-    // ======================================================
 
     const allowed =
         Array.isArray(
