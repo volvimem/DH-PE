@@ -1634,6 +1634,44 @@ exports.performDhClubDraw =
                     DHCLUB_ROOT
                 );
 
+// ======================================================
+// PRÉ-CARREGA O DH-CLUB ANTES DA TRANSAÇÃO
+// ======================================================
+//
+// O Firebase pode chamar a função da transação
+// inicialmente com "current === null", mesmo quando
+// os dados existem no servidor.
+//
+// Por isso carregamos o estado real antes de iniciar
+// a transação.
+
+const initialClubSnap =
+    await clubRef
+        .once(
+            "value"
+        );
+
+
+const initialClubRoot =
+    initialClubSnap.val() ||
+    {};
+
+
+// Confirma antes da transação que o sorteio
+// realmente existe no banco.
+
+if (
+    !initialClubRoot
+        ?.draws
+        ?.[drawId]
+) {
+
+    throw new HttpsError(
+        "not-found",
+        "SORTEIO NÃO ENCONTRADO."
+    );
+}
+            
             let failureCode =
                 null;
 
@@ -1652,8 +1690,15 @@ exports.performDhClubDraw =
                                 null;
 
                             const clubRoot =
-                                current ||
-                                {};
+    current == null
+
+        ? JSON.parse(
+            JSON.stringify(
+                initialClubRoot
+            )
+        )
+
+        : current;
 
                             const draw =
                                 clubRoot
