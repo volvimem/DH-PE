@@ -22847,7 +22847,7 @@ async function init() {
 
       ]),
 
-      10000,
+      30000,
 
       'DATABASE_TIMEOUT'
 
