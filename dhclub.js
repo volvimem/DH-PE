@@ -11850,6 +11850,13 @@ function drawCardMarkup(
   draw
 ) {
 
+  const drawKey =
+    String(
+      draw?._dbKey ||
+      draw?.id ||
+      ''
+    );
+  
   const status =
     String(
       draw?.status ||
@@ -12245,7 +12252,7 @@ function drawCardMarkup(
           "
           onclick="
             Club.showDrawParticipants(
-              '${esc(draw.id)}'
+              '${esc(drawKey)}'
             )
           "
         >
@@ -12426,9 +12433,22 @@ function renderDraws() {
 
 
   const draws =
-    objValues(
-      club.draws
-    )
+    Object
+      .entries(
+        club.draws || {}
+      )
+      .map(
+        ([dbKey, draw]) => ({
+
+          ...(draw || {}),
+
+          _dbKey:
+            String(
+              dbKey
+            )
+
+        })
+      )
       .sort(
         (
           a,
@@ -15633,7 +15653,7 @@ function showDrawDetails(
       "
       onclick="
         Club.showDrawParticipants(
-          '${esc(draw.id)}'
+          '${esc(drawKey)}'
         )
       "
     >
