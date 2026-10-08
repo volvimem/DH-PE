@@ -633,3 +633,1162 @@ exports.sincronizarExclusaoGoogleSheets =
             }
         }
     );
+
+// ==========================================================
+// 4. DH-CLUB — SORTEIO SEGURO NO SERVIDOR
+// ==========================================================
+
+const DHCLUB_ROOT = "dhclub";
+
+function sorteioDbKeyAtual() {
+    const ano = new Date().getFullYear();
+
+    if (ano === 2027) {
+        return "dhpe_2027_active";
+    }
+
+    if (ano >= 2028) {
+        return `dhpe_${ano}_active`;
+    }
+
+    return "dhpe_v25_final_stable_fix";
+}
+
+
+function sorteioCpfLimpo(valor) {
+    return String(valor || "")
+        .replace(/\D/g, "");
+}
+
+
+function sorteioCpfDoAuth(request) {
+
+    if (!request.auth) {
+        throw new HttpsError(
+            "unauthenticated",
+            "É NECESSÁRIO ESTAR AUTENTICADO."
+        );
+    }
+
+    const email = String(
+        request.auth.token?.email || ""
+    )
+        .trim()
+        .toLowerCase();
+
+    const match =
+        email.match(
+            /^(\d{11})@dhpe\.com\.br$/
+        );
+
+    if (!match) {
+        throw new HttpsError(
+            "permission-denied",
+            "CONTA FIREBASE NÃO VINCULADA AO DH-PE."
+        );
+    }
+
+    return match[1];
+}
+
+
+function sorteioParticipantId(cpf) {
+
+    const clean =
+        sorteioCpfLimpo(cpf);
+
+    if (!clean) {
+        return "";
+    }
+
+    return crypto
+        .createHash("sha256")
+        .update(
+            "DHCLUB-RAFFLE-ID-V1|" +
+            clean
+        )
+        .digest("hex");
+}
+
+
+function sorteioCycleKey(
+    filterType,
+    eventId = null
+) {
+
+    const type =
+        String(
+            filterType || ""
+        )
+            .toUpperCase();
+
+    if (type === "EVENT") {
+        return (
+            "EVENT_" +
+            String(eventId || "")
+        );
+    }
+
+    return type;
+}
+
+
+function sorteioSafeCycleKey(value) {
+
+    return String(
+        value || "GERAL"
+    )
+        .replace(
+            /[.#$[\]\/]/g,
+            "_"
+        );
+}
+
+
+function sorteioCarteiraAtiva(
+    user,
+    config,
+    ano
+) {
+
+    if (!user) {
+        return false;
+    }
+
+    if (
+        Number(
+            config?.allowAllIDsYear
+        ) ===
+        Number(ano)
+    ) {
+        return true;
+    }
+
+    if (
+        ano === 2026 &&
+        config?.allowAllIDs === true
+    ) {
+        return true;
+    }
+
+    if (
+        Number(
+            user.cardReleasedYear
+        ) ===
+        Number(ano)
+    ) {
+        return true;
+    }
+
+    if (
+        ano === 2026 &&
+        user.idReleased === true
+    ) {
+        return true;
+    }
+
+    return false;
+}
+
+
+function sorteioMembroClub(
+    user,
+    clubRoot
+) {
+
+    const cpf =
+        sorteioCpfLimpo(
+            user?.cpf
+        );
+
+    if (!cpf) {
+        return false;
+    }
+
+    const member =
+        clubRoot?.members?.[cpf];
+
+    if (!member) {
+        return false;
+    }
+
+    const status =
+        String(
+            member.status || ""
+        )
+            .toUpperCase();
+
+    return [
+        "BETA",
+        "ACTIVE",
+        "FOUNDER"
+    ].includes(status);
+}
+
+
+function sorteioInscritoEvento(
+    user,
+    eventId
+) {
+
+    if (
+        !user ||
+        !eventId
+    ) {
+        return false;
+    }
+
+    const inscricoes =
+        transformarEmArray(
+            user.inscricoes
+        );
+
+    return inscricoes.some(
+        inscricao => {
+
+            if (
+                String(
+                    inscricao?.id
+                ) !==
+                String(eventId)
+            ) {
+                return false;
+            }
+
+            const status =
+                String(
+                    inscricao?.status || ""
+                )
+                    .toUpperCase();
+
+            return (
+                status === "CONFIRMADO" ||
+                status === "ISENTO"
+            );
+        }
+    );
+}
+
+
+function sorteioElegiveis(
+    coreRoot,
+    clubRoot,
+    filterType,
+    eventId
+) {
+
+    const tipo =
+        String(
+            filterType || ""
+        )
+            .toUpperCase();
+
+    const ano =
+        new Date()
+            .getFullYear();
+
+    let users =
+        transformarEmArray(
+            coreRoot.users
+        )
+            .filter(
+                user =>
+                    sorteioCpfLimpo(
+                        user?.cpf
+                    )
+            );
+
+    if (
+        tipo === "DIGITAL_CARD"
+    ) {
+
+        users =
+            users.filter(
+                user =>
+                    sorteioCarteiraAtiva(
+                        user,
+                        coreRoot.config,
+                        ano
+                    )
+            );
+
+    } else if (
+        tipo === "DH_CLUB"
+    ) {
+
+        users =
+            users.filter(
+                user =>
+                    sorteioMembroClub(
+                        user,
+                        clubRoot
+                    )
+            );
+
+    } else if (
+        tipo === "EVENT"
+    ) {
+
+        if (!eventId) {
+            return [];
+        }
+
+        users =
+            users.filter(
+                user =>
+                    sorteioInscritoEvento(
+                        user,
+                        eventId
+                    )
+            );
+
+    } else if (
+        tipo !== "ALL_APP"
+    ) {
+
+        return [];
+    }
+
+    const mapa =
+        new Map();
+
+    users.forEach(
+        user => {
+
+            const cpf =
+                sorteioCpfLimpo(
+                    user?.cpf
+                );
+
+            if (
+                cpf &&
+                !mapa.has(cpf)
+            ) {
+                mapa.set(
+                    cpf,
+                    user
+                );
+            }
+        }
+    );
+
+    return Array.from(
+        mapa.values()
+    );
+}
+
+
+function sorteioParticipantePublico(
+    user
+) {
+
+    const cpf =
+        sorteioCpfLimpo(
+            user?.cpf
+        );
+
+    return {
+        participantId:
+            sorteioParticipantId(cpf),
+
+        name:
+            user?.nome ||
+            user?.name ||
+            "ATLETA",
+
+        city:
+            user?.city || "",
+
+        uf:
+            user?.uf || "PE",
+
+        category:
+            user?.cat ||
+            user?.category ||
+            ""
+    };
+}
+
+
+function sorteioPodeExecutar(
+    caller,
+    draw
+) {
+
+    if (!caller) {
+        return false;
+    }
+
+
+    const role =
+        String(
+            caller?.role || ""
+        )
+            .toUpperCase();
+
+
+    const callerCpf =
+        sorteioCpfLimpo(
+            caller?.cpf
+        );
+
+
+    // ======================================================
+    // ADMIN CADASTRADO
+    // OU ADMINISTRADOR GERAL DO SISTEMA
+    // ======================================================
+
+    if (
+        role === "ADMIN" ||
+        callerCpf === "08327632418"
+    ) {
+
+        return true;
+    }
+
+
+    // ======================================================
+    // SOMENTE ORGANIZADOR CONTINUA DAQUI
+    // ======================================================
+
+    if (
+        role !== "ORGANIZER"
+    ) {
+
+        return false;
+    }
+
+
+    // ======================================================
+    // ORGANIZADOR SÓ PODE FAZER SORTEIO DE EVENTO
+    // ======================================================
+
+    if (
+        String(
+            draw?.filterType || ""
+        )
+            .toUpperCase() !==
+        "EVENT"
+    ) {
+
+        return false;
+    }
+
+
+    // ======================================================
+    // CONFERE SE O EVENTO ESTÁ NA LISTA PERMITIDA
+    // ======================================================
+
+    const allowed =
+        Array.isArray(
+            caller.allowedEvts
+        )
+
+            ? caller.allowedEvts
+                .map(
+                    String
+                )
+
+            : [];
+
+
+    return allowed.includes(
+        String(
+            draw.eventId
+        )
+    );
+}
+
+
+function sorteioEscolher(
+    participants,
+    quantidade
+) {
+
+    const disponiveis =
+        participants.slice();
+
+    const winners = [];
+
+    while (
+        winners.length <
+        quantidade
+    ) {
+
+        const index =
+            crypto.randomInt(
+                disponiveis.length
+            );
+
+        winners.push(
+            disponiveis.splice(
+                index,
+                1
+            )[0]
+        );
+    }
+
+    return winners;
+}
+
+
+function sorteioAuditHash(
+    draw,
+    participants,
+    winners,
+    drawnAt,
+    cycleRound
+) {
+
+    const payload = {
+
+        version:
+            3,
+
+        drawId:
+            String(
+                draw?.id || ""
+            ),
+
+        publicId:
+            String(
+                draw?.publicId || ""
+            ),
+
+        filterType:
+            String(
+                draw?.filterType || ""
+            ),
+
+        eventId:
+            draw?.eventId || null,
+
+        participants:
+            participants
+                .map(
+                    item =>
+                        String(
+                            item.participantId ||
+                            ""
+                        )
+                )
+                .filter(Boolean)
+                .sort(),
+
+        winners:
+            winners
+                .map(
+                    item =>
+                        String(
+                            item.participantId ||
+                            ""
+                        )
+                ),
+
+        drawnAt:
+            Number(
+                drawnAt || 0
+            ),
+
+        cycleRound:
+            Number(
+                cycleRound || 1
+            )
+    };
+
+    return crypto
+        .createHash("sha256")
+        .update(
+            JSON.stringify(
+                payload
+            )
+        )
+        .digest("hex");
+}
+
+
+exports.performDhClubDraw =
+    onCall(
+        {
+            region:
+                "us-central1",
+
+            timeoutSeconds:
+                30,
+
+            memory:
+                "256MiB"
+        },
+
+        async request => {
+
+            const callerCpf =
+                sorteioCpfDoAuth(
+                    request
+                );
+
+            const drawId =
+                String(
+                    request.data?.drawId ||
+                    ""
+                )
+                    .trim();
+
+            if (!drawId) {
+
+                throw new HttpsError(
+                    "invalid-argument",
+                    "ID DO SORTEIO NÃO INFORMADO."
+                );
+            }
+
+            const database =
+                getDatabase();
+
+            const dbKey =
+                sorteioDbKeyAtual();
+
+            const coreSnap =
+                await database
+                    .ref(dbKey)
+                    .once("value");
+
+            const coreRoot =
+                coreSnap.val() ||
+                {};
+
+            const caller =
+                transformarEmArray(
+                    coreRoot.users
+                )
+                    .find(
+                        user =>
+                            sorteioCpfLimpo(
+                                user?.cpf
+                            ) ===
+                            callerCpf
+                    );
+
+            if (!caller) {
+
+                throw new HttpsError(
+                    "permission-denied",
+                    "USUÁRIO NÃO ENCONTRADO NO DH-PE."
+                );
+            }
+
+            const clubRef =
+                database.ref(
+                    DHCLUB_ROOT
+                );
+
+            let failureCode =
+                null;
+
+            let failureMessage =
+                null;
+
+            const result =
+                await clubRef
+                    .transaction(
+                        current => {
+
+                            failureCode =
+                                null;
+
+                            failureMessage =
+                                null;
+
+                            const clubRoot =
+                                current ||
+                                {};
+
+                            const draw =
+                                clubRoot
+                                    ?.draws
+                                    ?.[drawId];
+
+                            if (!draw) {
+
+                                failureCode =
+                                    "not-found";
+
+                                failureMessage =
+                                    "SORTEIO NÃO ENCONTRADO.";
+
+                                return;
+                            }
+
+                            if (
+                                String(
+                                    draw.status ||
+                                    ""
+                                )
+                                    .toUpperCase() !==
+                                "WAITING"
+                            ) {
+
+                                failureCode =
+                                    "failed-precondition";
+
+                                failureMessage =
+                                    "ESTE SORTEIO JÁ FOI REALIZADO OU ESTÁ INDISPONÍVEL.";
+
+                                return;
+                            }
+
+                            if (
+                                !sorteioPodeExecutar(
+                                    caller,
+                                    draw
+                                )
+                            ) {
+
+                                failureCode =
+                                    "permission-denied";
+
+                                failureMessage =
+                                    "VOCÊ NÃO TEM PERMISSÃO PARA ESTE SORTEIO.";
+
+                                return;
+                            }
+
+                            const eligibleUsers =
+                                sorteioElegiveis(
+                                    coreRoot,
+                                    clubRoot,
+                                    draw.filterType,
+                                    draw.eventId
+                                );
+
+                            const participants =
+                                eligibleUsers
+                                    .map(
+                                        user => ({
+
+                                            _cpf:
+                                                sorteioCpfLimpo(
+                                                    user.cpf
+                                                ),
+
+                                            ...sorteioParticipantePublico(
+                                                user
+                                            )
+                                        })
+                                    )
+                                    .filter(
+                                        item =>
+                                            item._cpf &&
+                                            item.participantId
+                                    )
+                                    .sort(
+                                        (
+                                            a,
+                                            b
+                                        ) =>
+                                            String(
+                                                a.participantId
+                                            )
+                                                .localeCompare(
+                                                    String(
+                                                        b.participantId
+                                                    )
+                                                )
+                                    );
+
+                            const winnersCount =
+                                Math.min(
+                                    20,
+
+                                    Math.max(
+                                        1,
+
+                                        Math.trunc(
+                                            Number(
+                                                draw.winnersCount ||
+                                                1
+                                            )
+                                        )
+                                    )
+                                );
+
+                            if (
+                                participants.length <
+                                winnersCount
+                            ) {
+
+                                failureCode =
+                                    "failed-precondition";
+
+                                failureMessage =
+                                    "NÃO HÁ PARTICIPANTES SUFICIENTES.";
+
+                                return;
+                            }
+
+                            const originalCycleKey =
+                                draw.cycleKey ||
+                                sorteioCycleKey(
+                                    draw.filterType,
+                                    draw.eventId
+                                );
+
+                            const cycleKey =
+                                sorteioSafeCycleKey(
+                                    originalCycleKey
+                                );
+
+                            if (
+                                !clubRoot.draw_cycles
+                            ) {
+                                clubRoot.draw_cycles =
+                                    {};
+                            }
+
+                            const cycle =
+                                clubRoot.draw_cycles[
+                                    cycleKey
+                                ] ||
+                                {};
+
+                            let used =
+                                (
+                                    cycle.used &&
+                                    typeof cycle.used ===
+                                        "object"
+                                )
+                                    ? {
+                                        ...cycle.used
+                                    }
+                                    : {};
+
+                            let round =
+                                Math.max(
+                                    1,
+
+                                    Number(
+                                        cycle.round ||
+                                        1
+                                    )
+                                );
+
+                            let cycleReset =
+                                false;
+
+                            participants.forEach(
+                                participant => {
+
+                                    if (
+                                        used[
+                                            participant._cpf
+                                        ]
+                                    ) {
+
+                                        used[
+                                            participant.participantId
+                                        ] =
+                                            true;
+                                    }
+                                }
+                            );
+
+                            Object.keys(
+                                used
+                            )
+                                .forEach(
+                                    key => {
+
+                                        if (
+                                            /^\d{11}$/.test(
+                                                key
+                                            )
+                                        ) {
+
+                                            delete used[
+                                                key
+                                            ];
+                                        }
+                                    }
+                                );
+
+                            let available =
+                                participants
+                                    .filter(
+                                        participant =>
+                                            !used[
+                                                participant.participantId
+                                            ]
+                                    );
+
+                            if (
+                                available.length ===
+                                0
+                            ) {
+
+                                used =
+                                    {};
+
+                                available =
+                                    participants.slice();
+
+                                round++;
+
+                                cycleReset =
+                                    true;
+                            }
+
+                            else if (
+                                available.length <
+                                winnersCount
+                            ) {
+
+                                failureCode =
+                                    "failed-precondition";
+
+                                failureMessage =
+                                    `RESTAM ${available.length} ATLETA(S) NESTE CICLO. ESTE SORTEIO PEDE ${winnersCount} VENCEDOR(ES).`;
+
+                                return;
+                            }
+
+                            const selected =
+                                sorteioEscolher(
+                                    available,
+                                    winnersCount
+                                );
+
+                            const winners =
+                                selected.map(
+                                    (
+                                        participant,
+                                        index
+                                    ) => ({
+
+                                        position:
+                                            index + 1,
+
+                                        participantId:
+                                            participant
+                                                .participantId,
+
+                                        name:
+                                            participant.name,
+
+                                        city:
+                                            participant.city,
+
+                                        uf:
+                                            participant.uf,
+
+                                        category:
+                                            participant.category
+                                    })
+                                );
+
+                            winners.forEach(
+                                winner => {
+
+                                    used[
+                                        winner.participantId
+                                    ] =
+                                        true;
+                                }
+                            );
+
+                            const participantsObject =
+                                {};
+
+                            participants.forEach(
+                                participant => {
+
+                                    participantsObject[
+                                        participant.participantId
+                                    ] = {
+
+                                        participantId:
+                                            participant.participantId,
+
+                                        name:
+                                            participant.name,
+
+                                        city:
+                                            participant.city,
+
+                                        uf:
+                                            participant.uf,
+
+                                        category:
+                                            participant.category
+                                    };
+                                }
+                            );
+
+                            const now =
+                                Date.now();
+
+                            const auditHash =
+                                sorteioAuditHash(
+                                    draw,
+                                    Object.values(
+                                        participantsObject
+                                    ),
+                                    winners,
+                                    now,
+                                    round
+                                );
+
+                            clubRoot.draws[
+                                drawId
+                            ] = {
+
+                                ...draw,
+
+                                status:
+                                    "DRAWN",
+
+                                participants:
+                                    participantsObject,
+
+                                participantCount:
+                                    participants.length,
+
+                                winners,
+
+                                drawnAt:
+                                    now,
+
+                                eligibleBeforeAntiRepeat:
+                                    participants.length,
+
+                                antiRepeatPool:
+                                    available.length,
+
+                                cycleRound:
+                                    round,
+
+                                cycleReset,
+
+                                locked:
+                                    true,
+
+                                auditHash,
+
+                                auditVersion:
+                                    3,
+
+                                randomMethod:
+                                    "NODE_CRYPTO_RANDOM_INT_SERVER",
+
+                                integrityRegistered:
+                                    true,
+
+                                serverExecuted:
+                                    true,
+
+                                executionVersion:
+                                    1,
+
+                                drawnBy: {
+
+                                    participantId:
+                                        sorteioParticipantId(
+                                            callerCpf
+                                        ),
+
+                                    name:
+                                        caller.nome ||
+                                        caller.name ||
+                                        "ORGANIZAÇÃO",
+
+                                    role:
+                                        caller.role ||
+                                        "USER"
+                                }
+                            };
+
+                            clubRoot.draw_cycles[
+                                cycleKey
+                            ] = {
+
+                                key:
+                                    originalCycleKey,
+
+                                round,
+
+                                used,
+
+                                updatedAt:
+                                    now
+                            };
+
+                            return clubRoot;
+                        }
+                    );
+
+            if (
+                !result.committed
+            ) {
+
+                throw new HttpsError(
+                    failureCode ||
+                    "aborted",
+
+                    failureMessage ||
+                    "O SORTEIO NÃO PÔDE SER REALIZADO."
+                );
+            }
+
+            const finalClub =
+                result.snapshot
+                    .val() ||
+                {};
+
+            const finalDraw =
+                finalClub
+                    ?.draws
+                    ?.[drawId];
+
+            if (!finalDraw) {
+
+                throw new HttpsError(
+                    "internal",
+                    "RESULTADO DO SORTEIO NÃO ENCONTRADO."
+                );
+            }
+
+            return {
+
+                ok:
+                    true,
+
+                drawId:
+                    finalDraw.id ||
+                    drawId,
+
+                publicId:
+                    finalDraw.publicId ||
+                    "",
+
+                drawnAt:
+                    finalDraw.drawnAt ||
+                    null,
+
+                participantCount:
+                    finalDraw.participantCount ||
+                    0,
+
+                cycleRound:
+                    finalDraw.cycleRound ||
+                    1,
+
+                auditHash:
+                    finalDraw.auditHash ||
+                    "",
+
+                winners:
+                    transformarEmArray(
+                        finalDraw.winners
+                    )
+            };
+        }
+    );
