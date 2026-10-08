@@ -12433,16 +12433,28 @@ function renderDraws() {
 
 
   const draws =
-    Object
-      .entries(
-        club.draws || {}
-      )
+    Object.entries(
+      club.draws ||
+      {}
+    )
       .map(
-        ([dbKey, draw]) => ({
+        (
+          [
+            dbKey,
+            draw
+          ]
+        ) => ({
 
-          ...(draw || {}),
+          ...(
+            draw ||
+            {}
+          ),
 
-          _dbKey:
+          // IMPORTANTE:
+          // usa como ID a chave REAL
+          // onde o sorteio está salvo
+          // no Firebase.
+          id:
             String(
               dbKey
             )
