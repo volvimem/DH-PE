@@ -1330,27 +1330,93 @@ function sorteioEscolher(
     const disponiveis =
         participants.slice();
 
-    const winners = [];
+
+    const winners =
+        [];
+
+
+    const trace =
+        [];
+
 
     while (
         winners.length <
         quantidade
     ) {
 
-        const index =
+        // Quantos atletas estavam disponíveis
+        // exatamente antes desta escolha.
+        const poolSize =
+            disponiveis.length;
+
+
+        // ESTE É O NÚMERO ALEATÓRIO
+        // REAL GERADO PELO SERVIDOR.
+        const randomIndex =
             crypto.randomInt(
-                disponiveis.length
+                poolSize
             );
 
-        winners.push(
+
+        // Remove exatamente o atleta
+        // correspondente ao índice sorteado.
+        const selected =
             disponiveis.splice(
-                index,
+                randomIndex,
                 1
-            )[0]
+            )[0];
+
+
+        winners.push(
+            selected
         );
+
+
+        // Número público mostrado no replay.
+        //
+        // Internamente:
+        // randomIndex 0 = posição pública 1.
+        //
+        // Exemplo:
+        // índice 73 = número público 000074.
+        const publicNumber =
+            String(
+                randomIndex + 1
+            )
+                .padStart(
+                    6,
+                    "0"
+                );
+
+
+        trace.push({
+
+            position:
+                winners.length,
+
+            poolSize,
+
+            randomIndex,
+
+            publicNumber,
+
+            participantId:
+                String(
+                    selected?.participantId ||
+                    ""
+                )
+
+        });
     }
 
-    return winners;
+
+    return {
+
+        winners,
+
+        trace
+
+    };
 }
 
 
@@ -1358,6 +1424,7 @@ function sorteioAuditHash(
     draw,
     participants,
     winners,
+    selectionTrace,
     drawnAt,
     cycleRound
 ) {
@@ -1365,25 +1432,34 @@ function sorteioAuditHash(
     const payload = {
 
         version:
-            3,
+            4,
+
 
         drawId:
             String(
-                draw?.id || ""
+                draw?.id ||
+                ""
             ),
+
 
         publicId:
             String(
-                draw?.publicId || ""
+                draw?.publicId ||
+                ""
             ),
+
 
         filterType:
             String(
-                draw?.filterType || ""
+                draw?.filterType ||
+                ""
             ),
 
+
         eventId:
-            draw?.eventId || null,
+            draw?.eventId ||
+            null,
+
 
         participants:
             participants
@@ -1394,8 +1470,11 @@ function sorteioAuditHash(
                             ""
                         )
                 )
-                .filter(Boolean)
+                .filter(
+                    Boolean
+                )
                 .sort(),
+
 
         winners:
             winners
@@ -1407,25 +1486,76 @@ function sorteioAuditHash(
                         )
                 ),
 
+
+        selectionTrace:
+            transformarEmArray(
+                selectionTrace
+            )
+                .map(
+                    item => ({
+
+                        position:
+                            Number(
+                                item?.position ||
+                                0
+                            ),
+
+                        poolSize:
+                            Number(
+                                item?.poolSize ||
+                                0
+                            ),
+
+                        randomIndex:
+                            Number(
+                                item?.randomIndex ??
+                                -1
+                            ),
+
+                        publicNumber:
+                            String(
+                                item?.publicNumber ||
+                                ""
+                            ),
+
+                        participantId:
+                            String(
+                                item?.participantId ||
+                                ""
+                            )
+
+                    })
+                ),
+
+
         drawnAt:
             Number(
-                drawnAt || 0
+                drawnAt ||
+                0
             ),
+
 
         cycleRound:
             Number(
-                cycleRound || 1
+                cycleRound ||
+                1
             )
+
     };
 
+
     return crypto
-        .createHash("sha256")
+        .createHash(
+            "sha256"
+        )
         .update(
             JSON.stringify(
                 payload
             )
         )
-        .digest("hex");
+        .digest(
+            "hex"
+        );
 }
 
 
@@ -1773,14 +1903,23 @@ exports.performDhClubDraw =
                                 return;
                             }
 
-                            const selected =
-                                sorteioEscolher(
-                                    available,
-                                    winnersCount
-                                );
+                            const selectionResult =
+    sorteioEscolher(
+        available,
+        winnersCount
+    );
 
-                            const winners =
-                                selected.map(
+
+const selected =
+    selectionResult.winners;
+
+
+const selectionTrace =
+    selectionResult.trace;
+
+
+const winners =
+    selected.map(
                                     (
                                         participant,
                                         index
@@ -1849,15 +1988,21 @@ exports.performDhClubDraw =
                                 Date.now();
 
                             const auditHash =
-                                sorteioAuditHash(
-                                    draw,
-                                    Object.values(
-                                        participantsObject
-                                    ),
-                                    winners,
-                                    now,
-                                    round
-                                );
+    sorteioAuditHash(
+        draw,
+
+        Object.values(
+            participantsObject
+        ),
+
+        winners,
+
+        selectionTrace,
+
+        now,
+
+        round
+    );
 
                             clubRoot.draws[
                                 drawId
@@ -1876,6 +2021,17 @@ exports.performDhClubDraw =
 
                                 winners,
 
+                            selectionTrace,
+
+replayAvailable:
+    true,
+
+replayVersion:
+    1,
+
+replayNumberMode:
+    "SERVER_RANDOM_POOL_POSITION",
+                                
                                 drawnAt:
                                     now,
 
@@ -1896,7 +2052,7 @@ exports.performDhClubDraw =
                                 auditHash,
 
                                 auditVersion:
-                                    3,
+                                    4,
 
                                 randomMethod:
                                     "NODE_CRYPTO_RANDOM_INT_SERVER",
@@ -1908,7 +2064,7 @@ exports.performDhClubDraw =
                                     true,
 
                                 executionVersion:
-                                    1,
+                                    2,
 
                                 drawnBy: {
 
@@ -2008,9 +2164,14 @@ exports.performDhClubDraw =
                     "",
 
                 winners:
-                    transformarEmArray(
-                        finalDraw.winners
-                    )
+    transformarEmArray(
+        finalDraw.winners
+    ),
+
+selectionTrace:
+    transformarEmArray(
+        finalDraw.selectionTrace
+    )
             };
         }
     );
