@@ -2431,25 +2431,63 @@ function memberRecord() {
 
 function hasClubAccess() {
 
- if (
-  isAdmin(loggedUser) ||
-  isOrganizer(loggedUser)
-) {
+  // ========================================================
+  // ACESSO GRATUITO GERAL
+  //
+  // Enquanto MODO BETA estiver ATIVO,
+  // qualquer atleta autenticado no DH-PE
+  // pode entrar no DH-Club.
+  // ========================================================
 
-  return true;
-}
+  if (
+    club.config?.betaMode !== false
+  ) {
 
-  const m = memberRecord();
+    return !!loggedUser;
+  }
 
-  return !!m &&
+
+  // ========================================================
+  // ADMIN E ORGANIZADOR
+  // CONTINUAM COM ACESSO SEMPRE
+  // ========================================================
+
+  if (
+    isAdmin(
+      loggedUser
+    ) ||
+    isOrganizer(
+      loggedUser
+    )
+  ) {
+
+    return true;
+  }
+
+
+  // ========================================================
+  // QUANDO O ACESSO GRATUITO FOR DESATIVADO,
+  // PASSA A EXIGIR MEMBRO LIBERADO.
+  // ========================================================
+
+  const m =
+    memberRecord();
+
+
+  return (
+    !!m &&
     [
       'BETA',
       'ACTIVE',
       'FOUNDER'
     ].includes(
-      String(m.status || '')
+      String(
+        m.status ||
+        ''
+      )
         .toUpperCase()
-    );
+    )
+  );
 }
 
 
@@ -2459,9 +2497,21 @@ function planLabel() {
     return 'ADMIN • BETA';
   }
 
-  const m = memberRecord();
+    const m =
+    memberRecord();
+
+
+  if (
+    !m &&
+    club.config?.betaMode !== false
+  ) {
+
+    return 'ACESSO LIBERADO';
+  }
+
 
   if (!m) {
+
     return 'SEM PLANO';
   }
 
