@@ -40,6 +40,18 @@ if (!firebase.apps.length) {
 const database = firebase.database();
 const auth = firebase.auth();
 
+  const functions =
+  firebase
+    .app()
+    .functions(
+      'us-central1'
+    );
+
+
+const performDhClubDrawCallable =
+  functions.httpsCallable(
+    'performDhClubDraw'
+  );
 
 let loggedUser = null;
 
@@ -14949,714 +14961,85 @@ async function performDraw(
   }
 
 
-  const drawRef =
-    database.ref(
-      `${CLUB_ROOT}/draws/${drawId}`
+  if (
+    String(
+      draw.status ||
+      ''
+    )
+      .toUpperCase() !==
+    'WAITING'
+  ) {
+
+    closeModal();
+
+    toast(
+      'ESTE SORTEIO JÁ FOI INICIADO OU REALIZADO'
     );
 
-
-  const statusRef =
-    drawRef.child(
-      'status'
-    );
+    return;
+  }
 
 
   try {
 
-    // ======================================================
-    // TRAVA O SORTEIO
-    // WAITING -> DRAWING
-    // ======================================================
-
-    const lock =
-      await statusRef
-        .transaction(
-          current => {
-
-            if (
-              String(
-                current ||
-                ''
-              )
-                .toUpperCase() !==
-                'WAITING'
-            ) {
-
-              return;
-            }
-
-
-            return 'DRAWING';
-          }
-        );
-
-
-    if (
-      !lock.committed
-    ) {
-
-      closeModal();
-
-      toast(
-        'ESTE SORTEIO JÁ FOI INICIADO OU REALIZADO'
-      );
-
-      return;
-    }
-
-
-    // ======================================================
-    // PARTICIPANTES ELEGÍVEIS
-    //
-    // CPF existe somente temporariamente na memória.
-    // ======================================================
-
-    const eligibleUsers =
-      getDrawEligibleUsers(
-        draw.filterType,
-        draw.eventId
-      );
-
-
-    const uniqueUsers =
-      drawUniqueUsers(
-        eligibleUsers
-      );
-
-
-    const participants =
-      (
-        await Promise.all(
-
-          uniqueUsers.map(
-            async user => {
-
-              const cpf =
-                cleanCPF(
-                  user?.cpf
-                );
-
-
-              const participantId =
-                await drawOpaqueIdFromCpf(
-                  cpf
-                );
-
-
-              if (
-                !cpf ||
-                !participantId
-              ) {
-
-                return null;
-              }
-
-
-              return {
-
-                participantId,
-
-                // SOMENTE MEMÓRIA.
-                // ESTE CAMPO NÃO SERÁ SALVO.
-                _privateCpf:
-                  cpf,
-
-                ...drawPublicParticipant(
-                  user
-                )
-
-              };
-            }
-          )
-        )
-      )
-        .filter(Boolean)
-        .sort(
-          (
-            a,
-            b
-          ) =>
-
-            String(
-              a.participantId
-            )
-              .localeCompare(
-                String(
-                  b.participantId
-                )
-              )
-        );
-
-
-    const winnersCount =
-      Math.max(
-        1,
-        Number(
-          draw.winnersCount ||
-          1
-        )
-      );
-
-
-    if (
-      participants.length <
-      winnersCount
-    ) {
-
-      await statusRef
-        .set(
-          'WAITING'
-        );
-
-
-      closeModal();
-
-
-      toast(
-        'NÃO HÁ PARTICIPANTES SUFICIENTES'
-      );
-
-
-      return;
-    }
-
-
-    // ======================================================
-    // CICLO ANTI-REPETIÇÃO
-    // ======================================================
-
-    const originalCycleKey =
-      draw.cycleKey ||
-      getDrawCycleKey(
-        draw.filterType,
-        draw.eventId
-      );
-
-
-    const cycleKey =
-      safeDrawCycleKey(
-        originalCycleKey
-      );
-
-
-    const cycle =
-      club.draw_cycles?.[
-        cycleKey
-      ] ||
-      {};
-
-
-    let used =
-      cycle.used &&
-      typeof cycle.used ===
-        'object'
-
-        ? {
-            ...cycle.used
-          }
-
-        : {};
-
-
-    let round =
-      Math.max(
-        1,
-        Number(
-          cycle.round ||
-          1
-        )
-      );
-
-
-    let cycleReset =
-      false;
-
-
-    // ======================================================
-    // MIGRA CICLOS ANTIGOS QUE AINDA USAVAM CPF
-    // ======================================================
-
-    participants.forEach(
-      participant => {
-
-        if (
-          used[
-            participant._privateCpf
-          ]
-        ) {
-
-          used[
-            participant.participantId
-          ] =
-            true;
-        }
-      }
+    toast(
+      'REALIZANDO SORTEIO NO SERVIDOR…'
     );
 
 
-    // Remove chaves antigas que eram CPF
-
-    Object.keys(
-      used
-    )
-      .forEach(
-        key => {
-
-          if (
-            /^\d{11}$/.test(
-              key
-            )
-          ) {
-
-            delete used[
-              key
-            ];
-          }
-        }
-      );
-
-
-    let available =
-      participants.filter(
-        participant =>
-          !used[
-            participant.participantId
-          ]
-      );
-
-
-    // ======================================================
-    // NOVO CICLO QUANDO NECESSÁRIO
-    // ======================================================
-
-        // ======================================================
-    // CASO 1:
-    // TODOS JÁ GANHARAM NESTE CICLO
-    //
-    // Só aqui um novo ciclo pode começar.
-    // ======================================================
-
-    if (
-      available.length ===
-      0
-    ) {
-
-      used =
-        {};
-
-
-      available =
-        participants.slice();
-
-
-      round++;
-
-
-      cycleReset =
-        true;
-    }
-
-
-    // ======================================================
-    // CASO 2:
-    // AINDA EXISTEM ATLETAS SEM GANHAR,
-    // MAS NÃO HÁ QUANTIDADE SUFICIENTE
-    // PARA ESTE SORTEIO.
-    //
-    // NÃO reinicia o ciclo.
-    // NÃO permite repetir vencedor.
-    // ======================================================
-
-    else if (
-      available.length <
-      winnersCount
-    ) {
-
-      await statusRef
-        .set(
-          'WAITING'
-        );
-
-
-      closeModal();
-
-
-      toast(
-        `RESTAM ${available.length} ATLETA(S) NESTE CICLO. ESTE SORTEIO PEDE ${winnersCount} VENCEDOR(ES).`
-      );
-
-
-      return;
-    }
-
-
-    // ======================================================
-    // ESCOLHE VENCEDORES
-    // ======================================================
-
-    const selected =
-      securePickWinners(
-        available,
-        winnersCount
-      );
-
-
-    // ======================================================
-    // VENCEDORES PÚBLICOS
-    //
-    // SEM CPF.
-    // ======================================================
-
-    const winners =
-      selected.map(
-        (
-          participant,
-          index
-        ) => ({
-
-          position:
-            index + 1,
-
-          participantId:
-            participant.participantId,
-
-          name:
-            participant.name,
-
-          city:
-            participant.city,
-
-          uf:
-            participant.uf,
-
-          category:
-            participant.category
-
-        })
-      );
-
-
-    // ======================================================
-    // MARCA VENCEDORES NO CICLO
-    // ======================================================
-
-    winners.forEach(
-      winner => {
-
-        used[
-          winner.participantId
-        ] =
-          true;
-      }
-    );
-
-
-    // ======================================================
-    // CONGELA PARTICIPANTES SEM CPF
-    // ======================================================
-
-    const participantsObject =
-      {};
-
-
-    participants.forEach(
-      participant => {
-
-        participantsObject[
-          participant.participantId
-        ] = {
-
-          participantId:
-            participant.participantId,
-
-          name:
-            participant.name,
-
-          city:
-            participant.city,
-
-          uf:
-            participant.uf,
-
-          category:
-            participant.category
-
-        };
-      }
-    );
-
-
-    const now =
-      Date.now();
-
-
-    // Identificador técnico de quem realizou o sorteio
-
-    const actorId =
-      await drawOpaqueIdFromCpf(
-        loggedUser?.cpf
-      );
-
-
-    // ======================================================
-    // HASH DE AUDITORIA
-    // ======================================================
-
-    const auditHash =
-      await createDrawAuditHash(
-        draw,
-        participants,
-        winners,
-        now,
-        round
-      );
-
-
-    // ======================================================
-    // ATUALIZAÇÃO ATÔMICA
-    // ======================================================
-
-    const updates =
-      {};
-
-
-    updates[
-      `${CLUB_ROOT}/draws/${drawId}/status`
-    ] =
-      'DRAWN';
-
-
-    updates[
-      `${CLUB_ROOT}/draws/${drawId}/participants`
-    ] =
-      participantsObject;
-
-
-    updates[
-      `${CLUB_ROOT}/draws/${drawId}/participantCount`
-    ] =
-      participants.length;
-
-
-    updates[
-      `${CLUB_ROOT}/draws/${drawId}/winners`
-    ] =
-      winners;
-
-
-    updates[
-      `${CLUB_ROOT}/draws/${drawId}/drawnAt`
-    ] =
-      now;
-
-
-    updates[
-      `${CLUB_ROOT}/draws/${drawId}/eligibleBeforeAntiRepeat`
-    ] =
-      participants.length;
-
-
-    updates[
-      `${CLUB_ROOT}/draws/${drawId}/antiRepeatPool`
-    ] =
-      available.length;
-
-
-    updates[
-      `${CLUB_ROOT}/draws/${drawId}/cycleRound`
-    ] =
-      round;
-
-
-    updates[
-      `${CLUB_ROOT}/draws/${drawId}/cycleReset`
-    ] =
-      cycleReset;
-
-
-    updates[
-      `${CLUB_ROOT}/draws/${drawId}/locked`
-    ] =
-      true;
-
-
-    updates[
-      `${CLUB_ROOT}/draws/${drawId}/auditHash`
-    ] =
-      auditHash;
-
-
-    updates[
-      `${CLUB_ROOT}/draws/${drawId}/auditVersion`
-    ] =
-      2;
-
-
-    updates[
-      `${CLUB_ROOT}/draws/${drawId}/randomMethod`
-    ] =
-      'CRYPTO_GET_RANDOM_VALUES';
-
-
-    updates[
-      `${CLUB_ROOT}/draws/${drawId}/integrityRegistered`
-    ] =
-      !!auditHash;
-
-
-    // ======================================================
-    // QUEM REALIZOU
-    //
-    // SEM CPF.
-    // ======================================================
-
-    updates[
-      `${CLUB_ROOT}/draws/${drawId}/drawnBy`
-    ] = {
-
-      participantId:
-        actorId,
-
-      name:
-        loggedUser?.nome ||
-        'ORGANIZAÇÃO',
-
-      role:
-        loggedUser?.role ||
-        'USER'
-
-    };
-
-
-    // ======================================================
-    // CICLO ANTI-REPETIÇÃO
-    //
-    // agora também usa participantId
-    // ======================================================
-
-    updates[
-      `${CLUB_ROOT}/draw_cycles/${cycleKey}`
-    ] = {
-
-      key:
-        originalCycleKey,
-
-      round,
-
-      used,
-
-      updatedAt:
-        now
-
-    };
-
-
-    await database
-      .ref()
-      .update(
-        updates
-      );
-
-
-    // ======================================================
-    // ATUALIZA MEMÓRIA LOCAL
-    // ======================================================
-
-    if (
-      !club.draw_cycles
-    ) {
-
-      club.draw_cycles =
-        {};
-    }
-
-
-    club.draw_cycles[
-      cycleKey
-    ] = {
-
-      key:
-        originalCycleKey,
-
-      round,
-
-      used,
-
-      updatedAt:
-        now
-
-    };
-
-
-    if (
-      club.draws?.[
+    const response =
+      await performDhClubDrawCallable({
         drawId
-      ]
+      });
+
+
+    const result =
+      response?.data ||
+      {};
+
+
+    if (
+      result.ok !==
+      true
     ) {
+
+      throw new Error(
+        'O SERVIDOR NÃO CONFIRMOU O SORTEIO'
+      );
+    }
+
+
+    const snapshot =
+      await database
+        .ref(
+          `${CLUB_ROOT}/draws/${drawId}`
+        )
+        .once(
+          'value'
+        );
+
+
+    const finalDraw =
+      snapshot.val();
+
+
+    if (
+      finalDraw
+    ) {
+
+      if (
+        !club.draws
+      ) {
+
+        club.draws =
+          {};
+      }
+
 
       club.draws[
         drawId
-      ] = {
-
-        ...club.draws[
-          drawId
-        ],
-
-        status:
-          'DRAWN',
-
-        participants:
-          participantsObject,
-
-        participantCount:
-          participants.length,
-
-        winners,
-
-        drawnAt:
-          now,
-
-        eligibleBeforeAntiRepeat:
-          participants.length,
-
-        antiRepeatPool:
-          available.length,
-
-        cycleRound:
-          round,
-
-        cycleReset,
-
-        locked:
-          true,
-
-        auditHash,
-
-        auditVersion:
-          2,
-
-        randomMethod:
-          'CRYPTO_GET_RANDOM_VALUES',
-
-        integrityRegistered:
-          !!auditHash,
-
-        drawnBy: {
-
-          participantId:
-            actorId,
-
-          name:
-            loggedUser?.nome ||
-            'ORGANIZAÇÃO',
-
-          role:
-            loggedUser?.role ||
-            'USER'
-
-        }
-
-      };
+      ] =
+        finalDraw;
     }
 
 
@@ -15667,59 +15050,55 @@ async function performDraw(
 
 
     toast(
-      winners.length > 1
-
-        ? 'SORTEIO REALIZADO! TEMOS VENCEDORES!'
-
-        : 'SORTEIO REALIZADO! TEMOS UM VENCEDOR!'
+      'SORTEIO REALIZADO COM SUCESSO'
     );
 
 
-  } catch (
-    error
-  ) {
+  } catch (error) {
 
     console.error(
-      '[DH-CLUB] Erro ao realizar sorteio:',
+      '[DH-CLUB] Erro ao realizar sorteio no servidor:',
       error
     );
 
 
-    try {
+    let message =
+      String(
+        error?.message ||
+        ''
+      );
 
-      const current =
-        (
-          await statusRef
-            .once(
-              'value'
-            )
+
+    message =
+      message
+        .replace(
+          /^FirebaseError:\s*/i,
+          ''
         )
-          .val();
+        .replace(
+          /^functions\/[a-z-]+:\s*/i,
+          ''
+        )
+        .trim();
 
 
-      if (
-        current ===
-        'DRAWING'
-      ) {
+    if (!message) {
 
-        await statusRef
-          .set(
-            'WAITING'
-          );
-      }
-
-    } catch {}
+      message =
+        'ERRO AO REALIZAR SORTEIO';
+    }
 
 
     closeModal();
 
 
     toast(
-      'ERRO AO REALIZAR SORTEIO'
+      message
     );
   }
 }
-  
+
+
 // ----------------------------------------------------------
 // DETALHES / TRANSPARÊNCIA DO SORTEIO
 // ----------------------------------------------------------
