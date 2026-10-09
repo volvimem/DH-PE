@@ -1820,6 +1820,73 @@ function memoryCardMarkup(
 // JOGOS — TELA PRINCIPAL
 // ==========================================================
 
+// ==========================================================
+// NOME CURTO PARA OS RECORDES
+// ==========================================================
+
+function memoryShortName(
+  fullName
+) {
+
+  const parts =
+    String(
+      fullName ||
+      'ATLETA'
+    )
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+
+  if (
+    parts.length <= 2
+  ) {
+
+    return parts.join(' ');
+  }
+
+
+  const particles =
+    [
+      'DA',
+      'DE',
+      'DO',
+      'DAS',
+      'DOS'
+    ];
+
+
+  const second =
+    String(
+      parts[1] ||
+      ''
+    )
+      .toUpperCase();
+
+
+  if (
+    particles.includes(
+      second
+    )
+  ) {
+
+    return parts
+      .slice(
+        0,
+        3
+      )
+      .join(' ');
+  }
+
+
+  return parts
+    .slice(
+      0,
+      2
+    )
+    .join(' ');
+}
+  
 function renderGames() {
 
   ensureMemoryGameReady();
@@ -2051,12 +2118,12 @@ const totalCards =
 
         <div class="memory-record-owner">
 
-  ${
-    esc(
-      globalRecord.name ||
-      'ATLETA'
-    )
-  }
+  ${esc(
+  memoryShortName(
+    globalRecord.name ||
+    'ATLETA'
+  )
+)}
 
   ${
     globalRecordLocation
