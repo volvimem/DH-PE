@@ -733,8 +733,122 @@ window.enviarNotificacao = function(msg, targetRole, targetCpf, targetEvtId) {
 };
 
 window.obterMinhasNotificacoes = function() {
-    if(!db.notifications) return [];
-    return db.notifications.filter(n => { if (n.deletedBy && n.deletedBy.includes(loggedUser.cpf)) return false; if (n.targetCpf && n.targetCpf === loggedUser.cpf) return true; if (n.targetRole === 'ADMIN' && isSuperAdmin(loggedUser)) return true; if (n.targetRole === 'ORGANIZER' && loggedUser.role === 'ORGANIZER' && n.targetEvtId) { if (loggedUser.allowedEvts && loggedUser.allowedEvts.includes(String(n.targetEvtId))) return true; } return false; }).sort((a,b) => new Date(b.date) - new Date(a.date));
+
+    if (!db.notifications) {
+        return [];
+    }
+
+
+    return db.notifications
+        .filter(
+            n => {
+
+                // Ocultada para este usuário
+                if (
+                    n.deletedBy &&
+                    n.deletedBy.includes(
+                        loggedUser.cpf
+                    )
+                ) {
+
+                    return false;
+                }
+
+
+                // Notificação individual
+                if (
+                    n.targetCpf &&
+                    n.targetCpf ===
+                        loggedUser.cpf
+                ) {
+
+                    return true;
+                }
+
+
+                // Somente administrador geral
+                if (
+                    n.targetRole ===
+                        'ADMIN' &&
+                    isSuperAdmin(
+                        loggedUser
+                    )
+                ) {
+
+                    return true;
+                }
+
+
+                // Somente organizador
+                // responsável pelo evento
+                if (
+                    n.targetRole ===
+                        'ORGANIZER' &&
+                    loggedUser.role ===
+                        'ORGANIZER' &&
+                    n.targetEvtId
+                ) {
+
+                    return !!(
+                        loggedUser.allowedEvts &&
+                        loggedUser.allowedEvts.includes(
+                            String(
+                                n.targetEvtId
+                            )
+                        )
+                    );
+                }
+
+
+                // ==================================================
+                // EQUIPE DO EVENTO
+                // UMA ÚNICA NOTIFICAÇÃO
+                //
+                // Visível para:
+                // - Super Admin
+                // - Organizador autorizado neste evento
+                // ==================================================
+
+                if (
+                    n.targetRole ===
+                    'EVENT_TEAM'
+                ) {
+
+                    if (
+                        isSuperAdmin(
+                            loggedUser
+                        )
+                    ) {
+
+                        return true;
+                    }
+
+
+                    if (
+                        loggedUser.role ===
+                            'ORGANIZER' &&
+                        n.targetEvtId &&
+                        loggedUser.allowedEvts &&
+                        loggedUser.allowedEvts.includes(
+                            String(
+                                n.targetEvtId
+                            )
+                        )
+                    ) {
+
+                        return true;
+                    }
+                }
+
+
+                return false;
+            }
+        )
+        .sort(
+            (a, b) =>
+                new Date(b.date) -
+                new Date(a.date)
+        );
 };
 
 window.confirmarDeletarNotificacao = function(notifId) { 
@@ -1699,8 +1813,12 @@ window.confirmarInscricaoPendente = function() {
         const catName = currentInscricaoPendente.extraCat ? currentInscricaoPendente.extraCat : loggedUser.cat; 
         
         // Notificação Interna (Sininho)
-        window.enviarNotificacao(`Nova Inscrição Pendente: ${loggedUser.nome} - Etapa: ${currentPayId.name} (${catName})`, 'ADMIN', null, currentPayId.id);
-        window.enviarNotificacao(`Nova Inscrição Pendente: ${loggedUser.nome} - Etapa: ${currentPayId.name} (${catName})`, 'ORGANIZER', null, currentPayId.id); 
+        window.enviarNotificacao(
+    `Nova Inscrição Pendente: ${loggedUser.nome} - Etapa: ${currentPayId.name} (${catName})`,
+    'EVENT_TEAM',
+    null,
+    currentPayId.id
+);
         
         // Notificação Push (Celular)
         window.dispararPushParaEquipe(currentPayId.id, "Nova Inscrição! 🚴‍♂️", `${loggedUser.nome} se inscreveu em ${currentPayId.name} (${catName}).`);
@@ -1723,8 +1841,12 @@ window.enviarComprovanteWhatsApp = function(){
         const catName = currentInscricaoPendente.extraCat ? currentInscricaoPendente.extraCat : loggedUser.cat; 
         
         // Notificação Interna (Sininho)
-        window.enviarNotificacao(`Nova Inscrição Pendente: ${loggedUser.nome} - Etapa: ${currentPayId.name} (${catName})`, 'ADMIN', null, currentPayId.id);
-        window.enviarNotificacao(`Nova Inscrição Pendente: ${loggedUser.nome} - Etapa: ${currentPayId.name} (${catName})`, 'ORGANIZER', null, currentPayId.id); 
+       window.enviarNotificacao(
+    `Nova Inscrição Pendente: ${loggedUser.nome} - Etapa: ${currentPayId.name} (${catName})`,
+    'EVENT_TEAM',
+    null,
+    currentPayId.id
+);
         
         // Notificação Push (Celular)
         window.dispararPushParaEquipe(currentPayId.id, "Comprovante Enviado! 🧾", `${loggedUser.nome} enviou comprovante para ${currentPayId.name} (${catName}).`);
