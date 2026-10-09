@@ -1178,6 +1178,83 @@ function sorteioElegiveis(
 }
 
 
+function sorteioNomeUtil(
+    valor
+) {
+
+    const nome =
+        String(
+            valor ||
+            ""
+        )
+            .trim();
+
+
+    if (!nome) {
+        return "";
+    }
+
+
+    const normalizado =
+        nome
+            .toUpperCase()
+            .trim();
+
+
+    const nomesInvalidos = [
+        "ATLETA",
+        "SEM NOME",
+        "NÃO INFORMADO",
+        "NAO INFORMADO",
+        "USUÁRIO",
+        "USUARIO",
+        "-"
+    ];
+
+
+    if (
+        nomesInvalidos.includes(
+            normalizado
+        )
+    ) {
+
+        return "";
+    }
+
+
+    return nome;
+}
+
+
+function sorteioUsuariosMesmoCpf(
+    user,
+    coreRoot
+) {
+
+    const cpf =
+        sorteioCpfLimpo(
+            user?.cpf
+        );
+
+
+    if (!cpf) {
+        return [];
+    }
+
+
+    return transformarEmArray(
+        coreRoot?.users
+    )
+        .filter(
+            candidato =>
+                sorteioCpfLimpo(
+                    candidato?.cpf
+                ) ===
+                cpf
+        );
+}
+
+
 function sorteioNomeAtleta(
     user,
     coreRoot
@@ -1189,30 +1266,60 @@ function sorteioNomeAtleta(
         );
 
 
-    // ------------------------------------------------------
-    // 1. PRIMEIRO: NOME NO CADASTRO DO USUÁRIO
-    // ------------------------------------------------------
+    // ======================================================
+    // 1. TENTA O PRÓPRIO CADASTRO RECEBIDO
+    // ======================================================
 
-    const nomeCadastro =
-        String(
+    const nomeDireto =
+        sorteioNomeUtil(
             user?.nome ||
             user?.name ||
             user?.nomeCompleto ||
-            user?.fullName ||
-            ""
-        )
-            .trim();
+            user?.fullName
+        );
 
 
-    if (nomeCadastro) {
+    if (nomeDireto) {
 
-        return nomeCadastro;
+        return nomeDireto;
     }
 
 
-    // ------------------------------------------------------
-    // 2. SEGUNDO: PROCURA O NOME NOS RESULTADOS OFICIAIS
-    // ------------------------------------------------------
+    // ======================================================
+    // 2. PROCURA OUTRO CADASTRO COM O MESMO CPF
+    // ======================================================
+
+    const usuariosMesmoCpf =
+        sorteioUsuariosMesmoCpf(
+            user,
+            coreRoot
+        );
+
+
+    for (
+        const candidato of
+        usuariosMesmoCpf
+    ) {
+
+        const nome =
+            sorteioNomeUtil(
+                candidato?.nome ||
+                candidato?.name ||
+                candidato?.nomeCompleto ||
+                candidato?.fullName
+            );
+
+
+        if (nome) {
+
+            return nome;
+        }
+    }
+
+
+    // ======================================================
+    // 3. PROCURA NOS RESULTADOS OFICIAIS PELO CPF
+    // ======================================================
 
     const resultados =
         transformarEmArray(
@@ -1220,37 +1327,145 @@ function sorteioNomeAtleta(
         );
 
 
-    const resultadoDoAtleta =
-        resultados.find(
-            resultado =>
-                sorteioCpfLimpo(
-                    resultado?.cpf
-                ) === cpf &&
-                String(
-                    resultado?.name ||
-                    resultado?.nome ||
-                    ""
-                )
-                    .trim()
-        );
+    for (
+        const resultado of
+        resultados
+    ) {
+
+        if (
+            sorteioCpfLimpo(
+                resultado?.cpf
+            ) !==
+            cpf
+        ) {
+
+            continue;
+        }
 
 
-    if (resultadoDoAtleta) {
+        const nome =
+            sorteioNomeUtil(
+                resultado?.name ||
+                resultado?.nome
+            );
 
-        return String(
-            resultadoDoAtleta.name ||
-            resultadoDoAtleta.nome ||
-            ""
-        )
-            .trim();
+
+        if (nome) {
+
+            return nome;
+        }
     }
 
 
-    // ------------------------------------------------------
-    // 3. ÚLTIMO RECURSO
-    // ------------------------------------------------------
+    // ======================================================
+    // 4. ÚLTIMO RECURSO
+    // ======================================================
 
     return "ATLETA";
+}
+
+
+function sorteioCidadeAtleta(
+    user,
+    coreRoot
+) {
+
+    const cidadeDireta =
+        String(
+            user?.city ||
+            user?.cidade ||
+            ""
+        )
+            .trim();
+
+
+    if (cidadeDireta) {
+
+        return cidadeDireta;
+    }
+
+
+    const usuariosMesmoCpf =
+        sorteioUsuariosMesmoCpf(
+            user,
+            coreRoot
+        );
+
+
+    for (
+        const candidato of
+        usuariosMesmoCpf
+    ) {
+
+        const cidade =
+            String(
+                candidato?.city ||
+                candidato?.cidade ||
+                ""
+            )
+                .trim();
+
+
+        if (cidade) {
+
+            return cidade;
+        }
+    }
+
+
+    return "";
+}
+
+
+function sorteioUfAtleta(
+    user,
+    coreRoot
+) {
+
+    const ufDireta =
+        String(
+            user?.uf ||
+            ""
+        )
+            .trim()
+            .toUpperCase();
+
+
+    if (ufDireta) {
+
+        return ufDireta;
+    }
+
+
+    const usuariosMesmoCpf =
+        sorteioUsuariosMesmoCpf(
+            user,
+            coreRoot
+        );
+
+
+    for (
+        const candidato of
+        usuariosMesmoCpf
+    ) {
+
+        const uf =
+            String(
+                candidato?.uf ||
+                ""
+            )
+                .trim()
+                .toUpperCase();
+
+
+        if (uf) {
+
+            return uf;
+        }
+    }
+
+
+    return "PE";
 }
 
 
@@ -1279,13 +1494,16 @@ function sorteioParticipantePublico(
             ),
 
         city:
-            user?.city ||
-            user?.cidade ||
-            "",
+            sorteioCidadeAtleta(
+                user,
+                coreRoot
+            ),
 
         uf:
-            user?.uf ||
-            "PE",
+            sorteioUfAtleta(
+                user,
+                coreRoot
+            ),
 
         category:
             user?.cat ||
