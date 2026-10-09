@@ -1279,6 +1279,63 @@ current => {
       3
     );
 
+// ==========================================
+// TOP 3 GERAL DE TODOS OS NÍVEIS
+// ==========================================
+
+const globalTop3Level1 =
+  objValues(
+    club.memory_game
+      ?.global
+      ?.level_1
+      ?.top3
+  )
+  .sort(
+    (a,b)=>
+      Number(a.timeMs) -
+      Number(b.timeMs)
+  )
+  .slice(
+    0,
+    3
+  );
+
+
+const globalTop3Level2 =
+  objValues(
+    club.memory_game
+      ?.global
+      ?.level_2
+      ?.top3
+  )
+  .sort(
+    (a,b)=>
+      Number(a.timeMs) -
+      Number(b.timeMs)
+  )
+  .slice(
+    0,
+    3
+  );
+
+
+const globalTop3Level3 =
+  objValues(
+    club.memory_game
+      ?.global
+      ?.level_3
+      ?.top3
+  )
+  .sort(
+    (a,b)=>
+      Number(a.timeMs) -
+      Number(b.timeMs)
+  )
+  .slice(
+    0,
+    3
+  );
+    
   }
 );
 
@@ -2108,83 +2165,171 @@ const totalCards =
 <div class="memory-global-record">
 
   <div class="eyebrow">
-    🏆 TOP 3 GERAL • NÍVEL ${memoryLevel}
+    🏆 TOP 3 GERAL
   </div>
 
-  ${
-  globalTop3.length
 
-  ? globalTop3.map(
-      (record, index) => `
+  <div
+    style="
+      display:flex;
+      overflow-x:auto;
+      gap:16px;
+      scroll-snap-type:x mandatory;
+      padding-bottom:10px;
+    "
+  >
 
-      <div class="memory-record-owner"
+
+    ${
+      [
+        {
+          level:1,
+          data:globalTop3Level1
+        },
+        {
+          level:2,
+          data:globalTop3Level2
+        },
+        {
+          level:3,
+          data:globalTop3Level3
+        }
+      ]
+
+      .map(item => `
+
+
+      <div
         style="
-          margin-top:12px;
-          padding:12px 0;
-          border-bottom:1px solid rgba(255,255,255,.08);
+          min-width:92%;
+          scroll-snap-align:center;
+          background:rgba(255,255,255,.03);
+          border-radius:18px;
+          padding:15px;
         "
       >
 
-        <div
-          class="memory-record-time"
-          style="
-            font-size:22px;
-            font-weight:900;
-            color:var(--gold2);
-          "
-        >
-          ${
-            index === 0 ? '🥇' :
-            index === 1 ? '🥈' :
-            '🥉'
-          }
-
-          ${formatMemoryDuration(record.timeMs)}
-        </div>
-
-
-        <div
-          style="
-            margin-top:5px;
-            font-size:14px;
-            font-weight:900;
-            color:white;
-          "
-        >
-          ${
-            esc(
-              memoryShortName(
-                record.name || 'ATLETA'
-              )
-            )
-          }
+        <div class="eyebrow">
+          🏆 NÍVEL ${item.level}
         </div>
 
 
         ${
-          record.city
+          item.data && item.data.length
 
-          ? `
+          ?
 
-          <div
-            style="
-              margin-top:4px;
-              font-size:11px;
-              font-weight:700;
-              color:var(--muted);
-            "
-          >
-            📍 ${esc(record.city)}
-            ${record.uf ? '-' + esc(record.uf) : ''}
-          </div>
+          item.data.map(
+            (record,index)=>`
+
+            <div
+              style="
+                margin-top:12px;
+                padding:12px 0;
+                border-bottom:
+                1px solid rgba(255,255,255,.08);
+              "
+            >
+
+
+              <div
+                style="
+                  font-size:20px;
+                  font-weight:900;
+                  color:var(--gold2);
+                "
+              >
+
+                ${
+                  index===0?'🥇':
+                  index===1?'🥈':
+                  '🥉'
+                }
+
+                ${formatMemoryDuration(record.timeMs)}
+
+              </div>
+
+
+
+              <div
+                style="
+                  margin-top:5px;
+                  font-size:14px;
+                  font-weight:900;
+                  color:white;
+                "
+              >
+
+                ${
+                  esc(
+                    memoryShortName(
+                      record.name || 'ATLETA'
+                    )
+                  )
+                }
+
+              </div>
+
+
+
+              ${
+                record.city
+
+                ?
+
+                `
+                <div
+                  style="
+                    margin-top:4px;
+                    font-size:11px;
+                    font-weight:700;
+                    color:var(--muted);
+                  "
+                >
+
+                📍 ${esc(record.city)}
+                ${record.uf ? '-'+esc(record.uf):''}
+
+                </div>
+                `
+
+                :
+
+                ''
+
+              }
+
+
+            </div>
+
+            `
+
+          ).join('')
+
+          :
 
           `
+          <div class="memory-no-record">
+            AINDA NÃO HÁ RECORDE
+          </div>
+          `
 
-          : ''
         }
 
 
       </div>
+
+
+      `).join('')
+
+    }
+
+
+  </div>
+
+
+</div>
 
       `
     )
