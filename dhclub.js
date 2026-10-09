@@ -2304,7 +2304,7 @@ const totalCards =
 
             `
 
-          ).join('')
+          .join('')
 
           :
 
