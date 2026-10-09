@@ -1131,6 +1131,22 @@ async function saveMemoryRecord(
     loggedUser.nome ||
     'ATLETA';
 
+const athleteCity =
+  String(
+    loggedUser?.city ||
+    loggedUser?.cidade ||
+    ''
+  )
+    .trim();
+
+const athleteUf =
+  String(
+    loggedUser?.uf ||
+    ''
+  )
+    .trim()
+    .toUpperCase();
+  
   const levelKey =
     `level_${level}`;
 
@@ -1154,19 +1170,30 @@ async function saveMemoryRecord(
 
       records.push({
 
-        timeMs:
-          Number(timeMs),
+  cpf,
 
-        moves:
-          Number(moves || 0),
+  name:
+    athleteName,
 
-        level:
-          Number(level),
+  city:
+    athleteCity,
 
-        date:
-          Date.now()
+  uf:
+    athleteUf,
 
-      });
+  timeMs:
+    Number(timeMs),
+
+  moves:
+    Number(moves || 0),
+
+  level:
+    Number(level),
+
+  date:
+    Date.now()
+
+});
 
       return records
         .filter(
@@ -1215,15 +1242,21 @@ async function saveMemoryRecord(
 
           return {
 
-            recordId,
+  recordId,
 
-            cpf,
+  cpf,
 
-            name:
-              athleteName,
+  name:
+    athleteName,
 
-            timeMs:
-              Number(timeMs),
+  city:
+    athleteCity,
+
+  uf:
+    athleteUf,
+
+  timeMs:
+    Number(timeMs),
 
             moves:
               Number(moves || 0),
@@ -1811,7 +1844,26 @@ const globalRecord =
     ?.[levelKey] ||
   null;
 
+const globalRecordLocation =
+  globalRecord
 
+    ? officialAthleteCity(
+        globalRecord.cpf,
+        globalRecord.city ||
+        ''
+      )
+
+    : '';
+
+
+const myRecordLocation =
+  officialAthleteCity(
+    myCpf,
+    loggedUser?.city ||
+    loggedUser?.cidade ||
+    ''
+  );
+  
 const myRecords =
   objValues(
     club.memory_game
@@ -1999,14 +2051,39 @@ const totalCards =
 
         <div class="memory-record-owner">
 
-          ${
-            esc(
-              globalRecord.name ||
-              'ATLETA'
-            )
-          }
+  ${
+    esc(
+      globalRecord.name ||
+      'ATLETA'
+    )
+  }
+
+  ${
+    globalRecordLocation
+
+      ? `
+
+        <div
+          style="
+            margin-top:4px;
+            font-size:11px;
+            font-weight:700;
+            color:var(--muted);
+          "
+        >
+
+          📍 ${esc(
+            globalRecordLocation
+          )}
 
         </div>
+
+      `
+
+      : ''
+  }
+
+</div>
 
       `
 
@@ -2026,6 +2103,30 @@ const totalCards =
   <div class="eyebrow">
     MEUS 5 MELHORES • NÍVEL ${memoryLevel}
   </div>
+
+<div
+  style="
+    margin-top:6px;
+    margin-bottom:10px;
+    font-size:11px;
+    font-weight:800;
+    color:var(--muted);
+  "
+>
+
+  ${esc(
+    loggedUser?.nome ||
+    loggedUser?.name ||
+    'ATLETA'
+  )}
+
+  ${
+    myRecordLocation
+      ? ` • 📍 ${esc(myRecordLocation)}`
+      : ''
+  }
+
+</div>
 
   ${
     myRecords.length
@@ -12222,6 +12323,35 @@ function drawCardMarkup(
                           'ATLETA'
                         )}
 
+                       ${
+  drawWinnerLocation(
+    winner
+  )
+
+    ? `
+
+      <div
+        style="
+          margin-top:3px;
+          font-size:10px;
+          font-weight:700;
+          color:var(--muted);
+        "
+      >
+
+        📍 ${esc(
+          drawWinnerLocation(
+            winner
+          )
+        )}
+
+      </div>
+
+    `
+
+    : ''
+}
+
                       </div>
 
                     `
@@ -14759,6 +14889,46 @@ function drawPublicParticipant(
   };
 }
 
+
+function drawWinnerLocation(
+  winner
+) {
+
+  const city =
+    String(
+      winner?.city ||
+      winner?.cidade ||
+      ''
+    )
+      .trim()
+      .toUpperCase();
+
+
+  const uf =
+    String(
+      winner?.uf ||
+      ''
+    )
+      .trim()
+      .toUpperCase();
+
+
+  if (
+    city &&
+    uf
+  ) {
+
+    return `${city}-${uf}`;
+  }
+
+
+  return (
+    city ||
+    uf ||
+    ''
+  );
+}
+  
 // ----------------------------------------------------------
 // LOCALIZAR SORTEIO PELA CHAVE REAL OU PELO ID INTERNO
 // ----------------------------------------------------------
@@ -16505,35 +16675,66 @@ function showDrawDetails(
             </div>
 
 
-            ${
-              winners
-                .map(
-                  (
-                    winner,
-                    index
-                  ) => `
+           ${
+  winners
+    .map(
+      (
+        winner,
+        index
+      ) => `
 
-                    <div
-                      style="
-                        margin-top:8px;
-                        font-size:14px;
-                        font-weight:900;
-                      "
-                    >
+        <div
+          style="
+            margin-top:8px;
+            font-size:14px;
+            font-weight:900;
+          "
+        >
 
-                      ${index + 1}º
+          ${index + 1}º
 
-                      ${esc(
-                        winner.name ||
-                        'ATLETA'
-                      )}
+          ${esc(
+            winner.name ||
+            winner.nome ||
+            'ATLETA'
+          )}
 
-                    </div>
 
-                  `
-                )
-                .join('')
-            }
+          ${
+            drawWinnerLocation(
+              winner
+            )
+
+              ? `
+
+                <div
+                  style="
+                    margin-top:4px;
+                    font-size:10px;
+                    font-weight:700;
+                    color:var(--muted);
+                  "
+                >
+
+                  📍 ${esc(
+                    drawWinnerLocation(
+                      winner
+                    )
+                  )}
+
+                </div>
+
+              `
+
+              : ''
+          }
+
+        </div>
+
+      `
+    )
+    .join('')
+}
 
           </div>
 
