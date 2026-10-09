@@ -1274,14 +1274,13 @@ current => {
       Number(b.timeMs)
     )
 
-    .slice(
+        .slice(
       0,
       3
     );
 
-});
-      }
-    );
+  }
+);
 
 
   const savedGlobal =
