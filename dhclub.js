@@ -14916,6 +14916,117 @@ createdBy: {
     ] =
       draw;
 
+    // ==========================================================
+// NOTIFICA TODOS OS ATLETAS PARTICIPANTES
+// ==========================================================
+
+let notifiedCount =
+  0;
+
+
+try {
+
+  const pushUpdates =
+    {};
+
+
+  eligibleNow.forEach(
+    user => {
+
+      const token =
+        String(
+          user?.fcmToken ||
+          ''
+        )
+          .trim();
+
+
+      // Sem autorização/token,
+      // não há como enviar push.
+      if (!token) {
+
+        return;
+      }
+
+
+      const pushKey =
+        database
+          .ref(
+            'push_queue'
+          )
+          .push()
+          .key;
+
+
+      if (!pushKey) {
+
+        return;
+      }
+
+
+      pushUpdates[
+        `push_queue/${pushKey}`
+      ] = {
+
+        token,
+
+        title:
+          '🎁 NOVO SORTEIO DH-CLUB',
+
+        body:
+          `O sorteio "${title}" foi criado e você está participando!${
+            prize
+              ? ` Prêmio: ${prize}.`
+              : ''
+          } Abra o DH-Club para conferir os detalhes.`,
+
+        status:
+          'pending',
+
+        timestamp:
+          Date.now(),
+
+        source:
+          'DHCLUB_DRAW_CREATED',
+
+        drawId:
+          id,
+
+        publicId:
+          publicId
+
+      };
+
+
+      notifiedCount++;
+    }
+  );
+
+
+  if (
+    Object.keys(
+      pushUpdates
+    ).length
+  ) {
+
+    await database
+      .ref()
+      .update(
+        pushUpdates
+      );
+  }
+
+
+} catch (pushError) {
+
+  // O sorteio continua publicado
+  // mesmo que alguma notificação falhe.
+
+  console.error(
+    '[DH-CLUB] Erro ao notificar participantes do sorteio:',
+    pushError
+  );
+}
 
     closeModal();
 
@@ -14924,8 +15035,12 @@ createdBy: {
 
 
     toast(
-      'SORTEIO PUBLICADO!'
-    );
+  notifiedCount > 0
+
+    ? `SORTEIO PUBLICADO • ${notifiedCount} NOTIFICAÇÕES ENVIADAS`
+
+    : 'SORTEIO PUBLICADO!'
+);
 
 
   } catch (error) {
