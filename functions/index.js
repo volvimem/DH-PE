@@ -1384,7 +1384,7 @@ function sorteioEscolher(
                 randomIndex + 1
             )
                 .padStart(
-                    6,
+                    3,
                     "0"
                 );
 
