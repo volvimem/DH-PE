@@ -1830,67 +1830,56 @@ function memoryCardMarkup(
 // NOME CURTO PARA OS RECORDES
 // ==========================================================
 
-function memoryShortName(
-  fullName
-) {
+function memoryShortName(fullName) {
 
   const parts =
     String(
-      fullName ||
-      'ATLETA'
+      fullName || 'ATLETA'
     )
       .trim()
       .split(/\s+/)
       .filter(Boolean);
 
 
-  if (
-    parts.length <= 2
-  ) {
+  if (!parts.length) {
+    return 'ATLETA';
+  }
 
+
+  if (parts.length <= 2) {
     return parts.join(' ');
   }
 
 
-  const particles =
-    [
-      'DA',
-      'DE',
-      'DO',
-      'DAS',
-      'DOS'
-    ];
+  const particles = [
+    'DA',
+    'DE',
+    'DO',
+    'DAS',
+    'DOS'
+  ];
 
 
-  const second =
-    String(
-      parts[1] ||
-      ''
-    )
-      .toUpperCase();
+  let result = [
+    parts[0],
+    parts[1]
+  ];
 
 
   if (
     particles.includes(
-      second
+      String(parts[1]).toUpperCase()
     )
   ) {
 
-    return parts
-      .slice(
-        0,
-        3
-      )
-      .join(' ');
+    result.push(
+      parts[2]
+    );
+
   }
 
 
-  return parts
-    .slice(
-      0,
-      2
-    )
-    .join(' ');
+  return result.join(' ');
 }
   
 function renderGames() {
