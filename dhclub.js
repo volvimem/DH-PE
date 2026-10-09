@@ -15101,6 +15101,18 @@ async function performDraw(
   drawId
 ) {
 
+  if (
+    performDraw.__running
+  ) {
+
+    toast(
+      'SORTEIO JÁ ESTÁ SENDO PROCESSADO'
+    );
+
+    return;
+  }
+
+
   const resolved =
     resolveDrawRecord(
       drawId
@@ -15165,18 +15177,293 @@ async function performDraw(
   }
 
 
+  performDraw.__running =
+    true;
+
+
+  let liveSpinTimer =
+    null;
+
+
+  const stopLiveSpinner =
+    () => {
+
+      if (
+        liveSpinTimer
+      ) {
+
+        clearInterval(
+          liveSpinTimer
+        );
+
+        liveSpinTimer =
+          null;
+      }
+    };
+
+
   try {
 
-    toast(
-      'REALIZANDO SORTEIO NO SERVIDOR…'
-    );
+    const eligibleNow =
+      getDrawEligibleUsers(
+        draw.filterType,
+        draw.eventId
+      ).length;
+
+
+    openModal(`
+
+      <div
+        class="eyebrow"
+        style="
+          color:#ff5252;
+          text-align:center;
+        "
+      >
+
+        🔴 SORTEIO AO VIVO
+
+      </div>
+
+
+      <h2
+        style="
+          text-align:center;
+          margin-top:6px;
+        "
+      >
+
+        ${esc(
+          draw.title ||
+          'SORTEIO DH-CLUB'
+        )}
+
+      </h2>
+
+
+      <div
+        style="
+          margin-top:12px;
+          text-align:center;
+          color:var(--muted);
+          font-size:10px;
+          line-height:1.6;
+        "
+      >
+
+        ${eligibleNow}
+        PARTICIPANTES ELEGÍVEIS
+
+        <br>
+
+        RESULTADO PROCESSADO NO SERVIDOR
+
+      </div>
+
+
+      <div
+        id="draw-replay-round"
+        style="
+          margin-top:18px;
+          text-align:center;
+          font-size:10px;
+          font-weight:900;
+          color:var(--gold2);
+        "
+      >
+
+        AGUARDANDO RESULTADO OFICIAL…
+
+      </div>
+
+
+      <div
+        style="
+          display:grid;
+          grid-template-columns:
+            repeat(
+              3,
+              minmax(
+                0,
+                1fr
+              )
+            );
+          gap:8px;
+          margin-top:12px;
+        "
+      >
+
+        <div
+          id="draw-replay-digit-0"
+          style="
+            height:84px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            border-radius:16px;
+            background:#07111d;
+            border:
+              1px solid
+              rgba(255,255,255,.12);
+            font-size:44px;
+            font-weight:1000;
+            font-family:monospace;
+            color:var(--gold2);
+          "
+        >
+          0
+        </div>
+
+
+        <div
+          id="draw-replay-digit-1"
+          style="
+            height:84px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            border-radius:16px;
+            background:#07111d;
+            border:
+              1px solid
+              rgba(255,255,255,.12);
+            font-size:44px;
+            font-weight:1000;
+            font-family:monospace;
+            color:var(--gold2);
+          "
+        >
+          0
+        </div>
+
+
+        <div
+          id="draw-replay-digit-2"
+          style="
+            height:84px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            border-radius:16px;
+            background:#07111d;
+            border:
+              1px solid
+              rgba(255,255,255,.12);
+            font-size:44px;
+            font-weight:1000;
+            font-family:monospace;
+            color:var(--gold2);
+          "
+        >
+          0
+        </div>
+
+      </div>
+
+
+      <div
+        id="draw-replay-status"
+        style="
+          margin-top:12px;
+          text-align:center;
+          color:var(--muted);
+          font-size:10px;
+          font-weight:900;
+          line-height:1.5;
+        "
+      >
+
+        PROCESSANDO SORTEIO SEGURO NO SERVIDOR…
+
+      </div>
+
+
+      <div
+        style="
+          margin-top:10px;
+          padding:10px;
+          border-radius:10px;
+          background:
+            rgba(78,161,255,.08);
+          border:
+            1px solid
+            rgba(78,161,255,.18);
+          font-size:9px;
+          line-height:1.55;
+          color:var(--muted);
+          text-align:center;
+        "
+      >
+
+        Os números girando são apenas
+        a animação de espera.
+
+        <br>
+
+        O número final e o vencedor
+        vêm exclusivamente do registro
+        oficial do servidor.
+
+      </div>
+
+
+      <div
+        id="draw-live-result"
+        style="
+          margin-top:12px;
+        "
+      >
+      </div>
+
+
+      <div
+        id="draw-live-actions"
+        style="
+          margin-top:12px;
+        "
+      >
+      </div>
+
+    `);
+
+
+    liveSpinTimer =
+      setInterval(
+        () => {
+
+          for (
+            let index = 0;
+            index < 3;
+            index++
+          ) {
+
+            const box =
+              document.getElementById(
+                `draw-replay-digit-${index}`
+              );
+
+
+            if (box) {
+
+              box.textContent =
+                String(
+                  Math.floor(
+                    Math.random() *
+                    10
+                  )
+                );
+            }
+          }
+        },
+        80
+      );
 
 
     const response =
-  await performDhClubDrawCallable({
-    drawId:
-      realDrawId
-  });
+      await performDhClubDrawCallable({
+        drawId:
+          realDrawId
+      });
 
 
     const result =
@@ -15198,8 +15485,8 @@ async function performDraw(
     const snapshot =
       await database
         .ref(
-  `${CLUB_ROOT}/draws/${realDrawId}`
-)
+          `${CLUB_ROOT}/draws/${realDrawId}`
+        )
         .once(
           'value'
         );
@@ -15209,30 +15496,481 @@ async function performDraw(
       snapshot.val();
 
 
-    if (
-      finalDraw
-    ) {
+    if (!finalDraw) {
 
-      if (
-        !club.draws
-      ) {
-
-        club.draws =
-          {};
-      }
-
-
-      club.draws[
-  realDrawId
-] =
-  finalDraw;
+      throw new Error(
+        'RESULTADO NÃO ENCONTRADO APÓS O SORTEIO'
+      );
     }
 
 
-    closeModal();
+    stopLiveSpinner();
+
+
+    if (
+      !club.draws
+    ) {
+
+      club.draws =
+        {};
+    }
+
+
+    club.draws[
+      realDrawId
+    ] =
+      finalDraw;
 
 
     renderDraws();
+
+
+    const trace =
+      objValues(
+        finalDraw.selectionTrace ||
+        result.selectionTrace
+      )
+        .sort(
+          (
+            a,
+            b
+          ) =>
+
+            Number(
+              a?.position ||
+              0
+            ) -
+
+            Number(
+              b?.position ||
+              0
+            )
+        );
+
+
+    const winners =
+      objValues(
+        finalDraw.winners
+      )
+        .sort(
+          (
+            a,
+            b
+          ) =>
+
+            Number(
+              a?.position ||
+              0
+            ) -
+
+            Number(
+              b?.position ||
+              0
+            )
+        );
+
+
+    const resultEl =
+      document.getElementById(
+        'draw-live-result'
+      );
+
+
+    if (
+      !trace.length
+    ) {
+
+      const statusEl =
+        document.getElementById(
+          'draw-replay-status'
+        );
+
+
+      if (statusEl) {
+
+        statusEl.textContent =
+          '✓ SORTEIO REALIZADO • REPLAY NÃO DISPONÍVEL';
+      }
+
+
+      if (
+        resultEl
+      ) {
+
+        resultEl.innerHTML =
+          winners
+            .map(
+              (
+                winner,
+                index
+              ) => `
+
+                <div
+                  style="
+                    margin-top:10px;
+                    padding:14px;
+                    border-radius:12px;
+                    background:
+                      rgba(46,204,113,.10);
+                    border:
+                      1px solid
+                      rgba(46,204,113,.22);
+                    text-align:center;
+                  "
+                >
+
+                  <div
+                    style="
+                      font-size:10px;
+                      color:var(--muted);
+                    "
+                  >
+
+                    ${index + 1}º VENCEDOR
+
+                  </div>
+
+
+                  <div
+                    style="
+                      margin-top:7px;
+                      font-size:18px;
+                      font-weight:1000;
+                      color:#2ecc71;
+                    "
+                  >
+
+                    🏆
+                    ${esc(
+                      winner.name ||
+                      'ATLETA'
+                    )}
+
+                  </div>
+
+                </div>
+
+              `
+            )
+            .join('');
+      }
+
+    } else {
+
+      for (
+        let traceIndex = 0;
+
+        traceIndex <
+        trace.length;
+
+        traceIndex++
+      ) {
+
+        const item =
+          trace[
+            traceIndex
+          ] ||
+          {};
+
+
+        const randomIndex =
+          Number(
+            item.randomIndex ??
+            -1
+          );
+
+
+        const publicNumber =
+          String(
+            Number(
+              item.publicNumber ||
+
+              (
+                randomIndex >= 0
+
+                  ? randomIndex + 1
+
+                  : 0
+              )
+            )
+          )
+            .padStart(
+              3,
+              '0'
+            );
+
+
+        const winner =
+          winners.find(
+            current =>
+
+              String(
+                current?.participantId ||
+                ''
+              ) ===
+
+              String(
+                item?.participantId ||
+                ''
+              )
+          ) ||
+
+          winners[
+            traceIndex
+          ] ||
+
+          {};
+
+
+        const roundEl =
+          document.getElementById(
+            'draw-replay-round'
+          );
+
+
+        if (roundEl) {
+
+          roundEl.textContent =
+            `VENCEDOR ${traceIndex + 1} DE ${trace.length}`;
+        }
+
+
+        for (
+          let digitIndex = 0;
+
+          digitIndex < 3;
+
+          digitIndex++
+        ) {
+
+          const box =
+            document.getElementById(
+              `draw-replay-digit-${digitIndex}`
+            );
+
+
+          if (box) {
+
+            box.textContent =
+              '0';
+
+
+            box.style.borderColor =
+              'rgba(255,255,255,.12)';
+
+
+            box.style.boxShadow =
+              'none';
+          }
+        }
+
+
+        await animateDrawReplayNumber(
+          publicNumber
+        );
+
+
+        if (
+          resultEl
+        ) {
+
+          resultEl.insertAdjacentHTML(
+            'beforeend',
+
+            `
+
+              <div
+                style="
+                  margin-top:12px;
+                  padding:14px;
+                  border-radius:12px;
+                  background:
+                    rgba(46,204,113,.10);
+                  border:
+                    1px solid
+                    rgba(46,204,113,.22);
+                  text-align:center;
+                "
+              >
+
+                <div
+                  style="
+                    font-size:9px;
+                    color:var(--muted);
+                  "
+                >
+
+                  NÚMERO OFICIAL
+
+                </div>
+
+
+                <div
+                  style="
+                    margin-top:3px;
+                    font-size:28px;
+                    font-family:monospace;
+                    font-weight:1000;
+                    color:var(--gold2);
+                    letter-spacing:3px;
+                  "
+                >
+
+                  ${esc(
+                    publicNumber
+                  )}
+
+                </div>
+
+
+                <div
+                  style="
+                    margin-top:6px;
+                    font-size:10px;
+                    color:var(--muted);
+                  "
+                >
+
+                  POSIÇÃO
+
+                  ${
+                    randomIndex >= 0
+
+                      ? randomIndex +
+                        1
+
+                      : '-'
+                  }
+
+                  DE
+
+                  ${Number(
+                    item.poolSize ||
+                    0
+                  )}
+
+                </div>
+
+
+                <div
+                  style="
+                    margin-top:10px;
+                    font-size:18px;
+                    font-weight:1000;
+                    color:#2ecc71;
+                  "
+                >
+
+                  🏆
+
+                  ${esc(
+                    winner.name ||
+                    'ATLETA'
+                  )}
+
+                </div>
+
+              </div>
+
+            `
+          );
+        }
+
+
+        if (
+          traceIndex <
+          trace.length - 1
+        ) {
+
+          await drawReplayDelay(
+            1500
+          );
+        }
+      }
+
+
+      const statusEl =
+        document.getElementById(
+          'draw-replay-status'
+        );
+
+
+      if (statusEl) {
+
+        statusEl.textContent =
+          '✓ SORTEIO CONCLUÍDO • RESULTADO REGISTRADO NO SERVIDOR';
+      }
+    }
+
+
+    const actionsEl =
+      document.getElementById(
+        'draw-live-actions'
+      );
+
+
+    if (
+      actionsEl
+    ) {
+
+      actionsEl.innerHTML = `
+
+        <button
+          class="primary-btn"
+          style="
+            width:100%;
+          "
+          onclick="
+            Club.showDrawReplay(
+              '${esc(realDrawId)}'
+            )
+          "
+        >
+
+          <i class="fa-solid fa-play"></i>
+
+          VER REPLAY OFICIAL
+
+        </button>
+
+
+        <button
+          class="secondary-btn"
+          style="
+            width:100%;
+            margin-top:8px;
+          "
+          onclick="
+            Club.showDrawDetails(
+              '${esc(realDrawId)}'
+            )
+          "
+        >
+
+          <i class="fa-solid fa-circle-info"></i>
+
+          VER DETALHES DO SORTEIO
+
+        </button>
+
+
+        <button
+          class="secondary-btn"
+          style="
+            width:100%;
+            margin-top:8px;
+          "
+          onclick="
+            Club.closeModal()
+          "
+        >
+
+          FECHAR
+
+        </button>
+
+      `;
+    }
 
 
     toast(
@@ -15241,6 +15979,9 @@ async function performDraw(
 
 
   } catch (error) {
+
+    stopLiveSpinner();
+
 
     console.error(
       '[DH-CLUB] Erro ao realizar sorteio no servidor:',
@@ -15275,12 +16016,62 @@ async function performDraw(
     }
 
 
-    closeModal();
+    const statusEl =
+      document.getElementById(
+        'draw-replay-status'
+      );
+
+
+    if (
+      statusEl
+    ) {
+
+      statusEl.textContent =
+        `ERRO: ${message}`;
+    }
+
+
+    const actionsEl =
+      document.getElementById(
+        'draw-live-actions'
+      );
+
+
+    if (
+      actionsEl
+    ) {
+
+      actionsEl.innerHTML = `
+
+        <button
+          class="secondary-btn"
+          style="
+            width:100%;
+          "
+          onclick="
+            Club.closeModal()
+          "
+        >
+
+          FECHAR
+
+        </button>
+
+      `;
+    }
 
 
     toast(
       message
     );
+
+  } finally {
+
+    stopLiveSpinner();
+
+
+    performDraw.__running =
+      false;
   }
 }
 
