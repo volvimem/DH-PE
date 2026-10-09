@@ -2178,185 +2178,169 @@ const totalCards =
     "
   >
 
-    ${
-      [
-        {
-          level:1,
-          title:'NÍVEL 1',
-          data:globalTop3Level1
-        },
+${
+[
+  {
+    title:'NÍVEL 1',
+    data:globalTop3Level1
+  },
 
-        {
-          level:2,
-          title:'NÍVEL 2',
-          data:globalTop3Level2
-        },
+  {
+    title:'NÍVEL 2',
+    data:globalTop3Level2
+  },
 
-        {
-          level:3,
-          title:'NÍVEL 3',
-          data:globalTop3Level3
-        }
+  {
+    title:'NÍVEL 3',
+    data:globalTop3Level3
+  }
 
-      ]
+]
 
-      .map(item => `
-
-        <div
-          style="
-            min-width:92%;
-            scroll-snap-align:center;
-            background:rgba(255,255,255,.04);
-            border-radius:20px;
-            padding:16px;
-          "
-        >
-
-          <div class="eyebrow">
-            🏆 ${item.title}
-          </div>
+.map(item => `
 
 
-          ${
-            item.data.length
-
-            ?
-
-            item.data.map(
-              (record,index)=>`
-
-              <div
-                style="
-                  padding:12px 0;
-                  border-bottom:
-                  1px solid rgba(255,255,255,.08);
-                "
-              >
-
-                <div
-                  style="
-                    font-size:22px;
-                    font-weight:900;
-                    color:var(--gold2);
-                  "
-                >
-
-                  ${
-                    index===0?'🥇':
-                    index===1?'🥈':
-                    '🥉'
-                  }
-
-                  ${formatMemoryDuration(record.timeMs)}
-
-                </div>
+<div
+  style="
+    min-width:92%;
+    scroll-snap-align:center;
+    background:rgba(255,255,255,.04);
+    border-radius:20px;
+    padding:16px;
+  "
+>
 
 
-                <div
-                  style="
-                    margin-top:6px;
-                    color:white;
-                    font-size:14px;
-                    font-weight:900;
-                  "
-                >
-
-                  ${
-                    esc(
-                      memoryShortName(
-                        record.name || 'ATLETA'
-                      )
-                    )
-                  }
-
-                </div>
+<div class="eyebrow">
+  🏆 ${item.title}
+</div>
 
 
-                ${
-                  record.city
 
-                  ?
+${
+item.data && item.data.length
 
-                  `
-                  <div
-                    style="
-                      margin-top:4px;
-                      color:var(--muted);
-                      font-size:11px;
-                    "
-                  >
+?
 
-                    📍 ${esc(record.city)}
-                    ${record.uf ? '-'+esc(record.uf):''}
+item.data.map(
+(record,index)=>`
 
-                  </div>
-                  `
-
-                  :
-
-                  ''
-
-                }
+<div
+ style="
+   margin-top:12px;
+   padding:12px 0;
+   border-bottom:
+   1px solid rgba(255,255,255,.08);
+ "
+>
 
 
-              </div>
+<div
+ style="
+   font-size:22px;
+   font-weight:900;
+   color:var(--gold2);
+ "
+>
 
-              `
+${
+ index===0
+ ? '🥇'
+ : index===1
+ ? '🥈'
+ : '🥉'
+}
 
-            ).join('')
-
-
-            :
-
-            `
-            <div class="memory-no-record">
-              AINDA NÃO HÁ RECORDE
-            </div>
-            `
-
-          }
-
-
-        </div>
-
-
-      `).join('')
-
-    }
-
-
-  </div>
+${formatMemoryDuration(record.timeMs)}
 
 </div>
 
 
-      `).join('')
 
-    }
+<div
+ style="
+   margin-top:6px;
+   font-size:14px;
+   font-weight:900;
+   color:white;
+ "
+>
 
-
-  </div>
-
-
-</div>
-
-      `
-    )
-    .join('')
-
-
-  :
-
-  `
-
-    <div class="memory-no-record">
-      AINDA NÃO HÁ RECORDE
-    </div>
-
-  `
+${
+esc(
+ memoryShortName(
+  record.name || 'ATLETA'
+ )
+)
 }
 
 </div>
+
+
+
+${
+record.city
+
+?
+
+`
+<div
+ style="
+  margin-top:4px;
+  font-size:11px;
+  color:var(--muted);
+ "
+>
+
+📍 ${esc(record.city)}
+${record.uf ? '-' + esc(record.uf) : ''}
+
+</div>
+`
+
+:
+
+''
+}
+
+
+</div>
+
+
+`
+
+).join('')
+
+
+:
+
+`
+
+<div class="memory-no-record">
+ AINDA NÃO HÁ RECORDE
+</div>
+
+`
+
+}
+
+
+</div>
+
+
+`)
+
+.join('')
+
+
+}
+
+
+  </div>
+
+
+</div>
+            
 
 <div class="memory-my-records">
 
