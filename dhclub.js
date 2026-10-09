@@ -1213,64 +1213,73 @@ const athleteUf =
   );
 
 
-  // ==========================================
-  // RECORDE GERAL DO NÍVEL
-  // ==========================================
+ // ==========================================
+// TOP 3 GERAL DO NÍVEL
+// ==========================================
 
-  const globalRef =
-    database.ref(
-      `${CLUB_ROOT}/memory_game/global/${levelKey}`
+const globalRef =
+database.ref(
+`${CLUB_ROOT}/memory_game/global/${levelKey}/top3`
+);
+
+
+await globalRef.transaction(
+current => {
+
+  const records =
+    objValues(current);
+
+
+  records.push({
+
+    recordId:
+      `${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
+
+    cpf,
+
+    name:
+      athleteName,
+
+    city:
+      athleteCity,
+
+    uf:
+      athleteUf,
+
+    timeMs:
+      Number(timeMs),
+
+    moves:
+      Number(moves || 0),
+
+    level:
+      Number(level),
+
+    updatedAt:
+      Date.now()
+
+  });
+
+
+  return records
+
+    .filter(
+      item =>
+      Number(item.timeMs) > 0
+    )
+
+    .sort(
+      (a,b)=>
+      Number(a.timeMs) -
+      Number(b.timeMs)
+    )
+
+    .slice(
+      0,
+      3
     );
 
-  const recordId =
-    `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
-  const transactionResult =
-    await globalRef.transaction(
-      current => {
-
-        const oldTime =
-          Number(
-            current?.timeMs ||
-            Infinity
-          );
-
-        if (
-          Number(timeMs) <
-          oldTime
-        ) {
-
-          return {
-
-  recordId,
-
-  cpf,
-
-  name:
-    athleteName,
-
-  city:
-    athleteCity,
-
-  uf:
-    athleteUf,
-
-  timeMs:
-    Number(timeMs),
-
-            moves:
-              Number(moves || 0),
-
-            level:
-              Number(level),
-
-            updatedAt:
-              Date.now()
-
-          };
-        }
-
-        return current;
+});
       }
     );
 
@@ -1905,11 +1914,26 @@ const myCpf =
   );
 
 
+const globalTop3 =
+  objValues(
+    club.memory_game
+      ?.global
+      ?.[levelKey]
+      ?.top3
+  )
+  .sort(
+    (a,b)=>
+      Number(a.timeMs) -
+      Number(b.timeMs)
+  )
+  .slice(
+    0,
+    3
+  );
+
+
 const globalRecord =
-  club.memory_game
-    ?.global
-    ?.[levelKey] ||
-  null;
+  globalTop3[0] || null;
 
 const globalRecordLocation =
   globalRecord
@@ -2098,70 +2122,99 @@ const totalCards =
 <div class="memory-global-record">
 
   <div class="eyebrow">
-    🏆 RECORDE GERAL • NÍVEL ${memoryLevel}
+    🏆 TOP 3 GERAL • NÍVEL ${memoryLevel}
   </div>
 
   ${
-    globalRecord
+  globalTop3.length
 
-      ? `
+  ? globalTop3.map(
+      (record, index) => `
 
-        <div class="memory-record-time">
+      <div class="memory-record-owner"
+        style="
+          margin-top:12px;
+          padding:12px 0;
+          border-bottom:1px solid rgba(255,255,255,.08);
+        "
+      >
 
+        <div
+          class="memory-record-time"
+          style="
+            font-size:22px;
+            font-weight:900;
+            color:var(--gold2);
+          "
+        >
           ${
-            formatMemoryDuration(
-              globalRecord.timeMs
-            )
+            index === 0 ? '🥇' :
+            index === 1 ? '🥈' :
+            '🥉'
           }
 
+          ${formatMemoryDuration(record.timeMs)}
         </div>
 
-        <div class="memory-record-owner">
-
-  ${esc(
-  memoryShortName(
-    globalRecord.name ||
-    'ATLETA'
-  )
-)}
-
-  ${
-    globalRecordLocation
-
-      ? `
 
         <div
           style="
-            margin-top:4px;
-            font-size:11px;
-            font-weight:700;
-            color:var(--muted);
+            margin-top:5px;
+            font-size:14px;
+            font-weight:900;
+            color:white;
           "
         >
-
-          📍 ${esc(
-            globalRecordLocation
-          )}
-
+          ${
+            esc(
+              memoryShortName(
+                record.name || 'ATLETA'
+              )
+            )
+          }
         </div>
 
+
+        ${
+          record.city
+
+          ? `
+
+          <div
+            style="
+              margin-top:4px;
+              font-size:11px;
+              font-weight:700;
+              color:var(--muted);
+            "
+          >
+            📍 ${esc(record.city)}
+            ${record.uf ? '-' + esc(record.uf) : ''}
+          </div>
+
+          `
+
+          : ''
+        }
+
+
+      </div>
+
       `
+    )
+    .join('')
 
-      : ''
-  }
 
-</div>
+  :
 
-      `
+  `
 
-      : `
+    <div class="memory-no-record">
+      AINDA NÃO HÁ RECORDE
+    </div>
 
-        <div class="memory-no-record">
-          AINDA NÃO HÁ RECORDE
-        </div>
-
-      `
-  }
+  `
+}
 
 </div>
 
