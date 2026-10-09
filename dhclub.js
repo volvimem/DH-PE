@@ -1285,19 +1285,17 @@ current => {
 
 
   const savedGlobal =
-    transactionResult.snapshot
-      ?.val?.() ||
-    null;
+  transactionResult.snapshot
+    ?.val?.() ||
+  null;
 
 
-  return {
+return {
 
-    newGlobalRecord:
-      !!savedGlobal &&
-      savedGlobal.recordId ===
-        recordId
+  newGlobalRecord:
+    false
 
-  };
+};
 }
 
 
