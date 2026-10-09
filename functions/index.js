@@ -2266,6 +2266,192 @@ replayNumberMode:
                 );
             }
 
+          // ==========================================================
+// NOTIFICA O(S) VENCEDOR(ES) DO SORTEIO
+// ==========================================================
+//
+// IMPORTANTE:
+// fica FORA da transaction para não gerar
+// notificações duplicadas caso a transaction seja repetida.
+// ==========================================================
+
+try {
+
+    const finalWinners =
+        transformarEmArray(
+            finalDraw.winners
+        );
+
+
+    const allUsers =
+        transformarEmArray(
+            coreRoot.users
+        );
+
+
+    const notificationJobs =
+        [];
+
+
+    finalWinners.forEach(
+        winner => {
+
+            const participantId =
+                String(
+                    winner?.participantId ||
+                    ""
+                );
+
+
+            if (!participantId) {
+
+                return;
+            }
+
+
+            const winnerUser =
+                allUsers.find(
+                    user => {
+
+                        const cpf =
+                            sorteioCpfLimpo(
+                                user?.cpf
+                            );
+
+
+                        if (!cpf) {
+
+                            return false;
+                        }
+
+
+                        return (
+                            String(
+                                sorteioParticipantId(
+                                    cpf
+                                )
+                            ) ===
+                            participantId
+                        );
+                    }
+                );
+
+
+            if (!winnerUser) {
+
+                logger.warn(
+                    "Vencedor não localizado para notificação",
+                    {
+                        drawId,
+                        participantId
+                    }
+                );
+
+                return;
+            }
+
+
+            const token =
+                String(
+                    winnerUser.fcmToken ||
+                    ""
+                )
+                    .trim();
+
+
+            if (!token) {
+
+                logger.info(
+                    "Vencedor sem token de notificação",
+                    {
+                        drawId,
+                        participantId
+                    }
+                );
+
+                return;
+            }
+
+
+            const winnerName =
+                String(
+                    winner?.name ||
+                    winnerUser?.nome ||
+                    winnerUser?.name ||
+                    "ATLETA"
+                )
+                    .trim();
+
+
+            const drawTitle =
+                String(
+                    finalDraw.title ||
+                    "SORTEIO DH-CLUB"
+                )
+                    .trim();
+
+
+            const pushRef =
+                database
+                    .ref(
+                        "push_queue"
+                    )
+                    .push();
+
+
+            notificationJobs.push(
+
+                pushRef.set({
+
+                    token,
+
+                    title:
+                        "🎉 VOCÊ FOI SORTEADO!",
+
+                    body:
+                        `Parabéns, ${winnerName}! Você foi o vencedor do sorteio "${drawTitle}" no DH-CLUB.`,
+
+                    status:
+                        "pending",
+
+                    timestamp:
+                        Date.now(),
+
+                    source:
+                        "DHCLUB_DRAW",
+
+                    drawId:
+                        String(
+                            drawId
+                        )
+
+                })
+            );
+        }
+    );
+
+
+    if (
+        notificationJobs.length
+    ) {
+
+        await Promise.all(
+            notificationJobs
+        );
+    }
+
+
+} catch (pushError) {
+
+    // A notificação nunca deve cancelar
+    // um sorteio que já foi realizado.
+
+    logger.error(
+        "Erro ao registrar notificação do vencedor",
+        pushError
+    );
+}
+            
             return {
 
                 ok:
