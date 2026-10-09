@@ -2104,66 +2104,175 @@ const totalCards =
     MEUS 5 MELHORES • NÍVEL ${memoryLevel}
   </div>
 
-<div
-  style="
-    margin-top:6px;
-    margin-bottom:10px;
-    font-size:11px;
-    font-weight:800;
-    color:var(--muted);
-  "
->
-
-  ${esc(
-    loggedUser?.nome ||
-    loggedUser?.name ||
-    'ATLETA'
-  )}
-
-  ${
-    myRecordLocation
-      ? ` • 📍 ${esc(myRecordLocation)}`
-      : ''
-  }
-
-</div>
 
   ${
     myRecords.length
 
       ? myRecords
           .map(
-            (record, index) => `
+            (
+              record,
+              index
+            ) => {
 
-              <div class="memory-record-row">
+              const recordName =
+                record?.name ||
+                loggedUser?.nome ||
+                loggedUser?.name ||
+                'ATLETA';
 
-                <span>
-                  ${index + 1}º
-                </span>
 
-                <b>
-                  ${
-                    formatMemoryDuration(
-                      record.timeMs
-                    )
-                  }
-                </b>
+              const recordLocation =
+                officialAthleteCity(
+                  record?.cpf ||
+                  myCpf,
 
-                <small>
-                  ${record.moves || 0}
-                  jogadas
-                </small>
+                  record?.city ||
+                  loggedUser?.city ||
+                  loggedUser?.cidade ||
+                  ''
+                );
 
-              </div>
 
-            `
+              return `
+
+                <div
+                  class="memory-record-row"
+
+                  style="
+                    display:grid;
+
+                    grid-template-columns:
+                      28px
+                      76px
+                      minmax(0,1fr)
+                      auto;
+
+                    gap:8px;
+
+                    align-items:center;
+
+                    padding:
+                      12px 0;
+                  "
+                >
+
+                  <span
+                    style="
+                      font-weight:900;
+                      color:var(--gold2);
+                    "
+                  >
+
+                    ${index + 1}º
+
+                  </span>
+
+
+                  <b
+                    style="
+                      font-size:14px;
+                      white-space:nowrap;
+                    "
+                  >
+
+                    ${
+                      formatMemoryDuration(
+                        record.timeMs
+                      )
+                    }
+
+                  </b>
+
+
+                  <div
+                    style="
+                      min-width:0;
+                    "
+                  >
+
+                    <div
+                      style="
+                        font-size:10px;
+                        font-weight:900;
+
+                        color:white;
+
+                        line-height:1.3;
+
+                        overflow:hidden;
+                        text-overflow:ellipsis;
+                      "
+                    >
+
+                      ${esc(
+                        recordName
+                      )}
+
+                    </div>
+
+
+                    ${
+                      recordLocation
+
+                        ? `
+
+                          <div
+                            style="
+                              margin-top:3px;
+
+                              font-size:9px;
+                              font-weight:700;
+
+                              color:var(--muted);
+
+                              white-space:nowrap;
+
+                              overflow:hidden;
+                              text-overflow:ellipsis;
+                            "
+                          >
+
+                            📍 ${esc(
+                              recordLocation
+                            )}
+
+                          </div>
+
+                        `
+
+                        : ''
+                    }
+
+                  </div>
+
+
+                  <small
+                    style="
+                      text-align:right;
+                      white-space:nowrap;
+                    "
+                  >
+
+                    ${record.moves || 0}
+                    jogadas
+
+                  </small>
+
+                </div>
+
+              `;
+            }
           )
           .join('')
 
       : `
 
         <div class="memory-no-record">
-          COMPLETE ESTE NÍVEL PARA REGISTRAR SEU TEMPO
+
+          COMPLETE ESTE NÍVEL
+          PARA REGISTRAR SEU TEMPO
+
         </div>
 
       `
