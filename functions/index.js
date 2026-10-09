@@ -1178,8 +1178,9 @@ function sorteioElegiveis(
 }
 
 
-function sorteioParticipantePublico(
-    user
+function sorteioNomeAtleta(
+    user,
+    coreRoot
 ) {
 
     const cpf =
@@ -1187,25 +1188,110 @@ function sorteioParticipantePublico(
             user?.cpf
         );
 
-    return {
-        participantId:
-            sorteioParticipantId(cpf),
 
-        name:
+    // ------------------------------------------------------
+    // 1. PRIMEIRO: NOME NO CADASTRO DO USUÁRIO
+    // ------------------------------------------------------
+
+    const nomeCadastro =
+        String(
             user?.nome ||
             user?.name ||
-            "ATLETA",
+            user?.nomeCompleto ||
+            user?.fullName ||
+            ""
+        )
+            .trim();
+
+
+    if (nomeCadastro) {
+
+        return nomeCadastro;
+    }
+
+
+    // ------------------------------------------------------
+    // 2. SEGUNDO: PROCURA O NOME NOS RESULTADOS OFICIAIS
+    // ------------------------------------------------------
+
+    const resultados =
+        transformarEmArray(
+            coreRoot?.tempos
+        );
+
+
+    const resultadoDoAtleta =
+        resultados.find(
+            resultado =>
+                sorteioCpfLimpo(
+                    resultado?.cpf
+                ) === cpf &&
+                String(
+                    resultado?.name ||
+                    resultado?.nome ||
+                    ""
+                )
+                    .trim()
+        );
+
+
+    if (resultadoDoAtleta) {
+
+        return String(
+            resultadoDoAtleta.name ||
+            resultadoDoAtleta.nome ||
+            ""
+        )
+            .trim();
+    }
+
+
+    // ------------------------------------------------------
+    // 3. ÚLTIMO RECURSO
+    // ------------------------------------------------------
+
+    return "ATLETA";
+}
+
+
+function sorteioParticipantePublico(
+    user,
+    coreRoot
+) {
+
+    const cpf =
+        sorteioCpfLimpo(
+            user?.cpf
+        );
+
+
+    return {
+
+        participantId:
+            sorteioParticipantId(
+                cpf
+            ),
+
+        name:
+            sorteioNomeAtleta(
+                user,
+                coreRoot
+            ),
 
         city:
-            user?.city || "",
+            user?.city ||
+            user?.cidade ||
+            "",
 
         uf:
-            user?.uf || "PE",
+            user?.uf ||
+            "PE",
 
         category:
             user?.cat ||
             user?.category ||
             ""
+
     };
 }
 
@@ -1769,7 +1855,8 @@ if (
                                                 ),
 
                                             ...sorteioParticipantePublico(
-                                                user
+                                               user,
+                                               coreRoot
                                             )
                                         })
                                     )
