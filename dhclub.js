@@ -12307,6 +12307,40 @@ function drawCardMarkup(
 
       </div>
 
+${
+  finished &&
+  draw.replayAvailable &&
+  draw.selectionTrace &&
+  objValues(
+    draw.selectionTrace
+  ).length
+
+    ? `
+
+      <button
+        class="primary-btn"
+        style="
+          width:100%;
+          margin-top:8px;
+        "
+        onclick="
+          Club.showDrawReplay(
+            '${esc(drawKey)}'
+          )
+        "
+      >
+
+        <i class="fa-solid fa-play"></i>
+
+        VER REPLAY DO SORTEIO
+
+      </button>
+
+    `
+
+    : ''
+}
+
       <button
         class="secondary-btn"
 
@@ -15259,13 +15293,13 @@ function showDrawDetails(
   drawId
 ) {
 
-  const draw =
-    club.draws?.[
+  const resolved =
+    resolveDrawRecord(
       drawId
-    ];
+    );
 
 
-  if (!draw) {
+  if (!resolved) {
 
     toast(
       'SORTEIO NÃO ENCONTRADO'
@@ -15273,6 +15307,14 @@ function showDrawDetails(
 
     return;
   }
+
+
+  const realDrawId =
+    resolved.key;
+
+
+  const draw =
+    resolved.draw;
 
 
   const status =
@@ -15627,7 +15669,7 @@ function showDrawDetails(
                   MÉTODO ALEATÓRIO:
                 </b>
 
-                Web Crypto API
+               Node.js crypto.randomInt • SERVIDOR
 
               </div>
 
@@ -15785,12 +15827,46 @@ function showDrawDetails(
       "
       onclick="
         Club.showDrawParticipants(
-          '${esc(drawKey)}'
-        )
+  '${esc(realDrawId)}'
+)
       "
     >
 
       <i class="fa-solid fa-users"></i>
+
+${
+  finished &&
+  draw.replayAvailable &&
+  draw.selectionTrace &&
+  objValues(
+    draw.selectionTrace
+  ).length
+
+    ? `
+
+      <button
+        class="primary-btn"
+        style="
+          width:100%;
+          margin-top:12px;
+        "
+        onclick="
+          Club.showDrawReplay(
+            '${esc(realDrawId)}'
+          )
+        "
+      >
+
+        <i class="fa-solid fa-play"></i>
+
+        VER REPLAY DO SORTEIO
+
+      </button>
+
+    `
+
+    : ''
+}
 
       VER PARTICIPANTES
 
@@ -15799,7 +15875,734 @@ function showDrawDetails(
   `);
 }
 
+// ----------------------------------------------------------
+// REPLAY DO SORTEIO
+// ----------------------------------------------------------
 
+function drawReplayDelay(
+  ms
+) {
+
+  return new Promise(
+    resolve =>
+      setTimeout(
+        resolve,
+        ms
+      )
+  );
+}
+
+
+// ----------------------------------------------------------
+// ANIMAR OS 6 DÍGITOS
+// ----------------------------------------------------------
+
+async function animateDrawReplayNumber(
+  publicNumber
+) {
+
+  const digits =
+    String(
+      publicNumber ||
+      '000000'
+    )
+      .padStart(
+        6,
+        '0'
+      )
+      .slice(
+        -6
+      )
+      .split('');
+
+
+  for (
+    let index = 0;
+    index < 6;
+    index++
+  ) {
+
+    const statusEl =
+      document.getElementById(
+        'draw-replay-status'
+      );
+
+
+    if (statusEl) {
+
+      statusEl.textContent =
+        `SORTEANDO DÍGITO ${index + 1} DE 6…`;
+    }
+
+
+    await new Promise(
+      resolve => {
+
+        let ticks =
+          0;
+
+
+        const timer =
+          setInterval(
+            () => {
+
+              const box =
+                document.getElementById(
+                  `draw-replay-digit-${index}`
+                );
+
+
+              if (!box) {
+
+                clearInterval(
+                  timer
+                );
+
+                resolve();
+
+                return;
+              }
+
+
+              // Apenas animação visual.
+              // NÃO define o vencedor.
+              box.textContent =
+                String(
+                  Math.floor(
+                    Math.random() *
+                    10
+                  )
+                );
+
+
+              ticks++;
+
+
+              if (
+                ticks >=
+                14 +
+                index * 2
+              ) {
+
+                clearInterval(
+                  timer
+                );
+
+
+                // O número final vem
+                // do registro REAL do servidor.
+                box.textContent =
+                  digits[
+                    index
+                  ];
+
+
+                box.style.borderColor =
+                  'rgba(247,201,72,.85)';
+
+
+                box.style.boxShadow =
+                  '0 0 18px rgba(247,201,72,.22)';
+
+
+                resolve();
+              }
+            },
+            70
+          );
+      }
+    );
+
+
+    await drawReplayDelay(
+      120
+    );
+  }
+}
+
+
+// ----------------------------------------------------------
+// ABRIR REPLAY
+// ----------------------------------------------------------
+
+async function showDrawReplay(
+  drawId
+) {
+
+  const resolved =
+    resolveDrawRecord(
+      drawId
+    );
+
+
+  if (!resolved) {
+
+    toast(
+      'SORTEIO NÃO ENCONTRADO'
+    );
+
+    return;
+  }
+
+
+  const realDrawId =
+    resolved.key;
+
+
+  const draw =
+    resolved.draw;
+
+
+  if (
+    String(
+      draw.status ||
+      ''
+    )
+      .toUpperCase() !==
+    'DRAWN'
+  ) {
+
+    toast(
+      'REPLAY DISPONÍVEL APENAS APÓS O SORTEIO'
+    );
+
+    return;
+  }
+
+
+  const trace =
+    objValues(
+      draw.selectionTrace
+    )
+      .sort(
+        (
+          a,
+          b
+        ) =>
+
+          Number(
+            a?.position ||
+            0
+          ) -
+
+          Number(
+            b?.position ||
+            0
+          )
+      );
+
+
+  if (!trace.length) {
+
+    toast(
+      'REPLAY NÃO DISPONÍVEL PARA ESTE SORTEIO'
+    );
+
+    return;
+  }
+
+
+  const winners =
+    objValues(
+      draw.winners
+    )
+      .sort(
+        (
+          a,
+          b
+        ) =>
+
+          Number(
+            a?.position ||
+            0
+          ) -
+
+          Number(
+            b?.position ||
+            0
+          )
+      );
+
+
+  const digitBoxes =
+    Array.from(
+      {
+        length: 6
+      },
+
+      (
+        _,
+        index
+      ) => `
+
+        <div
+          id="draw-replay-digit-${index}"
+
+          style="
+            height:64px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+
+            border-radius:14px;
+
+            background:#07111d;
+
+            border:
+              1px solid
+              rgba(255,255,255,.12);
+
+            font-size:30px;
+            font-weight:1000;
+            font-family:monospace;
+
+            color:var(--gold2);
+          "
+        >
+
+          0
+
+        </div>
+
+      `
+    )
+      .join('');
+
+
+  openModal(`
+
+    <div class="eyebrow">
+
+      REPLAY OFICIAL DO SORTEIO
+
+    </div>
+
+
+    <h2>
+
+      ${esc(
+        draw.title ||
+        'SORTEIO DH-CLUB'
+      )}
+
+    </h2>
+
+
+    <div
+      style="
+        margin:12px 0;
+        padding:11px;
+
+        border-radius:10px;
+
+        background:
+          rgba(78,161,255,.08);
+
+        border:
+          1px solid
+          rgba(78,161,255,.20);
+
+        color:var(--muted);
+
+        font-size:9px;
+        line-height:1.6;
+      "
+    >
+
+      Este replay não realiza
+      um novo sorteio.
+
+      <br><br>
+
+      Ele reproduz o número
+      registrado pelo servidor
+      no momento da escolha
+      do vencedor.
+
+    </div>
+
+
+    <div
+      id="draw-replay-round"
+
+      style="
+        margin-top:14px;
+
+        font-size:10px;
+        font-weight:900;
+
+        color:var(--gold2);
+
+        text-align:center;
+      "
+    >
+
+      PREPARANDO…
+
+    </div>
+
+
+    <div
+      style="
+        display:grid;
+
+        grid-template-columns:
+          repeat(
+            6,
+            minmax(
+              0,
+              1fr
+            )
+          );
+
+        gap:6px;
+
+        margin-top:10px;
+      "
+    >
+
+      ${digitBoxes}
+
+    </div>
+
+
+    <div
+      id="draw-replay-status"
+
+      style="
+        margin-top:10px;
+
+        text-align:center;
+
+        color:var(--muted);
+
+        font-size:9px;
+        font-weight:900;
+      "
+    >
+
+      PREPARANDO REPLAY…
+
+    </div>
+
+
+    <div
+      id="draw-replay-result"
+
+      style="
+        margin-top:12px;
+      "
+    >
+    </div>
+
+
+    <button
+      class="secondary-btn"
+
+      style="
+        width:100%;
+        margin-top:12px;
+      "
+
+      onclick="
+        Club.showDrawReplay(
+          '${esc(realDrawId)}'
+        )
+      "
+    >
+
+      <i
+        class="
+          fa-solid
+          fa-rotate-right
+        "
+      ></i>
+
+      REINICIAR REPLAY
+
+    </button>
+
+  `);
+
+
+  await drawReplayDelay(
+    350
+  );
+
+
+  const resultEl =
+    document.getElementById(
+      'draw-replay-result'
+    );
+
+
+  for (
+    let traceIndex = 0;
+
+    traceIndex <
+    trace.length;
+
+    traceIndex++
+  ) {
+
+    const item =
+      trace[
+        traceIndex
+      ] ||
+      {};
+
+
+    const randomIndex =
+      Number(
+        item.randomIndex ??
+        -1
+      );
+
+
+    const publicNumber =
+      String(
+
+        item.publicNumber ||
+
+        (
+          randomIndex >= 0
+
+            ? String(
+                randomIndex +
+                1
+              )
+                .padStart(
+                  6,
+                  '0'
+                )
+
+            : '000000'
+        )
+      )
+        .padStart(
+          6,
+          '0'
+        )
+        .slice(
+          -6
+        );
+
+
+    const winner =
+      winners.find(
+        current =>
+
+          String(
+            current?.participantId ||
+            ''
+          ) ===
+
+          String(
+            item?.participantId ||
+            ''
+          )
+      ) ||
+
+      winners[
+        traceIndex
+      ] ||
+
+      {};
+
+
+    const roundEl =
+      document.getElementById(
+        'draw-replay-round'
+      );
+
+
+    if (roundEl) {
+
+      roundEl.textContent =
+        `VENCEDOR ${traceIndex + 1} DE ${trace.length}`;
+    }
+
+
+    // Zera as colunas antes
+    // de cada vencedor.
+
+    for (
+      let digitIndex = 0;
+
+      digitIndex < 6;
+
+      digitIndex++
+    ) {
+
+      const box =
+        document.getElementById(
+          `draw-replay-digit-${digitIndex}`
+        );
+
+
+      if (box) {
+
+        box.textContent =
+          '0';
+
+
+        box.style.borderColor =
+          'rgba(255,255,255,.12)';
+
+
+        box.style.boxShadow =
+          'none';
+      }
+    }
+
+
+    await animateDrawReplayNumber(
+      publicNumber
+    );
+
+
+    if (resultEl) {
+
+      resultEl.insertAdjacentHTML(
+        'beforeend',
+
+        `
+
+          <div
+            style="
+              margin-top:10px;
+
+              padding:13px;
+
+              border-radius:12px;
+
+              background:
+                rgba(46,204,113,.10);
+
+              border:
+                1px solid
+                rgba(46,204,113,.22);
+            "
+          >
+
+            <div
+              style="
+                font-size:9px;
+                color:var(--muted);
+              "
+            >
+
+              NÚMERO REGISTRADO
+
+            </div>
+
+
+            <div
+              style="
+                margin-top:3px;
+
+                font-size:24px;
+
+                font-family:monospace;
+
+                font-weight:1000;
+
+                color:var(--gold2);
+
+                letter-spacing:2px;
+              "
+            >
+
+              ${esc(
+                publicNumber
+              )}
+
+            </div>
+
+
+            <div
+              style="
+                margin-top:7px;
+
+                font-size:10px;
+
+                color:var(--muted);
+              "
+            >
+
+              POSIÇÃO
+
+              ${
+                randomIndex >= 0
+
+                  ? randomIndex +
+                    1
+
+                  : '-'
+              }
+
+              DE
+
+              ${Number(
+                item.poolSize ||
+                0
+              )}
+
+            </div>
+
+
+            <div
+              style="
+                margin-top:10px;
+
+                font-size:14px;
+
+                font-weight:1000;
+
+                color:#2ecc71;
+              "
+            >
+
+              🏆
+
+              ${esc(
+                winner.name ||
+                'ATLETA'
+              )}
+
+            </div>
+
+          </div>
+
+        `
+      );
+    }
+
+
+    if (
+      traceIndex <
+      trace.length - 1
+    ) {
+
+      await drawReplayDelay(
+        1300
+      );
+    }
+  }
+
+
+  const statusEl =
+    document.getElementById(
+      'draw-replay-status'
+    );
+
+
+  if (statusEl) {
+
+    statusEl.textContent =
+      '✓ REPLAY CONCLUÍDO • RESULTADO REGISTRADO NO SERVIDOR';
+  }
+}
 
 // ----------------------------------------------------------
 // MOSTRAR PARTICIPANTES
@@ -23942,6 +24745,8 @@ confirmDraw,
 performDraw,
 
 showDrawDetails,
+
+showDrawReplay,
 
 showDrawParticipants,
 
