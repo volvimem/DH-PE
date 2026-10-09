@@ -1278,63 +1278,6 @@ current => {
       0,
       3
     );
-
-// ==========================================
-// TOP 3 GERAL DE TODOS OS NÍVEIS
-// ==========================================
-
-const globalTop3Level1 =
-  objValues(
-    club.memory_game
-      ?.global
-      ?.level_1
-      ?.top3
-  )
-  .sort(
-    (a,b)=>
-      Number(a.timeMs) -
-      Number(b.timeMs)
-  )
-  .slice(
-    0,
-    3
-  );
-
-
-const globalTop3Level2 =
-  objValues(
-    club.memory_game
-      ?.global
-      ?.level_2
-      ?.top3
-  )
-  .sort(
-    (a,b)=>
-      Number(a.timeMs) -
-      Number(b.timeMs)
-  )
-  .slice(
-    0,
-    3
-  );
-
-
-const globalTop3Level3 =
-  objValues(
-    club.memory_game
-      ?.global
-      ?.level_3
-      ?.top3
-  )
-  .sort(
-    (a,b)=>
-      Number(a.timeMs) -
-      Number(b.timeMs)
-  )
-  .slice(
-    0,
-    3
-  );
     
   }
 );
@@ -1974,6 +1917,62 @@ const globalTop3 =
     3
   );
 
+  // ==========================================
+// TOP 3 GERAL DE TODOS OS NÍVEIS
+// ==========================================
+
+const globalTop3Level1 =
+  objValues(
+    club.memory_game
+      ?.global
+      ?.level_1
+      ?.top3
+  )
+  .sort(
+    (a,b)=>
+      Number(a.timeMs) -
+      Number(b.timeMs)
+  )
+  .slice(
+    0,
+    3
+  );
+
+
+const globalTop3Level2 =
+  objValues(
+    club.memory_game
+      ?.global
+      ?.level_2
+      ?.top3
+  )
+  .sort(
+    (a,b)=>
+      Number(a.timeMs) -
+      Number(b.timeMs)
+  )
+  .slice(
+    0,
+    3
+  );
+
+
+const globalTop3Level3 =
+  objValues(
+    club.memory_game
+      ?.global
+      ?.level_3
+      ?.top3
+  )
+  .sort(
+    (a,b)=>
+      Number(a.timeMs) -
+      Number(b.timeMs)
+  )
+  .slice(
+    0,
+    3
+  );
 
 const globalRecord =
   globalTop3[0] || null;
