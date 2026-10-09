@@ -15902,23 +15902,22 @@ async function animateDrawReplayNumber(
 ) {
 
   const digits =
-    String(
+  String(
+    Number(
       publicNumber ||
-      '000000'
+      0
     )
-      .padStart(
-        6,
-        '0'
-      )
-      .slice(
-        -6
-      )
-      .split('');
+  )
+    .padStart(
+      3,
+      '0'
+    )
+    .split('');
 
 
   for (
     let index = 0;
-    index < 6;
+    index < 3;
     index++
   ) {
 
@@ -15931,7 +15930,7 @@ async function animateDrawReplayNumber(
     if (statusEl) {
 
       statusEl.textContent =
-        `SORTEANDO DÍGITO ${index + 1} DE 6…`;
+        `SORTEANDO DÍGITO ${index + 1} DE 3…`;
     }
 
 
@@ -16127,7 +16126,7 @@ async function showDrawReplay(
   const digitBoxes =
     Array.from(
       {
-        length: 6
+        length: 3
       },
 
       (
@@ -16248,7 +16247,7 @@ async function showDrawReplay(
 
         grid-template-columns:
           repeat(
-            6,
+            3,
             minmax(
               0,
               1fr
@@ -16360,32 +16359,23 @@ async function showDrawReplay(
 
 
     const publicNumber =
-      String(
+  String(
+    Number(
+      item.publicNumber ||
 
-        item.publicNumber ||
+      (
+        randomIndex >= 0
 
-        (
-          randomIndex >= 0
+          ? randomIndex + 1
 
-            ? String(
-                randomIndex +
-                1
-              )
-                .padStart(
-                  6,
-                  '0'
-                )
-
-            : '000000'
-        )
+          : 0
       )
-        .padStart(
-          6,
-          '0'
-        )
-        .slice(
-          -6
-        );
+    )
+  )
+    .padStart(
+      3,
+      '0'
+    );
 
 
     const winner =
@@ -16429,7 +16419,7 @@ async function showDrawReplay(
     for (
       let digitIndex = 0;
 
-      digitIndex < 6;
+      digitIndex < 3;
 
       digitIndex++
     ) {
