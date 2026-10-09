@@ -15894,7 +15894,7 @@ function drawReplayDelay(
 
 
 // ----------------------------------------------------------
-// ANIMAR OS 6 DÍGITOS
+// ANIMAR OS 3 DÍGITOS
 // ----------------------------------------------------------
 
 async function animateDrawReplayNumber(
