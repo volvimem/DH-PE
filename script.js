@@ -1215,8 +1215,137 @@ document.addEventListener("DOMContentLoaded", function() {
     configurarAutocompleteCidades('super-edit-city', 'super-edit-uf', 'lista-cidades-adm');
     // ==========================================================
 });
-function trocarTela(id) { document.querySelectorAll('.screen').forEach(e => e.classList.remove('active')); const tela = document.getElementById('screen-' + id); if(tela) tela.classList.add('active'); const nav = document.getElementById('main-nav-bar');
-const head = document.getElementById('main-app-header'); if(id === 'app') { if(nav) nav.style.display='flex'; if(head) head.style.display='flex'; } else { if(nav) nav.style.display='none'; if(head) head.style.display='none'; } }
+
+function trocarTela(id) {
+
+    document
+        .querySelectorAll('.screen')
+        .forEach(e => {
+            e.classList.remove('active');
+        });
+
+
+    const tela =
+        document.getElementById(
+            'screen-' + id
+        );
+
+
+    if (tela) {
+        tela.classList.add('active');
+    }
+
+
+    const nav =
+        document.getElementById(
+            'main-nav-bar'
+        );
+
+
+    const head =
+        document.getElementById(
+            'main-app-header'
+        );
+
+
+    if (id === 'app') {
+
+        if (nav) {
+
+            nav.style.setProperty(
+                'display',
+                'flex',
+                'important'
+            );
+
+            nav.style.setProperty(
+                'position',
+                'fixed',
+                'important'
+            );
+
+            nav.style.setProperty(
+                'bottom',
+                '0',
+                'important'
+            );
+
+            nav.style.setProperty(
+                'left',
+                '50%',
+                'important'
+            );
+
+            nav.style.setProperty(
+                'transform',
+                'translateX(-50%)',
+                'important'
+            );
+
+            nav.style.setProperty(
+                'width',
+                '100%',
+                'important'
+            );
+
+            nav.style.setProperty(
+                'max-width',
+                '600px',
+                'important'
+            );
+
+            nav.style.setProperty(
+                'height',
+                '60px',
+                'important'
+            );
+
+            nav.style.setProperty(
+                'z-index',
+                '999999',
+                'important'
+            );
+
+            nav.style.setProperty(
+                'background',
+                '#ffffff',
+                'important'
+            );
+        }
+
+
+        if (head) {
+
+            head.style.setProperty(
+                'display',
+                'flex',
+                'important'
+            );
+        }
+
+    } else {
+
+        if (nav) {
+
+            nav.style.setProperty(
+                'display',
+                'none',
+                'important'
+            );
+        }
+
+
+        if (head) {
+
+            head.style.setProperty(
+                'display',
+                'none',
+                'important'
+            );
+        }
+    }
+}
+
 function mostrarLoginInicial() { document.getElementById('lbl-season-year').innerText = SYSTEM_YEAR; trocarTela('login'); }
 window.togglePass = function(id) { const input = document.getElementById(id); const icon = input.nextElementSibling;
 if (input.type === "password") { input.type = "text"; icon.classList.remove("fa-eye"); icon.classList.add("fa-eye-slash"); } else { input.type = "password"; icon.classList.remove("fa-eye-slash"); icon.classList.add("fa-eye"); } };
