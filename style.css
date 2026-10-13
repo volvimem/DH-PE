@@ -285,3 +285,11 @@ body.archive-mode { border-top: 5px solid var(--pe-red); }
 .x1-status-concluido { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
 .x1-status-arregou { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
 .x1-winner-crown { color: #eab308; font-size: 18px; display: block; margin-bottom: 5px; animation: jump-btn 1.5s infinite; }
+
+/* ==========================================================
+   GARANTE MENU INFERIOR QUANDO O APP ESTIVER ABERTO
+   ========================================================== */
+
+#screen-app.active #main-nav-bar {
+    display: flex !important;
+}
