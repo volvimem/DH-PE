@@ -310,6 +310,68 @@ window.canManageEvent = function(evtId) {
     if(loggedUser && loggedUser.role === 'ORGANIZER' && loggedUser.allowedEvts && loggedUser.allowedEvts.includes(String(evtId))) return true;
     return false;
 };
+
+// Placa por etapa: um atleta usa a mesma placa em todas as suas categorias neste evento.
+// A busca no cadastro geral serve apenas para registros anteriores a esta atualização.
+window.getPlacaAtletaEvento = function(atleta, evtId, inscricao = null) {
+    if (!atleta) return '';
+    const inscricoesEvento = (atleta.inscricoes || []).filter(i => String(i.id) === String(evtId));
+    if (inscricao && inscricao.placa != null && String(inscricao.placa).trim()) return String(inscricao.placa).trim();
+    const comPlaca = inscricoesEvento.find(i => i.placa != null && String(i.placa).trim());
+    if (comPlaca) return String(comPlaca.placa).trim();
+    // Campo intencionalmente limpo pela organização: não herdar placa de outra etapa.
+    if (inscricoesEvento.some(i => Object.prototype.hasOwnProperty.call(i, 'placa'))) return '';
+    return String(atleta.numero || atleta.numPlaca || atleta.placa || '').trim();
+};
+
+function validarPlacaParaEvento(cpf, evtId, placa) {
+    if (!canManageEvent(evtId)) { toast('SEM PERMISSÃO PARA ESTE EVENTO', 'error'); return false; }
+    if (placa && !/^\d{1,6}$/.test(placa)) {
+        toast('A PLACA DEVE TER DE 1 A 6 DÍGITOS', 'error'); return false;
+    }
+    if (placa) {
+        const ocupado = db.users.find(u =>
+            cleanCPF(u.cpf) !== cleanCPF(cpf) &&
+            (u.inscricoes || []).some(i => String(i.id) === String(evtId)) &&
+            /^\d+$/.test(getPlacaAtletaEvento(u, evtId)) &&
+            Number(getPlacaAtletaEvento(u, evtId)) === Number(placa)
+        );
+        if (ocupado) { toast(`PLACA ${placa} JÁ USADA POR ${ocupado.nome} NESTA ETAPA!`, 'error'); return false; }
+    }
+    return true;
+}
+
+function registrarPlacaAtletaEvento(cpf, evtId, placa, auditar = true) {
+    const atleta = db.users.find(u => cleanCPF(u.cpf) === cleanCPF(cpf));
+    if (!atleta || !(atleta.inscricoes || []).some(i => String(i.id) === String(evtId))) {
+        toast('INSCRIÇÃO NÃO ENCONTRADA', 'error'); return false;
+    }
+    if (!validarPlacaParaEvento(cpf, evtId, placa)) return false;
+    const inscricoesEvento = atleta.inscricoes.filter(i => String(i.id) === String(evtId));
+    if (inscricoesEvento.every(i => Object.prototype.hasOwnProperty.call(i, 'placa') && String(i.placa) === placa)) return true;
+    inscricoesEvento.forEach(i => { i.placa = placa; });
+    saveDB('users');
+    if (auditar) window.logAction(`Atualizou placa de ${atleta.nome} no evento ${evtId}: ${placa || 'SEM PLACA'}`);
+    return true;
+}
+
+window.salvarPlacaInscricao = function(cpf, evtId, botao) {
+    const input = botao && botao.closest('.adm-placa-row')?.querySelector('.adm-placa-input');
+    if (!input) return toast('CAMPO DE PLACA NÃO ENCONTRADO', 'error');
+    const placa = input.value.trim();
+    if (registrarPlacaAtletaEvento(cpf, evtId, placa)) {
+        toast(placa ? `PLACA ${placa} SALVA NA INSCRIÇÃO!` : 'PLACA REMOVIDA DESTA ETAPA!', 'success');
+        renderInscriptions();
+    }
+};
+
+// Ao aprovar ou isentar, aproveita também a placa digitada no próprio cartão.
+function salvarPlacaNoAtoDaAprovacao(cpf, evtId, botao) {
+    const input = botao && botao.closest('.adm-card')?.querySelector('.adm-placa-input');
+    if (!input || !input.value.trim()) return true;
+    return registrarPlacaAtletaEvento(cpf, evtId, input.value.trim());
+}
+
 function applyAdminPermissions() {
     if(!loggedUser) return;
     const isSuper = isSuperAdmin(loggedUser); const displayMode = isSuper ? 'flex' : 'none';
@@ -2182,11 +2244,7 @@ window.verOrdemLargada = function() {
                     cat:
                         cat,
 
-                    placa:
-                        u.numero ||
-                        u.numPlaca ||
-                        u.placa ||
-                        '',
+                    placa: getPlacaAtletaEvento(u, evt.id, insc),
 
                     qualify:
                         qualify
@@ -3086,7 +3144,7 @@ window.renderModoCorrida = function() {
                 competidores.push({
                     cpf: u.cpf,
                     nome: u.nome || '',
-                    placa: u.numero || u.numPlaca || u.placa || '',
+                    placa: getPlacaAtletaEvento(u, evt.id, i),
                     cat: catU,
                     qualifyObj: acharTempo('qualify'),
                     oficialObj: acharTempo('1st'),
@@ -3170,7 +3228,7 @@ window.renderModoCorrida = function() {
             statusSub = 'Sua posição será atualizada automaticamente.';
         }
 
-        const placa = meuRegistro ? meuRegistro.placa : (loggedUser.numero || loggedUser.numPlaca || loggedUser.placa || '—');
+        const placa = meuRegistro ? meuRegistro.placa : getPlacaAtletaEvento(loggedUser, evt.id);
 
         html += `
             <div style="background:white; border:1px solid #dbe2ea; border-radius:12px; padding:11px; margin-bottom:12px; box-shadow:0 2px 6px rgba(15,23,42,.05);">
@@ -4414,7 +4472,7 @@ if (fEvt === 'ALL') {
                  const key = t.cpf + '_' + t.cat + '_' + t.evtId; 
                  if(!grouped[key]) { 
                      const evtObj = db.events.find(e => String(e.id) === String(t.evtId)); 
-                     grouped[key] = { cpf: t.cpf, name: t.name, city: t.city, cat: t.cat, evtName: evtObj ? evtObj.t : "ETAPA", q: '--:--.---', o: '--:--.---', s: '--:--.---', num: "" }; 
+                     grouped[key] = { cpf: t.cpf, name: t.name, city: t.city, cat: t.cat, evtId: t.evtId, evtName: evtObj ? evtObj.t : "ETAPA", q: '--:--.---', o: '--:--.---', s: '--:--.---', num: "" }; 
                  } 
                  if(t.num) grouped[key].num = t.num; // Pega a placa
                  if(t.runType === 'qualify') grouped[key].q = t.val; 
@@ -4482,7 +4540,7 @@ if (fEvt === 'ALL') {
                      
                      // LÓGICA DA PLACA
                      let userObj = db.users.find(u => u.cpf === r.cpf);
-                     let placaStr = r.num || (userObj ? (userObj.numero || userObj.numPlaca || userObj.placa || "") : "");
+                     let placaStr = userObj ? getPlacaAtletaEvento(userObj, r.evtId) : (r.num || "");
                      let placaHtml = placaStr ? `<span style="background:#1e293b; color:white; font-size:11px; font-weight:900; padding:2px 6px; border-radius:4px; margin-left:5px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">#${placaStr}</span>` : "";
 
                      let catHeader = '';
@@ -5731,7 +5789,7 @@ window.compartilListaInscritos = function() {
                     }
                     let val = parseFloat(valStr.replace(',', '.')) || 0;
                     if (i.status === 'CONFIRMADO') { totalArrecadado += val; }
-                    inscritos.push({ nome: u.nome, city: u.city, uf: u.uf || 'PE', cat: cat, status: i.status });
+                    inscritos.push({ nome: u.nome, city: u.city, uf: u.uf || 'PE', cat: cat, status: i.status, placa: getPlacaAtletaEvento(u, i.id, i) });
                     if (!contagemPorCategoria[cat]) contagemPorCategoria[cat] = 0; contagemPorCategoria[cat]++; totalInscritos++;
                 }
             });
@@ -5745,8 +5803,8 @@ window.compartilListaInscritos = function() {
     html += `</div></div></div>`; 
     catKeys.forEach(cat => {
         let atletasCat = inscritos.filter(a => a.cat === cat).sort((a,b) => a.nome.localeCompare(b.nome));
-        html += `<div class="cat-title">${cat} <span style="float: right; font-size: 11px; margin-top: 2px;">(${atletasCat.length} atletas)</span></div><table><thead><tr><th class="pos">#</th><th>NOME DO ATLETA</th><th>CIDADE/UF</th><th style="width: 100px;">STATUS</th></tr></thead><tbody>`;
-        atletasCat.forEach((a, idx) => { html += `<tr><td class="pos">${idx + 1}</td><td style="font-weight:bold;">${a.nome}</td><td>${a.city}-${a.uf}</td><td class="status-${a.status}">${a.status}</td></tr>`; });
+        html += `<div class="cat-title">${cat} <span style="float: right; font-size: 11px; margin-top: 2px;">(${atletasCat.length} atletas)</span></div><table><thead><tr><th class="pos">#</th><th style="width:65px">PLACA</th><th>NOME DO ATLETA</th><th>CIDADE/UF</th><th style="width: 100px;">STATUS</th></tr></thead><tbody>`;
+        atletasCat.forEach((a, idx) => { html += `<tr><td class="pos">${idx + 1}</td><td style="font-weight:900;">${a.placa || "—"}</td><td style="font-weight:bold;">${a.nome}</td><td>${a.city}-${a.uf}</td><td class="status-${a.status}">${a.status}</td></tr>`; });
         html += `</tbody></table>`;
     });
     html += `<div class="footer">Documento gerado oficialmente pelo Sistema FPC/PE em ${new Date().toLocaleString('pt-BR')}</div></body></html>`;
@@ -5776,7 +5834,7 @@ window.gerarExcelCBC = function() {
                 let key = t.cpf + '_' + t.cat;
                 if(!pilotResults[key]) {
                     let u = db.users.find(x => x.cpf === t.cpf) || {};
-                    pilotResults[key] = { cpf: t.cpf, nome: t.name, cbc: u.cbc || "", equipe: u.team || "", cidade: t.city, estado: u.uf || "PE", cat: t.cat, qualify: "", final: "", num: u.numero || u.numPlaca || u.placa || "" };
+                    pilotResults[key] = { cpf: t.cpf, nome: t.name, cbc: u.cbc || "", equipe: u.team || "", cidade: t.city, estado: u.uf || "PE", cat: t.cat, qualify: "", final: "", num: getPlacaAtletaEvento(u, evtId) };
                 }
                 if(t.runType === 'qualify') pilotResults[key].qualify = t.val;
                 if(t.runType === '1st' || !t.runType) pilotResults[key].final = t.val;
@@ -5798,7 +5856,7 @@ window.gerarExcelCBC = function() {
                 pilotosDaCat.sort((a,b) => { let tA = a.final !== "" ? a.final : "99:99.999"; let tB = b.final !== "" ? b.final : "99:99.999"; return tA.localeCompare(tB); });
                 let borderStyle = { top: {style:"thin"}, bottom: {style:"thin"}, left: {style:"thin"}, right: {style:"thin"} };
                 pilotosDaCat.forEach((p, index) => {
-                    ws_data.push([ {v: p.num || (index+1), t: 'n', s: { border: borderStyle, alignment: { horizontal: "center" } }}, {v: p.nome, t: 's', s: { border: borderStyle }}, {v: p.cbc, t: 's', s: { border: borderStyle, alignment: { horizontal: "center" } }}, {v: p.equipe, t: 's', s: { border: borderStyle }}, {v: p.cidade, t: 's', s: { border: borderStyle }}, {v: p.estado, t: 's', s: { border: borderStyle, alignment: { horizontal: "center" } }}, {v: p.qualify === "--:--.---" ? "" : p.qualify, t: 's', s: { border: borderStyle, alignment: { horizontal: "center" } }}, {v: p.final === "--:--.---" ? "" : p.final, t: 's', s: { border: borderStyle, alignment: { horizontal: "center", font: {bold: true} } }} ]);
+                    ws_data.push([ {v: String(p.num || ''), t: 's', s: { border: borderStyle, alignment: { horizontal: "center" } }}, {v: p.nome, t: 's', s: { border: borderStyle }}, {v: p.cbc, t: 's', s: { border: borderStyle, alignment: { horizontal: "center" } }}, {v: p.equipe, t: 's', s: { border: borderStyle }}, {v: p.cidade, t: 's', s: { border: borderStyle }}, {v: p.estado, t: 's', s: { border: borderStyle, alignment: { horizontal: "center" } }}, {v: p.qualify === "--:--.---" ? "" : p.qualify, t: 's', s: { border: borderStyle, alignment: { horizontal: "center" } }}, {v: p.final === "--:--.---" ? "" : p.final, t: 's', s: { border: borderStyle, alignment: { horizontal: "center", font: {bold: true} } }} ]);
                     rowIndex++;
                 });
                 ws_data.push(["", "", "", "", "", "", "", ""]); rowIndex++;
@@ -5846,7 +5904,7 @@ window.gerarExcelLargada = function() {
             db.users.forEach(u => {
                 if (u.inscricoes) {
                     u.inscricoes.forEach(i => {
-                        if (String(i.id) === String(evtId) && i.status === 'CONFIRMADO') {
+                        if (String(i.id) === String(evtId) && (i.status === 'CONFIRMADO' || i.status === 'ISENTO')) {
                             let cat = window.normalizeCatName(i.extraCat || u.cat);
                             
                             let qTime = "";
@@ -5857,7 +5915,7 @@ window.gerarExcelLargada = function() {
                             
                             inscritos.push({
                                 ordem: 0,
-                                placa: u.numero || u.numPlaca || u.placa || "",
+                                placa: getPlacaAtletaEvento(u, evtId, i),
                                 cat: cat,
                                 nome: u.nome,
                                 cidade: u.city + '-' + (u.uf || 'PE'),
@@ -5871,7 +5929,7 @@ window.gerarExcelLargada = function() {
 
             if(inscritos.length === 0) {
                 if(btnClicado && btnClicado.tagName === 'BUTTON') { btnClicado.innerHTML = textoOriginal; btnClicado.disabled = false; } 
-                return toast("Nenhum atleta confirmado nesta etapa.", "error");
+                return toast("Nenhum atleta pago ou isento nesta etapa.", "error");
             }
 
             inscritos.sort((a, b) => {
@@ -6019,7 +6077,10 @@ window.importarExcelTempos = function(event) {
                             db.tempos.push(objTempo);
                         }
                         
-                        if(placaStr && uObj) { uObj.numero = placaStr.toString(); }
+                        if(placaStr && uObj) {
+                            uObj.numero = placaStr.toString();
+                            (uObj.inscricoes || []).filter(i => String(i.id) === String(evtId)).forEach(i => { i.placa = placaStr.toString(); });
+                        }
                         contagemSalvos++;
                     }
                 }
@@ -6361,11 +6422,7 @@ window.gerarExcelLargada = function() {
 
                         ordem: 0,
 
-                        placa:
-                            u.numero ||
-                            u.numPlaca ||
-                            u.placa ||
-                            "",
+                        placa: getPlacaAtletaEvento(u, evtId, i),
 
                         cat: cat,
 
@@ -6927,8 +6984,12 @@ window.importarExcelTempos = function(event) {
                     let atualizouAlgo = false;
 
                     // 1. Atualiza a Placa do Atleta, se foi digitada no Excel
-                    if (placaStr !== "" && uObj && uObj.numero !== placaStr.toString()) {
+                    if (placaStr !== "" && uObj && (
+                        uObj.numero !== placaStr.toString() ||
+                        getPlacaAtletaEvento(uObj, evtId) !== placaStr.toString()
+                    )) {
                         uObj.numero = placaStr.toString();
+                        (uObj.inscricoes || []).filter(i => String(i.id) === String(evtId)).forEach(i => { i.placa = placaStr.toString(); });
                         atualizouAlgo = true;
                     }
 
@@ -7034,7 +7095,11 @@ window.addResult = function() {
         // NOVO: Salva a placa também no cadastro principal do atleta
         if(numPlaca) {
             let uIdx = db.users.findIndex(u => u.cpf === cpf);
-            if(uIdx > -1) { db.users[uIdx].numero = numPlaca; saveDB('users'); }
+            if(uIdx > -1) {
+                db.users[uIdx].numero = numPlaca;
+                (db.users[uIdx].inscricoes || []).filter(i => String(i.id) === String(evtId)).forEach(i => { i.placa = numPlaca; });
+                saveDB('users');
+            }
         }
 
         saveDB('tempos');
@@ -7590,7 +7655,7 @@ function gatherAndPushData(win) {
                                 } 
                             }); 
                         } 
-                        liveDataArray.push({ id: u.cpf + '||' + cat, originalCpf: u.cpf, name: nome, city: cityUF, region: uf, number: u.numero || u.numPlaca || u.placa || "S/N", category: cat, status: insc.status, times: times, startClocks: startClocks, isRerun: false });
+                        liveDataArray.push({ id: u.cpf + '||' + cat, originalCpf: u.cpf, name: nome, city: cityUF, region: uf, number: getPlacaAtletaEvento(u, evtId, insc) || "S/N", category: cat, status: insc.status, times: times, startClocks: startClocks, isRerun: false });
                     } 
                 });
             } 
@@ -7707,7 +7772,7 @@ window.renderInscriptions = function() {
                         inscritos.push({
                             cpf: u.cpf, nome: u.nome, city: u.city, uf: u.uf || 'PE', cat: catNome,
                             status: i.status, evtName: evtObj.t, evtIdInsc: i.id, valDisplay: valStr, 
-                            date: i.date || 0, tel: u.tel
+                            date: i.date || 0, tel: u.tel, placa: getPlacaAtletaEvento(u, i.id, i)
                         });
                     }
                 }
@@ -7728,7 +7793,8 @@ window.renderInscriptions = function() {
         inscritos = inscritos.filter(a => 
             a.nome.toLowerCase().includes(termo) || 
             a.cpf.includes(termo) || 
-            a.city.toLowerCase().includes(termo)
+            a.city.toLowerCase().includes(termo) ||
+            String(a.placa || '').includes(termo)
         );
     }
 
@@ -7750,8 +7816,8 @@ window.renderInscriptions = function() {
         
         let btnAcao = '';
         if (!isApproved) {
-            btnAcao = `<button class="btn-mini-adm" style="background:#009b3a; flex:1; font-weight:bold; padding:8px 0; margin:0;" onclick="aprovarInscricao('${a.cpf}', '${a.evtIdInsc}', '${a.cat}')"><i class="fas fa-check"></i> APROVAR</button>
-                       <button class="btn-mini-adm" style="background:#0284c7; flex:1; font-weight:bold; padding:8px 0; margin:0;" onclick="isentarInscricao('${a.cpf}', '${a.evtIdInsc}', '${a.cat}')"><i class="fas fa-handshake"></i> ISENTAR</button>`;
+            btnAcao = `<button class="btn-mini-adm" style="background:#009b3a; flex:1; font-weight:bold; padding:8px 0; margin:0;" onclick="aprovarInscricao('${a.cpf}', '${a.evtIdInsc}', '${a.cat}', this)"><i class="fas fa-check"></i> APROVAR</button>
+                       <button class="btn-mini-adm" style="background:#0284c7; flex:1; font-weight:bold; padding:8px 0; margin:0;" onclick="isentarInscricao('${a.cpf}', '${a.evtIdInsc}', '${a.cat}', this)"><i class="fas fa-handshake"></i> ISENTAR</button>`;
         } else {
             btnAcao = `<button class="btn-mini-adm" style="background:#d65a00; flex:1; font-weight:bold; padding:8px 0; margin:0;" onclick="estornarInscricao('${a.cpf}', '${a.evtIdInsc}', '${a.cat}')"><i class="fas fa-undo"></i> ESTORNAR</button>`;
         }
@@ -7774,6 +7840,11 @@ window.renderInscriptions = function() {
                     <div style="font-size:10px; color:#64748b; margin-top:4px; font-weight:bold;">${new Date(a.date).toLocaleDateString('pt-BR')}</div>
                 </div>
             </div>
+            <div class="adm-placa-row">
+                <label class="adm-placa-label"><i class="fas fa-hashtag"></i> PLACA DO ATLETA</label>
+                <input class="adm-placa-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" value="${String(a.placa || '').replace(/[^0-9]/g, '')}" placeholder="Ex.: 125" aria-label="Número da placa">
+                <button class="btn-mini-adm adm-placa-save" onclick="salvarPlacaInscricao('${a.cpf}', '${a.evtIdInsc}', this)"><i class="fas fa-save"></i> SALVAR PLACA</button>
+            </div>
             <div style="display:flex; gap:5px; border-top:1px dashed #e2e8f0; padding-top:10px; margin-top:4px;">
                 ${wppBtn}
                 ${btnAcao}
@@ -7783,8 +7854,8 @@ window.renderInscriptions = function() {
     }).join('');
 };
 
-window.isentarInscricao = function(cpf, evtId, cat) {
-    if(!isSuperAdmin(loggedUser) && loggedUser.role !== 'ORGANIZER') return toast("SEM PERMISSÃO", "error");
+window.isentarInscricao = function(cpf, evtId, cat, botaoAcao = null) {
+    if (!canManageEvent(evtId)) return toast("SEM PERMISSÃO NESTE EVENTO", "error");
     showConfirm("ISENTAR INSCRIÇÃO?", "Deseja isentar o pagamento e aprovar este atleta?", '<i class="fas fa-handshake" style="color:#0284c7"></i>', function(res) {
         if(res) {
             const uIdx = db.users.findIndex(u => u.cpf === cpf);
@@ -7792,6 +7863,7 @@ window.isentarInscricao = function(cpf, evtId, cat) {
                 const iIdx = db.users[uIdx].inscricoes.findIndex(i => String(i.id) === String(evtId) && window.normalizeCatName(i.extraCat || db.users[uIdx].cat).replace(" (EXTRA)", "") === cat.replace(" (EXTRA)", ""));
                 
                 if(iIdx > -1) {
+                    if (!salvarPlacaNoAtoDaAprovacao(cpf, evtId, botaoAcao)) return;
                     db.users[uIdx].inscricoes[iIdx].status = 'ISENTO';
                     saveDB('users');
                     window.logAction(`Isentou a inscrição de ${db.users[uIdx].nome} (Cat: ${cat}) no evento ID: ${evtId}`);
@@ -7830,8 +7902,8 @@ window.filtrarAtletasStatus = function() {
 };
 
 // FIX APLICADO NO APROVARINSCRIÇÃO: Agora ele faz o .replace(" (EXTRA)", "") nos dois lados da verificação
-window.aprovarInscricao = function(cpf, evtId, cat) {
-    if(!isSuperAdmin(loggedUser) && loggedUser.role !== 'ORGANIZER') return toast("SEM PERMISSÃO", "error");
+window.aprovarInscricao = function(cpf, evtId, cat, botaoAcao = null) {
+    if (!canManageEvent(evtId)) return toast("SEM PERMISSÃO NESTE EVENTO", "error");
     showConfirm("APROVAR INSCRIÇÃO?", "Confirmar o recebimento do pagamento e liberar o atleta?", '<i class="fas fa-check-circle" style="color:#009b3a"></i>', function(res) {
         if(res) {
             const uIdx = db.users.findIndex(u => u.cpf === cpf);
@@ -7839,6 +7911,7 @@ window.aprovarInscricao = function(cpf, evtId, cat) {
                 const iIdx = db.users[uIdx].inscricoes.findIndex(i => String(i.id) === String(evtId) && window.normalizeCatName(i.extraCat || db.users[uIdx].cat).replace(" (EXTRA)", "") === cat.replace(" (EXTRA)", ""));
                 
                 if(iIdx > -1) {
+                    if (!salvarPlacaNoAtoDaAprovacao(cpf, evtId, botaoAcao)) return;
                     db.users[uIdx].inscricoes[iIdx].status = 'CONFIRMADO';
                     saveDB('users');
                     const author = loggedUser.nome;
@@ -8375,7 +8448,7 @@ window.imprimirOrdemLargadaGeral = function() {
                         city: u.city,
                         uf: u.uf || 'PE',
                         cat: cat,
-                        num: u.numero || u.numPlaca || u.placa || "",
+                        num: getPlacaAtletaEvento(u, evtId),
                         qTime: qualifyTime,
                         hasQ: hasQ
                     });
