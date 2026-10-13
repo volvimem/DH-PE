@@ -24,7 +24,7 @@
     
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     
-    <link rel="stylesheet" href="style.css"> 
+    <link rel="stylesheet" href="style.css?v=158"> 
 </head>
 <body>
 
@@ -656,6 +656,7 @@
                            <button class="btn-mini-adm" style="background:#0284c7;color:white;flex:1" onclick="filterFinList('ISENTO')">ISENTOS</button>
                           <button class="btn-mini-adm" style="background:orange;color:white;flex:1" onclick="filterFinList('PENDENTE')">PEND</button>
                         </div>
+                        <p class="adm-placa-help">Informe a placa no cartão do atleta e clique em <b>Salvar Placa</b>. Funciona para inscrições pagas, isentas e pendentes; ao aprovar ou isentar, a placa digitada também é salva.</p>
                         <div id="fin-list-container" style="max-height:300px; overflow-y:auto; background:white; border:1px solid #eee"></div>
                     </div>
                     <button class="btn" style="background:#333; margin-top:20px" onclick="backToAdmMenu()">VOLTAR</button>
@@ -1600,7 +1601,7 @@ refreshListsOnly();
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
 
-<script src="script.js?v=157"></script>
+<script src="script.js?v=158"></script>
 
 </body>
 </html>
