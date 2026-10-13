@@ -539,196 +539,45 @@
                 <div id="adm-sec-results" class="adm-section" style="display:none">
                     <div style="background:white; border:1px solid #ddd; padding:10px; border-radius:8px;">
                         
-                        <div class="adm-result-actions-wrap">
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap: 5px; flex-wrap: wrap;">
+                            <b style="color:var(--pe-green); font-size:12px">LANÇAR RESULTADO</b>
+                            <div style="display:flex; gap:5px;">
+                                
+                                <!-- MECANISMO INVISÍVEL PARA LER O ARQUIVO -->
+                                <input type="file" id="input-import-excel" accept=".xlsx, .xls" style="display:none" onchange="window.importarExcelTempos(event)">
+                                
+                                <!-- BOTÃO DE IMPORTAR (INVISÍVEL POR PADRÃO, COM ID) -->
+                                <button id="btn-import-excel" class="btn-live-launch" title="Importar Tempos do Excel" style="background:#0038a8; color:white; padding:6px 10px; border:none; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer; display:none; align-items:center; gap:5px;" onclick="document.getElementById('input-import-excel').click()">
+                                    <i class="fas fa-upload"></i> IMPORTAR
+                                </button>
 
-    <b style="color:var(--pe-green); font-size:12px">
-        LANÇAR RESULTADO
-    </b>
-
-    <div
-    class="adm-result-actions"
-    style="
-        display:flex;
-        width:100%;
-        gap:5px;
-        margin-top:8px;
-        align-items:stretch;
-    "
+                                <!-- BOTÃO DE GERAR EXCEL LARGADA -->
+                                <button class="btn-live-launch" title="Baixar Planilha de Largada" style="background:#107c41; color:white; padding:6px 10px; border:none; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer; display:flex; align-items:center; gap:5px;" onclick="window.gerarExcelLargada()">
+                                    <i class="fas fa-file-excel"></i> LARGADA
+                                    <!-- PUBLICA / DESPUBLICA A ORDEM PARA OS ATLETAS -->
+<button
+    id="btn-publish-start-list"
+    class="btn-live-launch"
+    title="Liberar a ordem de largada para atletas pagos ou isentos"
+    style="background:#7c3aed; color:white; padding:6px 10px; border:none; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer; display:flex; align-items:center; gap:5px;"
+    onclick="window.alternarPublicacaoOrdemLargada()"
 >
+    <i class="fas fa-bullhorn"></i> PUBLICAR ORDEM
+</button>
+                                </button>
+                                
+                                <button class="btn-live-launch" style="background:#ff9800; color:white; padding:6px 10px; border:none; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer;" onclick="imprimirOrdemLargadaGeral()"><i class="fas fa-print"></i> IMPRIMIR</button>
+                                
+                                <button class="btn-live-launch" style="background:#dc3545; color:white; padding:6px 10px; border:none; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer; display:flex; align-items:center; gap:5px;" onclick="launchUnifiedLiveTiming()">
+                                    LIVE <i class="fas fa-external-link-alt"></i>
+                                </button>
+                            </div>
+                        </div>
 
-    <!-- INPUT INVISÍVEL DO EXCEL -->
-    <input
-        type="file"
-        id="input-import-excel"
-        accept=".xlsx, .xls"
-        style="display:none"
-        onchange="window.importarExcelTempos(event)"
-    >
-
-
-    <!-- IMPORTAR -->
-    <button
-        id="btn-import-excel"
-        class="btn-live-launch"
-        title="Importar Tempos do Excel"
-        style="
-            background:#0038a8;
-            color:white;
-            flex:1 1 0;
-            min-width:0;
-            height:48px;
-            padding:6px 2px;
-            border:none;
-            border-radius:6px;
-            font-weight:bold;
-            font-size:9px;
-            cursor:pointer;
-            display:none;
-            align-items:center;
-            justify-content:center;
-            gap:4px;
-        "
-        onclick="document.getElementById('input-import-excel').click()"
-    >
-        <i class="fas fa-upload"></i>
-        IMPORTAR
-    </button>
-
-
-    <!-- LARGADA -->
-    <button
-        class="btn-live-launch"
-        title="Baixar Planilha de Largada"
-        style="
-            background:#107c41;
-            color:white;
-            flex:1 1 0;
-            min-width:0;
-            height:48px;
-            padding:6px 2px;
-            border:none;
-            border-radius:6px;
-            font-weight:bold;
-            font-size:9px;
-            cursor:pointer;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            gap:4px;
-        "
-        onclick="window.gerarExcelLargada()"
-    >
-        <i class="fas fa-file-excel"></i>
-        LARGADA
-    </button>
-
-
-    <!-- PUBLICAR ORDEM -->
-    <button
-        id="btn-publish-start-list"
-        class="btn-live-launch"
-        title="Liberar a ordem de largada para atletas pagos ou isentos"
-        style="
-            background:#7c3aed;
-            color:white;
-            flex:1 1 0;
-            min-width:0;
-            height:48px;
-            padding:6px 2px;
-            border:none;
-            border-radius:6px;
-            font-weight:bold;
-            font-size:8px;
-            cursor:pointer;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            gap:3px;
-            text-align:center;
-            line-height:1.05;
-        "
-        onclick="window.alternarPublicacaoOrdemLargada()"
-    >
-        <i class="fas fa-bullhorn"></i>
-        <span>PUBLICAR<br>ORDEM</span>
-    </button>
-
-
-    <!-- IMPRIMIR -->
-    <button
-        class="btn-live-launch"
-        title="Imprimir ordem de largada"
-        style="
-            background:#ff9800;
-            color:white;
-            flex:1 1 0;
-            min-width:0;
-            height:48px;
-            padding:6px 2px;
-            border:none;
-            border-radius:6px;
-            font-weight:bold;
-            font-size:9px;
-            cursor:pointer;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            gap:4px;
-        "
-        onclick="imprimirOrdemLargadaGeral()"
-    >
-        <i class="fas fa-print"></i>
-        IMPRIMIR
-    </button>
-
-
-    <!-- LIVE -->
-    <button
-        id="btn-live-timing"
-        class="btn-live-launch"
-        title="Abrir Live Timing"
-        style="
-            background:#dc3545;
-            color:white;
-            flex:1 1 0;
-            min-width:0;
-            height:48px;
-            padding:6px 2px;
-            border:none;
-            border-radius:6px;
-            font-weight:bold;
-            font-size:9px;
-            cursor:pointer;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            gap:4px;
-        "
-        onclick="launchUnifiedLiveTiming()"
-    >
-        LIVE
-        <i class="fas fa-external-link-alt"></i>
-    </button>
-
-</div>
-
-
-<div style="display:flex; gap:5px; margin-top:10px;">
-
-    <select
-        id="adm-res-evt"
-        class="input-field"
-        onchange="renderAdmResults()"
-    >
-        <option value="">
-            SELECIONE EVENTO...
-        </option>
-    </select>
-
-</div>
-
-
-<div style="margin-top:5px;">
+                        <div style="display:flex; gap:5px; margin-top:10px;">
+                             <select id="adm-res-evt" class="input-field" onchange="renderAdmResults()"><option value="">SELECIONE EVENTO...</option></select>
+                        </div>
+                         <div style="margin-top:5px;">
                             <label style="font-size:10px; color:#666; font-weight:bold;">TIPO DE VOLTA:</label>
                             <select id="adm-res-runtype" class="input-field" style="font-weight:bold; color:#0038a8">
                                 <option value="1st">OFICIAL (1ª Descida)</option>
@@ -1751,7 +1600,7 @@ refreshListsOnly();
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
 
-<script src="script.js?v=158"></script>
+<script src="script.js?v=157"></script>
 
 </body>
 </html>
