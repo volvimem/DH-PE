@@ -285,3 +285,9 @@ body.archive-mode { border-top: 5px solid var(--pe-red); }
 .x1-status-concluido { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
 .x1-status-arregou { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
 .x1-winner-crown { color: #eab308; font-size: 18px; display: block; margin-bottom: 5px; animation: jump-btn 1.5s infinite; }
+/* Placas por evento — painel da organização */
+.adm-placa-help { font-size: 10px; color: #475569; line-height: 1.5; margin: 9px 0; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 9px; }
+.adm-placa-row { display: flex; align-items: center; gap: 7px; padding: 9px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 7px; flex-wrap: wrap; }
+.adm-placa-label { flex: 1 1 100%; margin: 0; color: #1e3a8a; font-size: 10px; font-weight: 900; }
+.adm-placa-input { flex: 1 1 95px; min-width: 70px; max-width: 130px; padding: 8px; background: #fff; text-align: center; border: 2px solid #93c5fd; font-size: 15px; font-weight: 900; }
+.adm-placa-save { flex: 1 1 125px; background: #0038a8; color: #fff; padding: 10px 8px; border-radius: 5px; font-size: 11px; }
